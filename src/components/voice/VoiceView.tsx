@@ -31,12 +31,12 @@ function DeviceSelector({
   onClose,
   onSelect,
 }: {
-  kind: 'audioinput' | 'videoinput';
+  kind: 'audioinput' | 'videoinput' | 'audiooutput';
   onClose: () => void;
   onSelect: (deviceId: string) => void;
 }) {
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
-  const storageKey = kind === 'audioinput' ? 'ecto-audio-device' : 'ecto-video-device';
+  const storageKey = kind === 'audioinput' ? 'ecto-audio-device' : kind === 'audiooutput' ? 'ecto-audio-output' : 'ecto-video-device';
   const selectedId = localStorage.getItem(storageKey);
 
   useEffect(() => {
@@ -51,10 +51,13 @@ function DeviceSelector({
     onClose();
   };
 
+  const label = kind === 'audioinput' ? 'Audio Input' : kind === 'audiooutput' ? 'Audio Output' : 'Video Input';
+  const fallbackLabel = kind === 'audioinput' ? 'Microphone' : kind === 'audiooutput' ? 'Speaker' : 'Camera';
+
   return (
     <div className="device-selector">
       <div className="device-selector-header">
-        {kind === 'audioinput' ? 'Audio Input' : 'Video Input'}
+        {label}
       </div>
       {devices.length === 0 ? (
         <div className="device-selector-empty">No devices found</div>
@@ -71,7 +74,7 @@ function DeviceSelector({
               onClick={() => handleSelect(d.deviceId)}
             >
               {isSelected && <span className="device-check">&#10003;</span>}
-              {d.label || `${kind === 'audioinput' ? 'Microphone' : 'Camera'} ${d.deviceId.slice(0, 8)}`}
+              {d.label || `${fallbackLabel} ${d.deviceId.slice(0, 8)}`}
             </button>
           );
         })
@@ -107,10 +110,11 @@ export function VoiceView() {
     toggleCamera,
     toggleScreenShare,
     switchAudioDevice,
+    switchAudioOutput,
     switchVideoDevice,
   } = useVoice();
 
-  const [deviceMenu, setDeviceMenu] = useState<'audio' | 'video' | null>(null);
+  const [deviceMenu, setDeviceMenu] = useState<'audio' | 'video' | 'output' | null>(null);
 
   const isConnectedHere = currentChannelId === activeChannelId && voiceStatus !== 'disconnected';
 
@@ -218,13 +222,25 @@ export function VoiceView() {
               )}
             </div>
 
-            <button
-              className={`voice-bar-btn ${selfDeafened ? 'active' : ''}`}
-              onClick={toggleDeafen}
-              title={selfDeafened ? 'Undeafen' : 'Deafen'}
-            >
-              {selfDeafened ? '\u{1F508}' : '\u{1F50A}'}
-            </button>
+            <div className="voice-bar-group">
+              <button
+                className={`voice-bar-btn ${selfDeafened ? 'active' : ''}`}
+                onClick={toggleDeafen}
+                title={selfDeafened ? 'Undeafen' : 'Deafen'}
+              >
+                {selfDeafened ? '\u{1F508}' : '\u{1F50A}'}
+              </button>
+              <button
+                className="voice-bar-device-btn"
+                onClick={() => setDeviceMenu(deviceMenu === 'output' ? null : 'output')}
+                title="Select audio output"
+              >
+                &#9650;
+              </button>
+              {deviceMenu === 'output' && (
+                <DeviceSelector kind="audiooutput" onClose={() => setDeviceMenu(null)} onSelect={switchAudioOutput} />
+              )}
+            </div>
 
             <div className="voice-bar-group">
               <button

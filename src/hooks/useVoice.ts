@@ -6,11 +6,10 @@ import { connectionManager } from '../services/connection-manager.js';
 
 let speakingCleanup: (() => void) | null = null;
 let voiceEventQueue: Promise<void> = Promise.resolve();
+let pendingProduceResolve: ((id: string) => void) | null = null;
+const consumerSpeakingCleanups = new Map<string, () => void>();
 
-function startSpeakingDetection(stream: MediaStream) {
-  const userId = useAuthStore.getState().user?.id;
-  if (!userId) return;
-
+function startSpeakingDetection(stream: MediaStream, userId: string): () => void {
   const audioCtx = new AudioContext();
   const source = audioCtx.createMediaStreamSource(stream);
   const analyser = audioCtx.createAnalyser();
@@ -35,11 +34,10 @@ function startSpeakingDetection(stream: MediaStream) {
     }
   }, 100);
 
-  speakingCleanup = () => {
+  return () => {
     clearInterval(interval);
     source.disconnect();
     audioCtx.close().catch(() => {});
-    speakingCleanup = null;
   };
 }
 
@@ -64,6 +62,15 @@ export function useVoice() {
     const originalOnEvent = ws.onEvent;
     ws.onEvent = (event, data, seq) => {
       originalOnEvent?.(event, data, seq);
+
+      // Resolve pending produce callback immediately to avoid deadlock
+      if (event === 'voice.produced') {
+        const d = data as Record<string, unknown>;
+        pendingProduceResolve?.(d.producer_id as string);
+        pendingProduceResolve = null;
+        return;
+      }
+
       voiceEventQueue = voiceEventQueue.then(() => handleVoiceEvent(ws, event, data)).catch((err) => {
         console.error('[voice] event handler error:', event, err);
       });
@@ -76,6 +83,10 @@ export function useVoice() {
     const ws = connectionManager.getMainWs(sid);
     ws?.voiceLeave(cid);
     speakingCleanup?.();
+    speakingCleanup = null;
+    for (const cleanup of consumerSpeakingCleanups.values()) cleanup();
+    consumerSpeakingCleanups.clear();
+    pendingProduceResolve = null;
     useVoiceStore.getState().cleanup();
   }, []);
 
@@ -112,9 +123,20 @@ export function useVoice() {
       await audioProducer.replaceTrack({ track: newTrack });
 
       speakingCleanup?.();
-      startSpeakingDetection(stream);
+      const localUserId = useAuthStore.getState().user?.id;
+      if (localUserId) speakingCleanup = startSpeakingDetection(stream, localUserId);
     } catch (err) {
       console.error('[voice] failed to switch audio device:', err);
+    }
+  }, []);
+
+  const switchAudioOutput = useCallback(async (deviceId: string) => {
+    localStorage.setItem('ecto-audio-output', deviceId);
+    const audioEls = document.querySelectorAll<HTMLAudioElement>('audio[data-consumer-id]');
+    for (const el of audioEls) {
+      if ('setSinkId' in el) {
+        await (el as HTMLAudioElement & { setSinkId: (id: string) => Promise<void> }).setSinkId(deviceId).catch(() => {});
+      }
     }
   }, []);
 
@@ -142,6 +164,8 @@ export function useVoice() {
     const userId = useAuthStore.getState().user?.id;
 
     if (producers.has('video')) {
+      const producer = producers.get('video')!;
+      if (ws && producer.id) ws.voiceProduceStop(producer.id);
       useVoiceStore.getState().removeProducer('video');
       if (userId) useVoiceStore.getState().setVideoStream(userId, null);
     } else if (sendTransport && ws) {
@@ -150,9 +174,43 @@ export function useVoice() {
         video: savedVideoDevice ? { deviceId: { ideal: savedVideoDevice } } : true,
       });
       const videoTrack = stream.getVideoTracks()[0]!;
-      const producer = await sendTransport.produce({ track: videoTrack });
+      const producer = await sendTransport.produce({ track: videoTrack, appData: { source: 'camera' } });
       useVoiceStore.getState().setProducer('video', producer);
       if (userId) useVoiceStore.getState().setVideoStream(userId, new MediaStream([videoTrack]));
+    }
+  }, []);
+
+  const toggleScreenShare = useCallback(async () => {
+    const { sendTransport, producers, currentServerId: sid } = useVoiceStore.getState();
+    const userId = useAuthStore.getState().user?.id;
+
+    if (producers.has('screen')) {
+      const producer = producers.get('screen')!;
+      const ws = sid ? connectionManager.getMainWs(sid) : null;
+      if (ws && producer.id) ws.voiceProduceStop(producer.id);
+      useVoiceStore.getState().removeProducer('screen');
+      if (userId) useVoiceStore.getState().setScreenStream(userId, null);
+    } else if (sendTransport) {
+      try {
+        const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+        const screenTrack = stream.getVideoTracks()[0]!;
+        const producer = await sendTransport.produce({ track: screenTrack, appData: { source: 'screen' } });
+        useVoiceStore.getState().setProducer('screen', producer);
+        if (userId) useVoiceStore.getState().setScreenStream(userId, new MediaStream([screenTrack]));
+
+        // Auto-cleanup when user clicks browser's "Stop sharing"
+        screenTrack.addEventListener('ended', () => {
+          const screenProducer = useVoiceStore.getState().producers.get('screen');
+          const curSid = useVoiceStore.getState().currentServerId;
+          const curWs = curSid ? connectionManager.getMainWs(curSid) : null;
+          if (curWs && screenProducer?.id) curWs.voiceProduceStop(screenProducer.id);
+          useVoiceStore.getState().removeProducer('screen');
+          if (userId) useVoiceStore.getState().setScreenStream(userId, null);
+        });
+      } catch (err) {
+        // User cancelled the display picker or getDisplayMedia failed
+        console.error('[voice] screen share failed:', err);
+      }
     }
   }, []);
 
@@ -170,7 +228,9 @@ export function useVoice() {
     toggleMute,
     toggleDeafen,
     toggleCamera,
+    toggleScreenShare,
     switchAudioDevice,
+    switchAudioOutput,
     switchVideoDevice,
   };
 }
@@ -209,9 +269,13 @@ async function handleVoiceEvent(ws: ReturnType<typeof connectionManager.getMainW
           ws.voiceConnectTransport(sendTransport.id, dtlsParameters);
           callback();
         });
-        sendTransport.on('produce', ({ kind, rtpParameters }, callback) => {
-          ws.voiceProduce(sendTransport.id, kind as 'audio' | 'video', rtpParameters);
-          callback({ id: 'pending' });
+        sendTransport.on('produce', async ({ kind, rtpParameters, appData }, callback) => {
+          const idPromise = new Promise<string>((resolve) => {
+            pendingProduceResolve = resolve;
+          });
+          ws.voiceProduce(sendTransport.id, kind as 'audio' | 'video', rtpParameters, appData?.source as string | undefined);
+          const id = await idPromise;
+          callback({ id });
         });
         useVoiceStore.getState().setSendTransport(sendTransport);
 
@@ -221,9 +285,10 @@ async function handleVoiceEvent(ws: ReturnType<typeof connectionManager.getMainW
             audio: savedAudioDevice ? { deviceId: { ideal: savedAudioDevice } } : true,
           });
           const audioTrack = stream.getAudioTracks()[0]!;
-          const producer = await sendTransport.produce({ track: audioTrack });
+          const producer = await sendTransport.produce({ track: audioTrack, appData: { source: 'mic' } });
           useVoiceStore.getState().setProducer('audio', producer);
-          startSpeakingDetection(stream);
+          const localUserId = useAuthStore.getState().user?.id;
+          if (localUserId) speakingCleanup = startSpeakingDetection(stream, localUserId);
         } catch (err) {
           console.error('[voice] audio setup failed:', err);
         }
@@ -254,25 +319,61 @@ async function handleVoiceEvent(ws: ReturnType<typeof connectionManager.getMainW
 
       if (consumer.kind === 'audio') {
         const audio = document.createElement('audio');
-        audio.srcObject = new MediaStream([consumer.track]);
+        const audioStream = new MediaStream([consumer.track]);
+        audio.srcObject = audioStream;
         audio.autoplay = true;
         audio.dataset['consumerId'] = consumer.id;
+        // Apply saved audio output device
+        const savedOutput = localStorage.getItem('ecto-audio-output');
+        if (savedOutput && 'setSinkId' in audio) {
+          (audio as HTMLAudioElement & { setSinkId: (id: string) => Promise<void> }).setSinkId(savedOutput).catch(() => {});
+        }
         document.body.appendChild(audio);
+        // Start speaking detection for remote user
+        const remoteUserId = d.user_id as string;
+        if (remoteUserId) {
+          const cleanup = startSpeakingDetection(audioStream, remoteUserId);
+          consumerSpeakingCleanups.set(consumer.id, cleanup);
+        }
       } else if (consumer.kind === 'video') {
         const userId = d.user_id as string;
-        useVoiceStore.getState().setVideoStream(userId, new MediaStream([consumer.track]));
+        if (d.source === 'screen') {
+          useVoiceStore.getState().setScreenStream(userId, new MediaStream([consumer.track]));
+        } else {
+          useVoiceStore.getState().setVideoStream(userId, new MediaStream([consumer.track]));
+        }
       }
       break;
     }
 
     case 'voice.producer_closed': {
-      const consumerId = [...store.consumers.entries()].find(
-        ([, c]) => c.producerId === (d.producerId as string),
-      )?.[0];
-      if (consumerId) {
+      const producerId = d.producer_id as string ?? d.producerId as string;
+      const entry = [...store.consumers.entries()].find(
+        ([, c]) => c.producerId === producerId,
+      );
+      if (entry) {
+        const [consumerId, consumer] = entry;
         useVoiceStore.getState().removeConsumer(consumerId);
         const audioEl = document.querySelector(`audio[data-consumer-id="${consumerId}"]`);
         audioEl?.remove();
+        // Clean up remote speaking detection
+        const speakingCleanupFn = consumerSpeakingCleanups.get(consumerId);
+        if (speakingCleanupFn) {
+          speakingCleanupFn();
+          consumerSpeakingCleanups.delete(consumerId);
+        }
+        // Clear video/screen stream if it was a video consumer
+        if (consumer.kind === 'video') {
+          const userId = d.user_id as string;
+          if (userId) {
+            // Check if this stream exists in screenStreams — if so, clear it; otherwise clear videoStreams
+            if (useVoiceStore.getState().screenStreams.has(userId)) {
+              useVoiceStore.getState().setScreenStream(userId, null);
+            } else {
+              useVoiceStore.getState().setVideoStream(userId, null);
+            }
+          }
+        }
       }
       break;
     }

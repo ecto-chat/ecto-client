@@ -209,23 +209,27 @@ export class MainWebSocket {
   }
 
   voiceConnectTransport(transportId: string, dtlsParameters: unknown) {
-    this.send('voice.connect_transport', { transportId, dtlsParameters });
+    this.send('voice.connect_transport', { transport_id: transportId, dtls_parameters: dtlsParameters });
   }
 
-  voiceProduce(transportId: string, kind: 'audio' | 'video', rtpParameters: unknown) {
-    this.send('voice.produce', { transportId, kind, rtpParameters });
+  voiceProduce(transportId: string, kind: 'audio' | 'video', rtpParameters: unknown, source?: string) {
+    this.send('voice.produce', { transport_id: transportId, kind, rtp_parameters: rtpParameters, source });
   }
 
   voiceProducerPause(producerId: string) {
-    this.send('voice.producer_pause', { producerId });
+    this.send('voice.producer_pause', { producer_id: producerId });
   }
 
   voiceProducerResume(producerId: string) {
-    this.send('voice.producer_resume', { producerId });
+    this.send('voice.producer_resume', { producer_id: producerId });
   }
 
   voiceConsumerResume(consumerId: string) {
-    this.send('voice.consumer_resume', { consumerId });
+    this.send('voice.consumer_resume', { consumer_id: consumerId });
+  }
+
+  voiceProduceStop(producerId: string) {
+    this.send('voice.produce_stop', { producer_id: producerId });
   }
 
   disconnect() {

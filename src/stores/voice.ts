@@ -13,6 +13,7 @@ interface VoiceStore {
   speaking: Set<string>;
   participants: Map<string, VoiceState>;
   videoStreams: Map<string, MediaStream>;
+  screenStreams: Map<string, MediaStream>;
   producers: Map<string, mediasoupTypes.Producer>;
   consumers: Map<string, mediasoupTypes.Consumer>;
   sendTransport: mediasoupTypes.Transport | null;
@@ -29,6 +30,7 @@ interface VoiceStore {
   removeParticipant: (userId: string) => void;
   updateParticipant: (state: VoiceState) => void;
   setVideoStream: (userId: string, stream: MediaStream | null) => void;
+  setScreenStream: (userId: string, stream: MediaStream | null) => void;
   setProducer: (kind: string, producer: mediasoupTypes.Producer) => void;
   removeProducer: (kind: string) => void;
   setConsumer: (consumerId: string, consumer: mediasoupTypes.Consumer) => void;
@@ -48,6 +50,7 @@ export const useVoiceStore = create<VoiceStore>()((set, get) => ({
   speaking: new Set(),
   participants: new Map(),
   videoStreams: new Map(),
+  screenStreams: new Map(),
   producers: new Map(),
   consumers: new Map(),
   sendTransport: null,
@@ -116,6 +119,14 @@ export const useVoiceStore = create<VoiceStore>()((set, get) => ({
       return { videoStreams };
     }),
 
+  setScreenStream: (userId, stream) =>
+    set((state) => {
+      const screenStreams = new Map(state.screenStreams);
+      if (stream) screenStreams.set(userId, stream);
+      else screenStreams.delete(userId);
+      return { screenStreams };
+    }),
+
   setProducer: (kind, producer) =>
     set((state) => {
       const producers = new Map(state.producers);
@@ -167,6 +178,7 @@ export const useVoiceStore = create<VoiceStore>()((set, get) => ({
       speaking: new Set(),
       participants: new Map(),
       videoStreams: new Map(),
+      screenStreams: new Map(),
       producers: new Map(),
       consumers: new Map(),
       sendTransport: null,
