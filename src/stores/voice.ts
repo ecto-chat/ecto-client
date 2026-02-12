@@ -1,10 +1,176 @@
 import { create } from 'zustand';
+import type { VoiceState } from 'ecto-shared';
+import type { types as mediasoupTypes } from 'mediasoup-client';
 
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-interface VoiceState {
-  // TODO: Add state shape
+type VoiceStatus = 'disconnected' | 'connecting' | 'connected';
+
+interface VoiceStore {
+  currentChannelId: string | null;
+  currentServerId: string | null;
+  voiceStatus: VoiceStatus;
+  selfMuted: boolean;
+  selfDeafened: boolean;
+  speaking: Set<string>;
+  participants: Map<string, VoiceState>;
+  videoStreams: Map<string, MediaStream>;
+  producers: Map<string, mediasoupTypes.Producer>;
+  consumers: Map<string, mediasoupTypes.Consumer>;
+  sendTransport: mediasoupTypes.Transport | null;
+  recvTransport: mediasoupTypes.Transport | null;
+  device: mediasoupTypes.Device | null;
+
+  setChannel: (serverId: string, channelId: string) => void;
+  setVoiceStatus: (status: VoiceStatus) => void;
+  leaveChannel: () => void;
+  toggleMute: () => void;
+  toggleDeafen: () => void;
+  setSpeaking: (userId: string, isSpeaking: boolean) => void;
+  addParticipant: (state: VoiceState) => void;
+  removeParticipant: (userId: string) => void;
+  updateParticipant: (state: VoiceState) => void;
+  setVideoStream: (userId: string, stream: MediaStream | null) => void;
+  setProducer: (kind: string, producer: mediasoupTypes.Producer) => void;
+  removeProducer: (kind: string) => void;
+  setConsumer: (consumerId: string, consumer: mediasoupTypes.Consumer) => void;
+  removeConsumer: (consumerId: string) => void;
+  setSendTransport: (transport: mediasoupTypes.Transport | null) => void;
+  setRecvTransport: (transport: mediasoupTypes.Transport | null) => void;
+  setDevice: (device: mediasoupTypes.Device | null) => void;
+  cleanup: () => void;
 }
 
-export const useVoiceStore = create<VoiceState>()((_set) => ({
-  // TODO: Initial state and actions
+export const useVoiceStore = create<VoiceStore>()((set, get) => ({
+  currentChannelId: null,
+  currentServerId: null,
+  voiceStatus: 'disconnected',
+  selfMuted: false,
+  selfDeafened: false,
+  speaking: new Set(),
+  participants: new Map(),
+  videoStreams: new Map(),
+  producers: new Map(),
+  consumers: new Map(),
+  sendTransport: null,
+  recvTransport: null,
+  device: null,
+
+  setChannel: (serverId, channelId) =>
+    set({ currentServerId: serverId, currentChannelId: channelId, voiceStatus: 'connecting' }),
+
+  setVoiceStatus: (status) => set({ voiceStatus: status }),
+
+  leaveChannel: () =>
+    set({
+      currentChannelId: null,
+      currentServerId: null,
+      voiceStatus: 'disconnected',
+      selfMuted: false,
+      selfDeafened: false,
+      speaking: new Set(),
+      participants: new Map(),
+    }),
+
+  toggleMute: () => set((state) => ({ selfMuted: !state.selfMuted })),
+  toggleDeafen: () =>
+    set((state) => ({
+      selfDeafened: !state.selfDeafened,
+      selfMuted: !state.selfDeafened ? true : state.selfMuted,
+    })),
+
+  setSpeaking: (userId, isSpeaking) =>
+    set((state) => {
+      const speaking = new Set(state.speaking);
+      if (isSpeaking) speaking.add(userId);
+      else speaking.delete(userId);
+      return { speaking };
+    }),
+
+  addParticipant: (voiceState) =>
+    set((state) => {
+      const participants = new Map(state.participants);
+      participants.set(voiceState.user_id, voiceState);
+      return { participants };
+    }),
+
+  removeParticipant: (userId) =>
+    set((state) => {
+      const participants = new Map(state.participants);
+      participants.delete(userId);
+      const speaking = new Set(state.speaking);
+      speaking.delete(userId);
+      return { participants, speaking };
+    }),
+
+  updateParticipant: (voiceState) =>
+    set((state) => {
+      const participants = new Map(state.participants);
+      participants.set(voiceState.user_id, voiceState);
+      return { participants };
+    }),
+
+  setVideoStream: (userId, stream) =>
+    set((state) => {
+      const videoStreams = new Map(state.videoStreams);
+      if (stream) videoStreams.set(userId, stream);
+      else videoStreams.delete(userId);
+      return { videoStreams };
+    }),
+
+  setProducer: (kind, producer) =>
+    set((state) => {
+      const producers = new Map(state.producers);
+      producers.set(kind, producer);
+      return { producers };
+    }),
+
+  removeProducer: (kind) =>
+    set((state) => {
+      const producers = new Map(state.producers);
+      const producer = producers.get(kind);
+      producer?.close();
+      producers.delete(kind);
+      return { producers };
+    }),
+
+  setConsumer: (consumerId, consumer) =>
+    set((state) => {
+      const consumers = new Map(state.consumers);
+      consumers.set(consumerId, consumer);
+      return { consumers };
+    }),
+
+  removeConsumer: (consumerId) =>
+    set((state) => {
+      const consumers = new Map(state.consumers);
+      const consumer = consumers.get(consumerId);
+      consumer?.close();
+      consumers.delete(consumerId);
+      return { consumers };
+    }),
+
+  setSendTransport: (transport) => set({ sendTransport: transport }),
+  setRecvTransport: (transport) => set({ recvTransport: transport }),
+  setDevice: (device) => set({ device }),
+
+  cleanup: () => {
+    const state = get();
+    state.sendTransport?.close();
+    state.recvTransport?.close();
+    for (const producer of state.producers.values()) producer.close();
+    for (const consumer of state.consumers.values()) consumer.close();
+    set({
+      currentChannelId: null,
+      currentServerId: null,
+      voiceStatus: 'disconnected',
+      selfMuted: false,
+      selfDeafened: false,
+      speaking: new Set(),
+      participants: new Map(),
+      videoStreams: new Map(),
+      producers: new Map(),
+      consumers: new Map(),
+      sendTransport: null,
+      recvTransport: null,
+    });
+  },
 }));
