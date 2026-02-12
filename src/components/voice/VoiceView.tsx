@@ -89,7 +89,9 @@ export function VoiceView() {
   const participants = useVoiceStore((s) => s.participants);
   const speaking = useVoiceStore((s) => s.speaking);
   const videoStreams = useVoiceStore((s) => s.videoStreams);
+  const screenStreams = useVoiceStore((s) => s.screenStreams);
   const voiceStatus = useVoiceStore((s) => s.voiceStatus);
+  const producers = useVoiceStore((s) => s.producers);
   const currentChannelId = useVoiceStore((s) => s.currentChannelId);
   const members = useMemberStore((s) =>
     activeServerId ? s.members.get(activeServerId) : undefined,
@@ -103,6 +105,7 @@ export function VoiceView() {
     toggleMute,
     toggleDeafen,
     toggleCamera,
+    toggleScreenShare,
     switchAudioDevice,
     switchVideoDevice,
   } = useVoice();
@@ -150,26 +153,41 @@ export function VoiceView() {
               const isSpeaking = speaking.has(p.user_id);
               const displayName = member?.display_name ?? member?.username ?? 'Unknown';
               const videoStream = videoStreams.get(p.user_id);
+              const screenStream = screenStreams.get(p.user_id);
+
+              const handleCardClick = () => {
+                if (!activeServerId) return;
+                useUiStore.getState().openModal('user-profile', { userId: p.user_id, serverId: activeServerId });
+              };
 
               return (
-                <div
-                  key={p.user_id}
-                  className={`voice-card ${isSpeaking ? 'speaking' : ''} ${videoStream ? 'has-video' : ''}`}
-                >
-                  {videoStream ? (
-                    <VideoRenderer stream={videoStream} />
-                  ) : (
-                    <Avatar
-                      src={member?.avatar_url}
-                      username={displayName}
-                      size={80}
-                    />
-                  )}
-                  <span className="voice-card-name">{displayName}</span>
-                  <div className="voice-card-icons">
-                    {p.self_mute && <span title="Muted">&#128263;</span>}
-                    {p.self_deaf && <span title="Deafened">&#128264;</span>}
+                <div key={p.user_id} className="voice-card-wrapper">
+                  <div
+                    className={`voice-card ${isSpeaking ? 'speaking' : ''} ${videoStream ? 'has-video' : ''}`}
+                    onClick={handleCardClick}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    {videoStream ? (
+                      <VideoRenderer stream={videoStream} />
+                    ) : (
+                      <Avatar
+                        src={member?.avatar_url}
+                        username={displayName}
+                        size={80}
+                      />
+                    )}
+                    <span className="voice-card-name">{displayName}</span>
+                    <div className="voice-card-icons">
+                      {p.self_mute && <span title="Muted">&#128263;</span>}
+                      {p.self_deaf && <span title="Deafened">&#128264;</span>}
+                    </div>
                   </div>
+                  {screenStream && (
+                    <div className="voice-card-screen">
+                      <VideoRenderer stream={screenStream} />
+                      <span className="voice-card-screen-label">{displayName}'s screen</span>
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -227,6 +245,14 @@ export function VoiceView() {
                 <DeviceSelector kind="videoinput" onClose={() => setDeviceMenu(null)} onSelect={switchVideoDevice} />
               )}
             </div>
+
+            <button
+              className={`voice-bar-btn ${producers.has('screen') ? 'screen-active' : ''}`}
+              onClick={toggleScreenShare}
+              title={producers.has('screen') ? 'Stop Screen Share' : 'Share Screen'}
+            >
+              &#128187;
+            </button>
 
             <button
               className="voice-bar-btn disconnect"

@@ -27,7 +27,13 @@ export function MessageItem({ message, onEdit, onDelete, onReact, onPin }: Messa
   const [editContent, setEditContent] = useState(message.content ?? '');
   const [hovering, setHovering] = useState(false);
   const currentUserId = useAuthStore((s) => s.user?.id);
+  const activeServerId = useUiStore((s) => s.activeServerId);
   const isOwn = message.author?.id === currentUserId;
+
+  const handleAuthorClick = () => {
+    if (!message.author?.id || !activeServerId) return;
+    useUiStore.getState().openModal('user-profile', { userId: message.author.id, serverId: activeServerId });
+  };
 
   const handleEditSubmit = useCallback(async () => {
     if (editContent && editContent.trim() && editContent !== message.content) {
@@ -69,15 +75,17 @@ export function MessageItem({ message, onEdit, onDelete, onReact, onPin }: Messa
       onMouseEnter={() => setHovering(true)}
       onMouseLeave={() => setHovering(false)}
     >
-      <Avatar
-        src={message.author?.avatar_url}
-        username={message.author?.username ?? 'Unknown'}
-        size={40}
-      />
+      <div onClick={handleAuthorClick} style={{ cursor: 'pointer', flexShrink: 0 }}>
+        <Avatar
+          src={message.author?.avatar_url}
+          username={message.author?.username ?? 'Unknown'}
+          size={40}
+        />
+      </div>
 
       <div className="message-body">
         <div className="message-header">
-          <span className="message-author">{message.author?.display_name ?? message.author?.username ?? 'Unknown'}</span>
+          <span className="message-author" onClick={handleAuthorClick} style={{ cursor: 'pointer' }}>{message.author?.display_name ?? message.author?.username ?? 'Unknown'}</span>
           <span className="message-timestamp">{timestamp}</span>
           {message.edited_at && <span className="message-edited">(edited)</span>}
           {message.pinned && <span className="message-pin-badge">pinned</span>}

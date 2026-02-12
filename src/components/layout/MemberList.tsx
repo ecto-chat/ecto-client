@@ -42,9 +42,15 @@ export function MemberList() {
 
 function MemberItem({ member }: { member: Member }) {
   const { status } = usePresence(member.user_id);
+  const activeServerId = useUiStore((s) => s.activeServerId);
+
+  const handleClick = () => {
+    if (!activeServerId) return;
+    useUiStore.getState().openModal('user-profile', { userId: member.user_id, serverId: activeServerId });
+  };
 
   return (
-    <div className="member-item">
+    <div className="member-item" onClick={handleClick}>
       <Avatar
         src={member.avatar_url ?? undefined}
         username={member.nickname ?? member.username}

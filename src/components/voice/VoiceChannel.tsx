@@ -45,10 +45,18 @@ export function VoiceChannel({ channel, isActive }: VoiceChannelProps) {
             const member = members?.get(p.user_id);
             const isSpeaking = speaking.has(p.user_id);
 
+            const handleUserClick = (e: React.MouseEvent) => {
+              e.stopPropagation();
+              if (!activeServerId) return;
+              useUiStore.getState().openModal('user-profile', { userId: p.user_id, serverId: activeServerId });
+            };
+
             return (
               <div
                 key={p.user_id}
                 className={`voice-user ${isSpeaking ? 'speaking' : ''}`}
+                onClick={handleUserClick}
+                style={{ cursor: 'pointer' }}
               >
                 <Avatar
                   src={member?.avatar_url}

@@ -16,6 +16,7 @@ import { useServerStore } from '../../stores/server.js';
 import { connectionManager } from '../../services/connection-manager.js';
 import { useNotifications } from '../../hooks/useNotifications.js';
 import { AddServerModal } from '../servers/AddServerModal.js';
+import { UserProfileModal } from '../user/UserProfileModal.js';
 
 export function AppLayout() {
   const activeServerId = useUiStore((s) => s.activeServerId);
@@ -104,6 +105,7 @@ export function AppLayout() {
       {!isHomeMode && memberListVisible && <MemberList />}
 
       <AddServerModal />
+      <UserProfileModal />
     </div>
   );
 }
