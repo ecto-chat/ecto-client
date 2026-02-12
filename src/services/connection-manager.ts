@@ -14,6 +14,7 @@ import { useConnectionStore } from '../stores/connection.js';
 import { useNotifyStore } from '../stores/notify.js';
 import { useFriendStore } from '../stores/friend.js';
 import { useDmStore } from '../stores/dm.js';
+import { useAuthStore } from '../stores/auth.js';
 import { useUiStore } from '../stores/ui.js';
 
 interface ServerConnection {
@@ -53,10 +54,14 @@ export class ConnectionManager {
       // Populate friend/DM stores from ready data
       useFriendStore.getState().setFriends(ready.friends as Friend[]);
       useFriendStore.getState().setIncomingRequests(ready.incoming_requests as FriendRequest[]);
+      useFriendStore.getState().setOutgoingRequests(ready.outgoing_requests as FriendRequest[]);
       usePresenceStore.getState().bulkSetPresence(
         ready.presences as { user_id: string; status: PresenceStatus; custom_text?: string }[],
       );
-      useDmStore.getState().setConversations(ready.pending_dms as import('ecto-shared').DMConversation[]);
+      // Load actual DM conversation list (pending_dms from ready are raw messages, not conversations)
+      this.centralTrpc!.dms.list.query().then((convos) => {
+        useDmStore.getState().setConversations(convos as import('ecto-shared').DMConversation[]);
+      }).catch(() => {});
     }
   }
 
@@ -404,12 +409,16 @@ export class ConnectionManager {
     const d = data as Record<string, unknown>;
 
     switch (event) {
-      case 'friend.request':
-        useFriendStore.getState().addIncomingRequest(d.request as FriendRequest);
+      case 'friend.request_incoming':
+        useFriendStore.getState().addIncomingRequest(d as unknown as FriendRequest);
+        break;
+
+      case 'friend.request_outgoing':
+        useFriendStore.getState().addOutgoingRequest(d as unknown as FriendRequest);
         break;
 
       case 'friend.accept':
-        useFriendStore.getState().addFriend(d.friend as Friend);
+        useFriendStore.getState().acceptedRequest(d as unknown as Friend);
         break;
 
       case 'friend.remove':
@@ -430,9 +439,13 @@ export class ConnectionManager {
         break;
 
       case 'dm.message': {
-        const msg = d.message as DirectMessage;
-        const peerId = msg.sender_id;
+        const msg = d as unknown as DirectMessage;
+        const myId = useAuthStore.getState().user?.id;
+        // Key by the OTHER user (peer), not ourselves
+        const peerId = msg.sender_id === myId ? msg.recipient_id : msg.sender_id;
         useDmStore.getState().addMessage(peerId, msg);
+        // Ensure sidebar conversation exists/is updated
+        useDmStore.getState().ensureConversation(peerId, msg);
         break;
       }
 

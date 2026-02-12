@@ -16,6 +16,7 @@ interface VoiceStore {
   screenStreams: Map<string, MediaStream>;
   producers: Map<string, mediasoupTypes.Producer>;
   consumers: Map<string, mediasoupTypes.Consumer>;
+  consumerMeta: Map<string, { userId: string; source: string }>;
   sendTransport: mediasoupTypes.Transport | null;
   recvTransport: mediasoupTypes.Transport | null;
   device: mediasoupTypes.Device | null;
@@ -33,7 +34,7 @@ interface VoiceStore {
   setScreenStream: (userId: string, stream: MediaStream | null) => void;
   setProducer: (kind: string, producer: mediasoupTypes.Producer) => void;
   removeProducer: (kind: string) => void;
-  setConsumer: (consumerId: string, consumer: mediasoupTypes.Consumer) => void;
+  setConsumer: (consumerId: string, consumer: mediasoupTypes.Consumer, meta?: { userId: string; source: string }) => void;
   removeConsumer: (consumerId: string) => void;
   setSendTransport: (transport: mediasoupTypes.Transport | null) => void;
   setRecvTransport: (transport: mediasoupTypes.Transport | null) => void;
@@ -53,6 +54,7 @@ export const useVoiceStore = create<VoiceStore>()((set, get) => ({
   screenStreams: new Map(),
   producers: new Map(),
   consumers: new Map(),
+  consumerMeta: new Map(),
   sendTransport: null,
   recvTransport: null,
   device: null,
@@ -143,11 +145,13 @@ export const useVoiceStore = create<VoiceStore>()((set, get) => ({
       return { producers };
     }),
 
-  setConsumer: (consumerId, consumer) =>
+  setConsumer: (consumerId, consumer, meta) =>
     set((state) => {
       const consumers = new Map(state.consumers);
       consumers.set(consumerId, consumer);
-      return { consumers };
+      const consumerMeta = new Map(state.consumerMeta);
+      if (meta) consumerMeta.set(consumerId, meta);
+      return { consumers, consumerMeta };
     }),
 
   removeConsumer: (consumerId) =>
@@ -156,7 +160,9 @@ export const useVoiceStore = create<VoiceStore>()((set, get) => ({
       const consumer = consumers.get(consumerId);
       consumer?.close();
       consumers.delete(consumerId);
-      return { consumers };
+      const consumerMeta = new Map(state.consumerMeta);
+      consumerMeta.delete(consumerId);
+      return { consumers, consumerMeta };
     }),
 
   setSendTransport: (transport) => set({ sendTransport: transport }),
@@ -181,6 +187,7 @@ export const useVoiceStore = create<VoiceStore>()((set, get) => ({
       screenStreams: new Map(),
       producers: new Map(),
       consumers: new Map(),
+      consumerMeta: new Map(),
       sendTransport: null,
       recvTransport: null,
     });

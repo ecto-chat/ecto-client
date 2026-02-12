@@ -11,6 +11,7 @@ interface MessageItemProps {
   onDelete: (messageId: string) => Promise<void>;
   onReact: (messageId: string, emoji: string) => Promise<void>;
   onPin: (messageId: string) => Promise<void>;
+  readOnly?: boolean;
 }
 
 function resolveFileUrl(relativeUrl: string): string {
@@ -22,7 +23,7 @@ function resolveFileUrl(relativeUrl: string): string {
   return `${conn.address}${relativeUrl}`;
 }
 
-export function MessageItem({ message, onEdit, onDelete, onReact, onPin }: MessageItemProps) {
+export function MessageItem({ message, onEdit, onDelete, onReact, onPin, readOnly }: MessageItemProps) {
   const [editing, setEditing] = useState(false);
   const [editContent, setEditContent] = useState(message.content ?? '');
   const [hovering, setHovering] = useState(false);
@@ -153,7 +154,7 @@ export function MessageItem({ message, onEdit, onDelete, onReact, onPin }: Messa
       </div>
 
       {/* Hover toolbar */}
-      {hovering && !editing && (
+      {hovering && !editing && !readOnly && (
         <div className="message-toolbar">
           {quickReactions.map((emoji) => (
             <button key={emoji} className="toolbar-btn" onClick={() => onReact(message.id, emoji)} title="React">

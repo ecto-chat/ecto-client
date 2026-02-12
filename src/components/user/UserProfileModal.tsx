@@ -81,9 +81,17 @@ function UserProfileContent({ data, onClose }: { data: ModalData; onClose: () =>
     try {
       const centralTrpc = connectionManager.getCentralTrpc();
       if (!centralTrpc) throw new Error('Not connected to central');
-      await centralTrpc.friends.request.mutate({
+      const result = await centralTrpc.friends.request.mutate({
         username: member.username,
         discriminator: member.discriminator,
+      });
+      // The WS event will also add it, but update immediately for responsiveness
+      useFriendStore.getState().addOutgoingRequest({
+        ...result,
+        from: userId,
+        from_username: member.username,
+        from_discriminator: member.discriminator ?? '',
+        from_avatar_url: member.avatar_url ?? null,
       });
       setRequestSent(true);
     } catch (err: unknown) {

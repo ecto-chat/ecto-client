@@ -4,6 +4,7 @@ export type CentralWsDisconnectHandler = (code: number, reason: string) => void;
 export interface CentralReadyData {
   friends: unknown[];
   incoming_requests: unknown[];
+  outgoing_requests: unknown[];
   presences: unknown[];
   pending_dms: unknown[];
   dm_read_states: unknown[];

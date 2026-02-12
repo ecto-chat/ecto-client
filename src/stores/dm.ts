@@ -15,6 +15,7 @@ interface DmStore {
   openConversation: (userId: string) => void;
   closeConversation: () => void;
   setTyping: (userId: string) => void;
+  ensureConversation: (userId: string, message: DirectMessage) => void;
   updateConversation: (userId: string, updates: Partial<DMConversation>) => void;
 }
 
@@ -36,10 +37,15 @@ export const useDmStore = create<DmStore>()((set) => ({
       const messages = new Map(state.messages);
       const messageOrder = new Map(state.messageOrder);
       const userMessages = new Map(messages.get(userId) ?? new Map());
+      const alreadyExists = userMessages.has(message.id);
       userMessages.set(message.id, message);
       messages.set(userId, userMessages);
-      const order = [...(messageOrder.get(userId) ?? []), message.id];
-      messageOrder.set(userId, order);
+
+      // Only append to order if genuinely new
+      if (!alreadyExists) {
+        const order = [...(messageOrder.get(userId) ?? []), message.id];
+        messageOrder.set(userId, order);
+      }
 
       // Update conversation last_message
       const conversations = new Map(state.conversations);
@@ -56,13 +62,14 @@ export const useDmStore = create<DmStore>()((set) => ({
       const messages = new Map(state.messages);
       const messageOrder = new Map(state.messageOrder);
       const userMessages = new Map(messages.get(userId) ?? new Map());
+      const existing = messageOrder.get(userId) ?? [];
+      const existingSet = new Set(existing);
       const newIds: string[] = [];
       for (const msg of newMessages) {
         userMessages.set(msg.id, msg);
-        newIds.push(msg.id);
+        if (!existingSet.has(msg.id)) newIds.push(msg.id);
       }
       messages.set(userId, userMessages);
-      const existing = messageOrder.get(userId) ?? [];
       messageOrder.set(userId, [...newIds, ...existing]);
       return { messages, messageOrder };
     }),
@@ -75,6 +82,31 @@ export const useDmStore = create<DmStore>()((set) => ({
       const typingUsers = new Map(state.typingUsers);
       typingUsers.set(userId, Date.now());
       return { typingUsers };
+    }),
+
+  ensureConversation: (userId, message) =>
+    set((state) => {
+      const conversations = new Map(state.conversations);
+      const existing = conversations.get(userId);
+      if (existing) {
+        // Update last_message if this message is newer
+        if (!existing.last_message || message.created_at >= existing.last_message.created_at) {
+          conversations.set(userId, { ...existing, last_message: message });
+        }
+      } else {
+        // Create a new conversation entry from the message sender info
+        const sender = message.sender;
+        conversations.set(userId, {
+          user_id: userId,
+          username: sender.username,
+          discriminator: '',
+          display_name: sender.display_name,
+          avatar_url: sender.avatar_url,
+          last_message: message,
+          unread_count: 0,
+        });
+      }
+      return { conversations };
     }),
 
   updateConversation: (userId, updates) =>

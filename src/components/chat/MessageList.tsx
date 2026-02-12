@@ -13,6 +13,7 @@ interface MessageListProps {
   onPin: (messageId: string) => Promise<void>;
   onUnpin: (messageId: string) => Promise<void>;
   onMarkRead: (messageId: string) => Promise<void>;
+  readOnly?: boolean;
 }
 
 export function MessageList({
@@ -25,6 +26,7 @@ export function MessageList({
   onPin,
   onUnpin,
   onMarkRead,
+  readOnly,
 }: MessageListProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const topSentinelRef = useRef<HTMLDivElement>(null);
@@ -125,6 +127,7 @@ export function MessageList({
               onDelete={onDelete}
               onReact={onReact}
               onPin={msg.pinned ? onUnpin : onPin}
+              readOnly={readOnly}
             />
           </div>
         );

@@ -1,8 +1,68 @@
 import { useCallback } from 'react';
-import { Device } from 'mediasoup-client';
+import { Device, type types as mediasoupTypes } from 'mediasoup-client';
 import { useVoiceStore } from '../stores/voice.js';
 import { useAuthStore } from '../stores/auth.js';
 import { connectionManager } from '../services/connection-manager.js';
+
+export type VideoQuality = 'low' | 'medium' | 'high' | 'source';
+export type ScreenQuality = 'low' | 'medium' | 'high' | 'source';
+
+const CAMERA_PRESETS: Record<VideoQuality, {
+  constraints: MediaTrackConstraints;
+  encodings: mediasoupTypes.RtpEncodingParameters[];
+}> = {
+  low: {
+    constraints: { width: { ideal: 640 }, height: { ideal: 360 }, frameRate: { ideal: 15 } },
+    encodings: [{ maxBitrate: 500_000, maxFramerate: 15 }],
+  },
+  medium: {
+    constraints: { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } },
+    encodings: [{ maxBitrate: 2_500_000, maxFramerate: 30 }],
+  },
+  high: {
+    constraints: { width: { ideal: 1920 }, height: { ideal: 1080 }, frameRate: { ideal: 30 } },
+    encodings: [{ maxBitrate: 6_000_000, maxFramerate: 30 }],
+  },
+  source: {
+    constraints: { width: { ideal: 1920 }, height: { ideal: 1080 }, frameRate: { ideal: 60 } },
+    encodings: [{ maxBitrate: 12_000_000, maxFramerate: 60 }],
+  },
+};
+
+const SCREEN_PRESETS: Record<ScreenQuality, {
+  constraints: DisplayMediaStreamOptions;
+  encodings: mediasoupTypes.RtpEncodingParameters[];
+  contentHint: 'detail' | 'motion';
+}> = {
+  low: {
+    constraints: { video: { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 10 } }, audio: true },
+    encodings: [{ maxBitrate: 1_500_000, maxFramerate: 10 }],
+    contentHint: 'detail',
+  },
+  medium: {
+    constraints: { video: { width: { ideal: 1920 }, height: { ideal: 1080 }, frameRate: { ideal: 30 } }, audio: true },
+    encodings: [{ maxBitrate: 5_000_000, maxFramerate: 30 }],
+    contentHint: 'detail',
+  },
+  high: {
+    constraints: { video: { width: { ideal: 1920 }, height: { ideal: 1080 }, frameRate: { ideal: 60 } }, audio: true },
+    encodings: [{ maxBitrate: 10_000_000, maxFramerate: 60 }],
+    contentHint: 'motion',
+  },
+  source: {
+    constraints: { video: { width: { ideal: 1920 }, height: { ideal: 1080 }, frameRate: { ideal: 60 } }, audio: true },
+    encodings: [{ maxBitrate: 15_000_000, maxFramerate: 60 }],
+    contentHint: 'motion',
+  },
+};
+
+function getVideoQuality(): VideoQuality {
+  return (localStorage.getItem('ecto-video-quality') as VideoQuality) || 'medium';
+}
+
+function getScreenQuality(): ScreenQuality {
+  return (localStorage.getItem('ecto-screen-quality') as ScreenQuality) || 'high';
+}
 
 let speakingCleanup: (() => void) | null = null;
 let voiceEventQueue: Promise<void> = Promise.resolve();
@@ -148,7 +208,7 @@ export function useVoice() {
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { deviceId: { exact: deviceId } },
+        video: { ...CAMERA_PRESETS[getVideoQuality()].constraints, deviceId: { exact: deviceId } },
       });
       const newTrack = stream.getVideoTracks()[0]!;
       await videoProducer.replaceTrack({ track: newTrack });
@@ -170,11 +230,22 @@ export function useVoice() {
       if (userId) useVoiceStore.getState().setVideoStream(userId, null);
     } else if (sendTransport && ws) {
       const savedVideoDevice = localStorage.getItem('ecto-video-device');
+      const preset = CAMERA_PRESETS[getVideoQuality()];
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: savedVideoDevice ? { deviceId: { ideal: savedVideoDevice } } : true,
+        video: { ...preset.constraints, ...(savedVideoDevice ? { deviceId: { ideal: savedVideoDevice } } : {}) },
       });
       const videoTrack = stream.getVideoTracks()[0]!;
-      const producer = await sendTransport.produce({ track: videoTrack, appData: { source: 'camera' } });
+      const camMaxKbps = Math.round(preset.encodings[0]!.maxBitrate! / 1000);
+      const producer = await sendTransport.produce({
+        track: videoTrack,
+        encodings: preset.encodings,
+        codecOptions: {
+          videoGoogleStartBitrate: Math.round(camMaxKbps * 0.5),
+          videoGoogleMinBitrate: Math.round(camMaxKbps * 0.25),
+          videoGoogleMaxBitrate: camMaxKbps,
+        },
+        appData: { source: 'camera' },
+      });
       useVoiceStore.getState().setProducer('video', producer);
       if (userId) useVoiceStore.getState().setVideoStream(userId, new MediaStream([videoTrack]));
     }
@@ -185,32 +256,120 @@ export function useVoice() {
     const userId = useAuthStore.getState().user?.id;
 
     if (producers.has('screen')) {
-      const producer = producers.get('screen')!;
       const ws = sid ? connectionManager.getMainWs(sid) : null;
-      if (ws && producer.id) ws.voiceProduceStop(producer.id);
+      const screenProducer = producers.get('screen')!;
+      if (ws && screenProducer.id) ws.voiceProduceStop(screenProducer.id);
       useVoiceStore.getState().removeProducer('screen');
+      // Also stop screen audio if active
+      const screenAudioProducer = producers.get('screen-audio');
+      if (screenAudioProducer) {
+        if (ws && screenAudioProducer.id) ws.voiceProduceStop(screenAudioProducer.id);
+        useVoiceStore.getState().removeProducer('screen-audio');
+      }
       if (userId) useVoiceStore.getState().setScreenStream(userId, null);
     } else if (sendTransport) {
       try {
-        const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+        const screenPreset = SCREEN_PRESETS[getScreenQuality()];
+        const stream = await navigator.mediaDevices.getDisplayMedia(screenPreset.constraints);
         const screenTrack = stream.getVideoTracks()[0]!;
-        const producer = await sendTransport.produce({ track: screenTrack, appData: { source: 'screen' } });
+        screenTrack.contentHint = screenPreset.contentHint;
+
+        // Prefer VP9 for screen content (better compression, sharper text)
+        const device = useVoiceStore.getState().device;
+        const vp9Codec = device?.rtpCapabilities.codecs?.find(
+          (c) => c.mimeType.toLowerCase() === 'video/vp9',
+        );
+
+        // Derive codec bitrate params from preset (values in kbps)
+        const maxKbps = Math.round(screenPreset.encodings[0]!.maxBitrate! / 1000);
+        const producer = await sendTransport.produce({
+          track: screenTrack,
+          encodings: screenPreset.encodings.map((e) => ({ ...e, priority: 'high' as const, networkPriority: 'high' as const })),
+          codecOptions: {
+            videoGoogleStartBitrate: Math.round(maxKbps * 0.5),
+            videoGoogleMinBitrate: Math.round(maxKbps * 0.25),
+            videoGoogleMaxBitrate: maxKbps,
+          },
+          codec: vp9Codec,
+          appData: { source: 'screen' },
+        });
         useVoiceStore.getState().setProducer('screen', producer);
         if (userId) useVoiceStore.getState().setScreenStream(userId, new MediaStream([screenTrack]));
 
+        // Produce screen audio if the stream has an audio track (tab/app audio)
+        const screenAudioTrack = stream.getAudioTracks()[0];
+        if (screenAudioTrack) {
+          const audioProducer = await sendTransport.produce({
+            track: screenAudioTrack,
+            appData: { source: 'screen-audio' },
+          });
+          useVoiceStore.getState().setProducer('screen-audio', audioProducer);
+        }
+
         // Auto-cleanup when user clicks browser's "Stop sharing"
         screenTrack.addEventListener('ended', () => {
-          const screenProducer = useVoiceStore.getState().producers.get('screen');
-          const curSid = useVoiceStore.getState().currentServerId;
+          const curState = useVoiceStore.getState();
+          const curSid = curState.currentServerId;
           const curWs = curSid ? connectionManager.getMainWs(curSid) : null;
-          if (curWs && screenProducer?.id) curWs.voiceProduceStop(screenProducer.id);
+          const screenProd = curState.producers.get('screen');
+          if (curWs && screenProd?.id) curWs.voiceProduceStop(screenProd.id);
           useVoiceStore.getState().removeProducer('screen');
+          // Also stop screen audio
+          const screenAudioProd = useVoiceStore.getState().producers.get('screen-audio');
+          if (screenAudioProd) {
+            if (curWs && screenAudioProd.id) curWs.voiceProduceStop(screenAudioProd.id);
+            useVoiceStore.getState().removeProducer('screen-audio');
+          }
           if (userId) useVoiceStore.getState().setScreenStream(userId, null);
         });
       } catch (err) {
         // User cancelled the display picker or getDisplayMedia failed
         console.error('[voice] screen share failed:', err);
       }
+    }
+  }, []);
+
+  const setVideoQuality = useCallback((quality: VideoQuality) => {
+    localStorage.setItem('ecto-video-quality', quality);
+  }, []);
+
+  const setScreenQuality = useCallback((quality: ScreenQuality) => {
+    localStorage.setItem('ecto-screen-quality', quality);
+  }, []);
+
+  /** Mute/unmute screen audio. Owner pauses producer for everyone; viewer mutes local element. */
+  const toggleScreenAudioMute = useCallback((streamUserId: string): boolean => {
+    const myUserId = useAuthStore.getState().user?.id;
+    const isOwner = streamUserId === myUserId;
+
+    if (isOwner) {
+      const producer = useVoiceStore.getState().producers.get('screen-audio');
+      if (!producer || producer.closed) return false;
+      const sid = useVoiceStore.getState().currentServerId;
+      const ws = sid ? connectionManager.getMainWs(sid) : null;
+      if (!ws) return false;
+      if (producer.paused) {
+        producer.resume();
+        ws.voiceProducerResume(producer.id);
+        return false; // now unmuted
+      } else {
+        producer.pause();
+        ws.voiceProducerPause(producer.id);
+        return true; // now muted
+      }
+    } else {
+      // Find the screen-audio consumer <audio> element for this user
+      const store = useVoiceStore.getState();
+      for (const [cid, meta] of store.consumerMeta.entries()) {
+        if (meta.userId === streamUserId && meta.source === 'screen-audio') {
+          const el = document.querySelector(`audio[data-consumer-id="${cid}"]`) as HTMLAudioElement | null;
+          if (el) {
+            el.muted = !el.muted;
+            return el.muted;
+          }
+        }
+      }
+      return false;
     }
   }, []);
 
@@ -232,6 +391,9 @@ export function useVoice() {
     switchAudioDevice,
     switchAudioOutput,
     switchVideoDevice,
+    setVideoQuality,
+    setScreenQuality,
+    toggleScreenAudioMute,
   };
 }
 
@@ -314,7 +476,11 @@ async function handleVoiceEvent(ws: ReturnType<typeof connectionManager.getMainW
         kind: d.kind as 'audio' | 'video',
         rtpParameters: d.rtpParameters as Parameters<typeof recvTransport.consume>[0]['rtpParameters'],
       });
-      useVoiceStore.getState().setConsumer(consumer.id, consumer);
+      const consumerSource = (d.source as string) ?? (consumer.kind === 'audio' ? 'mic' : 'camera');
+      useVoiceStore.getState().setConsumer(consumer.id, consumer, {
+        userId: d.user_id as string,
+        source: consumerSource,
+      });
       ws.voiceConsumerResume(consumer.id);
 
       if (consumer.kind === 'audio') {
@@ -329,9 +495,9 @@ async function handleVoiceEvent(ws: ReturnType<typeof connectionManager.getMainW
           (audio as HTMLAudioElement & { setSinkId: (id: string) => Promise<void> }).setSinkId(savedOutput).catch(() => {});
         }
         document.body.appendChild(audio);
-        // Start speaking detection for remote user
+        // Start speaking detection for remote user (skip screen audio)
         const remoteUserId = d.user_id as string;
-        if (remoteUserId) {
+        if (remoteUserId && consumerSource !== 'screen-audio') {
           const cleanup = startSpeakingDetection(audioStream, remoteUserId);
           consumerSpeakingCleanups.set(consumer.id, cleanup);
         }
