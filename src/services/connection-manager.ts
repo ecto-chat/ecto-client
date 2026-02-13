@@ -33,6 +33,7 @@ export class ConnectionManager {
   private centralWs: CentralWebSocket | null = null;
   private centralTrpc: CentralTrpcClient | null = null;
   private reconnectAttempts = new Map<string, number>();
+  private retryTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
   // Central connection
 
@@ -76,14 +77,17 @@ export class ConnectionManager {
 
   // Server connections
 
-  async connectToServer(serverId: string, address: string, token: string) {
-    useConnectionStore.getState().setStatus(serverId, 'connecting');
+  async connectToServer(serverId: string, address: string, token: string, options?: { silent?: boolean }) {
+    if (!options?.silent) {
+      useConnectionStore.getState().setStatus(serverId, 'connecting');
+    }
 
     // Always call server.join to get the real server UUID and a server token.
     // This is idempotent — existing members get a fresh token.
     const serverUrl = address.startsWith('http') ? address : `http://${address}`;
     let realServerId = serverId;
     let serverToken = token;
+    let joinFailed = false;
     try {
       const joinRes = await fetch(`${serverUrl}/trpc/server.join`, {
         method: 'POST',
@@ -96,9 +100,17 @@ export class ConnectionManager {
         };
         realServerId = joinData.result.data.server.id;
         serverToken = joinData.result.data.server_token;
+      } else {
+        joinFailed = true;
       }
     } catch {
-      // Fall through — try connecting with what we have
+      joinFailed = true;
+    }
+
+    // If the server is unreachable, mark as disconnected and bail out
+    if (joinFailed) {
+      useConnectionStore.getState().setStatus(serverId, 'disconnected');
+      throw new Error(`Server unreachable: ${address}`);
     }
 
     // If serverId changed (was an address, now a UUID), clean up the old key
@@ -146,7 +158,7 @@ export class ConnectionManager {
       }
     }
 
-    // Upgrade new → main
+    // Upgrade new → main (skip if server has no connection, i.e. offline)
     const newConn = this.connections.get(newServerId);
     if (newConn) {
       if (newConn.notifyWs) {
@@ -195,6 +207,7 @@ export class ConnectionManager {
     this.centralWs = null;
     this.centralTrpc = null;
     this.activeServerId = null;
+    this.stopAllRetries();
   }
 
   // Private: open Main WS
@@ -209,7 +222,31 @@ export class ConnectionManager {
         useConnectionStore.getState().setStatus(conn.serverId, 'disconnected');
         return;
       }
-      this.scheduleReconnect(conn.serverId, async () => {
+      const reconnect = async () => {
+        // Probe with HTTP first to avoid noisy browser WebSocket error logs
+        try {
+          await fetch(conn.address, { method: 'HEAD' });
+        } catch {
+          // Server still down — skip WS attempt entirely
+          const attempts = this.reconnectAttempts.get(conn.serverId) ?? 0;
+          if (attempts >= 3) {
+            // Transition to disconnected + 5s HTTP retry
+            useConnectionStore.getState().setStatus(conn.serverId, 'disconnected');
+            conn.mainWs = null;
+            this.reconnectAttempts.delete(conn.serverId);
+            this.startServerRetry(conn.address, (realId) => {
+              if (this.activeServerId === conn.serverId || this.activeServerId === realId) {
+                useUiStore.getState().setActiveServer(realId);
+                this.switchServer(realId).catch(() => {});
+              }
+            });
+          } else {
+            this.scheduleReconnect(conn.serverId, reconnect);
+          }
+          return;
+        }
+
+        // Server responded to HTTP — try WS reconnect
         try {
           if (!ws.isInvalidSequence(code) && ws.lastSeq > 0) {
             await ws.resume(conn.address, conn.token, ws.lastSeq);
@@ -219,9 +256,10 @@ export class ConnectionManager {
           useConnectionStore.getState().setStatus(conn.serverId, 'connected');
           this.reconnectAttempts.delete(conn.serverId);
         } catch {
-          // scheduleReconnect will retry
+          this.scheduleReconnect(conn.serverId, reconnect);
         }
-      });
+      };
+      this.scheduleReconnect(conn.serverId, reconnect);
     };
 
     try {
@@ -498,6 +536,61 @@ export class ConnectionManager {
         { serverId, channelId: d.channel_id as string },
       );
     }
+  }
+
+  // Server auto-retry for disconnected servers
+
+  startServerRetry(
+    address: string,
+    onReconnected: (realServerId: string) => void,
+  ): void {
+    if (this.retryTimers.has(address)) return;
+
+    const serverUrl = address.startsWith('http') ? address : `http://${address}`;
+    let connecting = false;
+
+    // Use setInterval for flat stack traces (chained setTimeout produces growing async traces)
+    const intervalId = setInterval(() => {
+      if (connecting) return; // Skip if previous attempt still in progress
+
+      const token = useAuthStore.getState().getToken();
+      if (!token) {
+        clearInterval(intervalId);
+        this.retryTimers.delete(address);
+        return;
+      }
+
+      connecting = true;
+      // Lightweight probe — connection refused fails instantly, any HTTP response means server is up
+      fetch(serverUrl, { method: 'HEAD' }).then(() => {
+        // Server responded — stop polling, do full connect
+        clearInterval(intervalId);
+        this.retryTimers.delete(address);
+        return this.connectToServer(address, address, token, { silent: true });
+      }).then((realId) => {
+        if (realId) onReconnected(realId);
+      }).catch(() => {
+        // Still down or connect failed — interval will fire again
+        connecting = false;
+      });
+    }, 5000);
+
+    this.retryTimers.set(address, intervalId);
+  }
+
+  stopServerRetry(address: string): void {
+    const timer = this.retryTimers.get(address);
+    if (timer) {
+      clearInterval(timer);
+      this.retryTimers.delete(address);
+    }
+  }
+
+  private stopAllRetries(): void {
+    for (const timer of this.retryTimers.values()) {
+      clearInterval(timer);
+    }
+    this.retryTimers.clear();
   }
 
   // Reconnection

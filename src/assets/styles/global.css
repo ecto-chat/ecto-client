@@ -306,6 +306,46 @@ a:hover {
   color: #fff;
 }
 
+.server-icon.offline {
+  opacity: 0.5;
+}
+.server-icon.offline:hover {
+  opacity: 0.7;
+}
+.server-offline-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+}
+
+.server-offline-view {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-muted);
+  gap: 12px;
+  text-align: center;
+  padding: 24px;
+}
+.server-offline-view-icon {
+  color: var(--text-muted);
+  opacity: 0.6;
+}
+.server-offline-view h2 {
+  color: var(--text-primary);
+  font-size: 20px;
+  font-weight: 600;
+  margin: 0;
+}
+.server-offline-view p {
+  color: var(--text-muted);
+  font-size: 14px;
+  margin: 0;
+}
+
 /* ══════════════════════════════
    CHANNEL SIDEBAR
    ══════════════════════════════ */

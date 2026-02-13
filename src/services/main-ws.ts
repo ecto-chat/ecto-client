@@ -94,8 +94,10 @@ export class MainWebSocket {
         this.stopHeartbeat();
         if (!identified) {
           reject(new Error(`Connection closed: ${event.code} ${event.reason}`));
+        } else {
+          // Only fire onDisconnect for established connections — not failed connect attempts
+          this.onDisconnect?.(event.code, event.reason);
         }
-        this.onDisconnect?.(event.code, event.reason);
       };
 
       this.ws.onerror = () => {
@@ -162,8 +164,9 @@ export class MainWebSocket {
         this.stopHeartbeat();
         if (!resumed) {
           reject(new Error(`Resume closed: ${event.code}`));
+        } else {
+          this.onDisconnect?.(event.code, event.reason);
         }
-        this.onDisconnect?.(event.code, event.reason);
       };
 
       this.ws.onerror = () => {};

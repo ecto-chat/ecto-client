@@ -3,6 +3,7 @@ import { useServerStore } from '../../stores/server.js';
 import { useUiStore } from '../../stores/ui.js';
 import { useNotifyStore } from '../../stores/notify.js';
 import { useReadStateStore } from '../../stores/read-state.js';
+import { useConnectionStore } from '../../stores/connection.js';
 import { connectionManager } from '../../services/connection-manager.js';
 import { Avatar } from '../common/Avatar.js';
 
@@ -12,6 +13,7 @@ export function ServerSidebar() {
   const activeServerId = useUiStore((s) => s.activeServerId);
   const notifications = useNotifyStore((s) => s.notifications);
   const mentionCounts = useReadStateStore((s) => s.mentionCounts);
+  const connections = useConnectionStore((s) => s.connections);
   const navigate = useNavigate();
 
   const handleHomeClick = () => {
@@ -22,6 +24,7 @@ export function ServerSidebar() {
 
   const handleServerClick = (serverId: string) => {
     useUiStore.getState().setActiveServer(serverId);
+    useUiStore.getState().setActiveChannel(null);
     connectionManager.switchServer(serverId).catch(() => {});
     navigate(`/servers/${serverId}/channels`);
   };
@@ -65,20 +68,31 @@ export function ServerSidebar() {
         if (!server) return null;
         const isActive = activeServerId === serverId;
         const hasUnread = getServerUnread(serverId);
+        const status = connections.get(serverId);
+        const isOffline = !status || status === 'disconnected';
 
         return (
           <div key={serverId} className="server-icon-wrapper">
             {hasUnread && !isActive && <div className="server-unread-dot" />}
             <div
-              className={`server-icon ${isActive ? 'active' : ''}`}
+              className={`server-icon ${isActive ? 'active' : ''} ${isOffline ? 'offline' : ''}`}
               onClick={() => handleServerClick(serverId)}
-              title={server.server_name ?? serverId}
+              title={isOffline ? `${server.server_name ?? serverId} (Offline)` : server.server_name ?? serverId}
             >
-              <Avatar
-                src={server.server_icon ?? undefined}
-                username={server.server_name ?? serverId}
-                size={48}
-              />
+              {isOffline ? (
+                <div className="server-offline-icon" title="Server Offline">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                    <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4C9.11 4 6.6 5.64 5.35 8.04C2.34 8.36 0 10.91 0 14C0 17.31 2.69 20 6 20H19C21.76 20 24 17.76 24 15C24 12.36 21.95 10.22 19.35 10.04Z" fill="currentColor" opacity="0.3"/>
+                    <line x1="4" y1="4" x2="20" y2="20" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                  </svg>
+                </div>
+              ) : (
+                <Avatar
+                  src={server.server_icon ?? undefined}
+                  username={server.server_name ?? serverId}
+                  size={48}
+                />
+              )}
             </div>
           </div>
         );
