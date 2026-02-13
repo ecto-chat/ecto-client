@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { DMConversation, DirectMessage } from 'ecto-shared';
+import type { DMConversation, DirectMessage, ReactionGroup } from 'ecto-shared';
 
 interface DmStore {
   conversations: Map<string, DMConversation>;
@@ -15,6 +15,9 @@ interface DmStore {
   openConversation: (userId: string) => void;
   closeConversation: () => void;
   setTyping: (userId: string) => void;
+  clearExpiredTyping: () => void;
+  updateMessage: (peerId: string, messageId: string, updates: Partial<DirectMessage>) => void;
+  updateReactions: (peerId: string, messageId: string, reactions: ReactionGroup[]) => void;
   ensureConversation: (userId: string, message: DirectMessage) => void;
   updateConversation: (userId: string, updates: Partial<DMConversation>) => void;
 }
@@ -82,6 +85,44 @@ export const useDmStore = create<DmStore>()((set) => ({
       const typingUsers = new Map(state.typingUsers);
       typingUsers.set(userId, Date.now());
       return { typingUsers };
+    }),
+
+  clearExpiredTyping: () =>
+    set((state) => {
+      const now = Date.now();
+      const typingUsers = new Map(state.typingUsers);
+      let changed = false;
+      for (const [userId, ts] of typingUsers) {
+        if (now - ts > 8000) {
+          typingUsers.delete(userId);
+          changed = true;
+        }
+      }
+      return changed ? { typingUsers } : state;
+    }),
+
+  updateMessage: (peerId, messageId, updates) =>
+    set((state) => {
+      const userMessages = state.messages.get(peerId);
+      const msg = userMessages?.get(messageId);
+      if (!msg) return state;
+      const messages = new Map(state.messages);
+      const updated = new Map(userMessages);
+      updated.set(messageId, { ...msg, ...updates });
+      messages.set(peerId, updated);
+      return { messages };
+    }),
+
+  updateReactions: (peerId, messageId, reactions) =>
+    set((state) => {
+      const userMessages = state.messages.get(peerId);
+      const msg = userMessages?.get(messageId);
+      if (!msg) return state;
+      const messages = new Map(state.messages);
+      const updated = new Map(userMessages);
+      updated.set(messageId, { ...msg, reactions });
+      messages.set(peerId, updated);
+      return { messages };
     }),
 
   ensureConversation: (userId, message) =>

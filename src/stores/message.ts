@@ -18,8 +18,10 @@ interface MessageStore {
   updateMessage: (channelId: string, update: { id: string; content?: string; edited_at?: string; pinned?: boolean }) => void;
   deleteMessage: (channelId: string, messageId: string) => void;
   updateReaction: (channelId: string, messageId: string, emoji: string, userId: string, action: 'add' | 'remove', count: number) => void;
+  replaceMessage: (channelId: string, tempId: string, real: Message) => void;
   clearChannel: (channelId: string) => void;
   setTyping: (channelId: string, userId: string) => void;
+  clearTyping: (channelId: string, userId: string) => void;
   clearExpiredTyping: () => void;
 }
 
@@ -128,6 +130,26 @@ export const useMessageStore = create<MessageStore>()((set) => ({
       return { messages };
     }),
 
+  replaceMessage: (channelId, tempId, real) =>
+    set((state) => {
+      const channelMessages = state.messages.get(channelId);
+      if (!channelMessages?.has(tempId)) return state;
+      const messages = new Map(state.messages);
+      const messageOrder = new Map(state.messageOrder);
+      const updated = new Map(channelMessages);
+      updated.delete(tempId);
+      updated.set(real.id, real);
+      messages.set(channelId, updated);
+      const order = messageOrder.get(channelId) ?? [];
+      if (order.includes(real.id)) {
+        // WS echo arrived first — real ID already in order, just remove temp
+        messageOrder.set(channelId, order.filter((id) => id !== tempId));
+      } else {
+        messageOrder.set(channelId, order.map((id) => (id === tempId ? real.id : id)));
+      }
+      return { messages, messageOrder };
+    }),
+
   clearChannel: (channelId) =>
     set((state) => {
       const messages = new Map(state.messages);
@@ -147,6 +169,17 @@ export const useMessageStore = create<MessageStore>()((set) => ({
       const channelTyping = new Map(typingUsers.get(channelId) ?? new Map());
       channelTyping.set(userId, Date.now());
       typingUsers.set(channelId, channelTyping);
+      return { typingUsers };
+    }),
+
+  clearTyping: (channelId, userId) =>
+    set((state) => {
+      const channelTyping = state.typingUsers.get(channelId);
+      if (!channelTyping?.has(userId)) return state;
+      const typingUsers = new Map(state.typingUsers);
+      const updated = new Map(channelTyping);
+      updated.delete(userId);
+      typingUsers.set(channelId, updated);
       return { typingUsers };
     }),
 

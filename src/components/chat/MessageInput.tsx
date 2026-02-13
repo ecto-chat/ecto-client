@@ -19,6 +19,10 @@ export function MessageInput({ channelId, serverId, onSend, replyTo, onCancelRep
     const text = content.trim();
     if (!text && !replyTo) return;
 
+    // Send typing.stop immediately so other users see indicator disappear
+    const ws = connectionManager.getMainWs(serverId);
+    ws?.send('typing.stop', { channel_id: channelId });
+
     try {
       await onSend(text, replyTo?.id);
       setContent('');
@@ -29,7 +33,7 @@ export function MessageInput({ channelId, serverId, onSend, replyTo, onCancelRep
     } catch {
       // Error handling done in hook
     }
-  }, [content, replyTo, onSend, onCancelReply]);
+  }, [content, replyTo, onSend, onCancelReply, channelId, serverId]);
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {

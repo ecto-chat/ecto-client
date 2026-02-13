@@ -1,7 +1,11 @@
 import { useCallback } from 'react';
+import { generateUUIDv7 } from 'ecto-shared';
+import type { Message } from 'ecto-shared';
 import { useMessageStore } from '../stores/message.js';
 import { useReadStateStore } from '../stores/read-state.js';
 import { useUiStore } from '../stores/ui.js';
+import { useAuthStore } from '../stores/auth.js';
+import { useMemberStore } from '../stores/member.js';
 import { connectionManager } from '../services/connection-manager.js';
 
 export function useMessages(channelId: string) {
@@ -39,13 +43,55 @@ export function useMessages(channelId: string) {
       if (!serverId) return;
       const trpc = connectionManager.getServerTrpc(serverId);
       if (!trpc) return;
-      await trpc.messages.send.mutate({
-        channel_id: channelId,
-        content: content || undefined,
-        reply_to: replyTo,
-        attachment_ids: attachmentIds,
-      });
-      // Message will arrive via WS event
+
+      // Build optimistic message
+      const tempId = generateUUIDv7();
+      const user = useAuthStore.getState().user;
+      const member = user ? useMemberStore.getState().members.get(serverId)?.get(user.id) : undefined;
+      if (user) {
+        const optimistic: Message = {
+          id: tempId,
+          channel_id: channelId,
+          author: {
+            id: user.id,
+            username: user.username,
+            display_name: user.display_name,
+            avatar_url: user.avatar_url,
+            nickname: member?.nickname ?? null,
+          },
+          content: content || null,
+          type: 0,
+          reply_to: replyTo ?? null,
+          pinned: false,
+          mention_everyone: false,
+          mention_roles: [],
+          mentions: [],
+          edited_at: null,
+          created_at: new Date().toISOString(),
+          attachments: [],
+          reactions: [],
+        };
+        useMessageStore.getState().addMessage(channelId, optimistic);
+      }
+
+      try {
+        const real = await trpc.messages.send.mutate({
+          channel_id: channelId,
+          content: content || undefined,
+          reply_to: replyTo,
+          attachment_ids: attachmentIds,
+        });
+        // Replace optimistic message with real one; WS echo dedup handles itself
+        if (real && user) {
+          // Remove temp, real message arrives via WS echo (addMessage dedup)
+          useMessageStore.getState().replaceMessage(channelId, tempId, real as Message);
+        }
+      } catch {
+        // Remove optimistic message on failure
+        if (user) {
+          useMessageStore.getState().deleteMessage(channelId, tempId);
+        }
+      }
     },
     [channelId],
   );
@@ -78,7 +124,32 @@ export function useMessages(channelId: string) {
       const msg = useMessageStore.getState().messages.get(channelId)?.get(messageId);
       const existingReaction = msg?.reactions.find((r) => r.emoji === emoji);
       const action = existingReaction?.me ? 'remove' : 'add';
-      await trpc.messages.react.mutate({ message_id: messageId, emoji, action });
+      const userId = useAuthStore.getState().user?.id;
+
+      // Optimistic update
+      if (userId) {
+        useMessageStore.getState().updateReaction(
+          channelId, messageId, emoji, userId, action,
+          action === 'add'
+            ? (existingReaction?.count ?? 0) + 1
+            : Math.max((existingReaction?.count ?? 1) - 1, 0),
+        );
+      }
+
+      try {
+        await trpc.messages.react.mutate({ message_id: messageId, emoji, action });
+      } catch {
+        // Revert on failure
+        if (userId) {
+          const revertAction = action === 'add' ? 'remove' : 'add';
+          useMessageStore.getState().updateReaction(
+            channelId, messageId, emoji, userId, revertAction,
+            revertAction === 'add'
+              ? (existingReaction?.count ?? 0)
+              : Math.max((existingReaction?.count ?? 1), 0),
+          );
+        }
+      }
     },
     [channelId],
   );

@@ -447,6 +447,18 @@ export interface CentralRouter {
         last_read_message_id: string;
       }) => Promise<{ success: boolean }>;
     };
+    edit: {
+      mutate: (input: {
+        message_id: string;
+        content: string;
+      }) => Promise<DirectMessage>;
+    };
+    react: {
+      mutate: (input: {
+        message_id: string;
+        emoji: string;
+      }) => Promise<{ reactions: ReactionGroup[] }>;
+    };
   };
 
   servers: {

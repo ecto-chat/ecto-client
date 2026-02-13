@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, useLocation } from 'react-router-dom';
 import { ServerSidebar } from './ServerSidebar.js';
 import { ChannelSidebar } from './ChannelSidebar.js';
 import { MemberList } from './MemberList.js';
@@ -74,7 +74,9 @@ export function AppLayout() {
   }, []);
 
   // Determine whether we're in DM/friends mode or server mode
-  const isHomeMode = activeServerId === null;
+  const location = useLocation();
+  const isHomeRoute = location.pathname.startsWith('/dms') || location.pathname.startsWith('/friends');
+  const isHomeMode = isHomeRoute || activeServerId === null;
 
   return (
     <div className="app-layout">

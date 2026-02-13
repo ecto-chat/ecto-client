@@ -12,6 +12,7 @@ interface MessageItemProps {
   onReact: (messageId: string, emoji: string) => Promise<void>;
   onPin: (messageId: string) => Promise<void>;
   readOnly?: boolean;
+  reactOnly?: boolean;
 }
 
 function resolveFileUrl(relativeUrl: string): string {
@@ -23,7 +24,7 @@ function resolveFileUrl(relativeUrl: string): string {
   return `${conn.address}${relativeUrl}`;
 }
 
-export function MessageItem({ message, onEdit, onDelete, onReact, onPin, readOnly }: MessageItemProps) {
+export function MessageItem({ message, onEdit, onDelete, onReact, onPin, readOnly, reactOnly }: MessageItemProps) {
   const [editing, setEditing] = useState(false);
   const [editContent, setEditContent] = useState(message.content ?? '');
   const [hovering, setHovering] = useState(false);
@@ -161,15 +162,17 @@ export function MessageItem({ message, onEdit, onDelete, onReact, onPin, readOnl
               {emoji}
             </button>
           ))}
-          <button className="toolbar-btn" onClick={() => onPin(message.id)} title={message.pinned ? 'Unpin' : 'Pin'}>
-            &#128204;
-          </button>
+          {!reactOnly && (
+            <button className="toolbar-btn" onClick={() => onPin(message.id)} title={message.pinned ? 'Unpin' : 'Pin'}>
+              &#128204;
+            </button>
+          )}
           {isOwn && (
             <button className="toolbar-btn" onClick={() => { setEditing(true); setEditContent(message.content ?? ''); }} title="Edit">
               &#9998;
             </button>
           )}
-          {isOwn && (
+          {!reactOnly && isOwn && (
             <button className="toolbar-btn danger" onClick={() => onDelete(message.id)} title="Delete">
               &#128465;
             </button>

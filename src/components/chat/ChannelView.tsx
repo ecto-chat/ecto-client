@@ -6,6 +6,7 @@ import { TypingIndicator } from './TypingIndicator.js';
 import { VoiceView } from '../voice/VoiceView.js';
 import { useMessages } from '../../hooks/useMessages.js';
 import { useChannels } from '../../hooks/useChannels.js';
+import { useMessageStore } from '../../stores/message.js';
 import { useUiStore } from '../../stores/ui.js';
 import { useChannelStore } from '../../stores/channel.js';
 
@@ -54,6 +55,14 @@ export function ChannelView() {
       initialLoadDone.current = false;
     };
   }, [channelId]);
+
+  // Periodically clear expired typing indicators
+  useEffect(() => {
+    const timer = setInterval(() => {
+      useMessageStore.getState().clearExpiredTyping();
+    }, 2000);
+    return () => clearInterval(timer);
+  }, []);
 
   if (!channelId || !channel) {
     return <div className="channel-view-empty">Select a channel</div>;

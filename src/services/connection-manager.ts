@@ -349,6 +349,10 @@ export class ConnectionManager {
         useMessageStore.getState().setTyping(d.channel_id as string, d.user_id as string);
         break;
 
+      case 'typing.stop':
+        useMessageStore.getState().clearTyping(d.channel_id as string, d.user_id as string);
+        break;
+
       case 'channel.create':
         useChannelStore.getState().addChannel(serverId, d as unknown as Channel);
         break;
@@ -452,6 +456,27 @@ export class ConnectionManager {
       case 'dm.typing':
         useDmStore.getState().setTyping(d.user_id as string);
         break;
+
+      case 'dm.message_update': {
+        const updatedMsg = d as unknown as DirectMessage;
+        const myId = useAuthStore.getState().user?.id;
+        const peerId = updatedMsg.sender_id === myId ? updatedMsg.recipient_id : updatedMsg.sender_id;
+        useDmStore.getState().updateMessage(peerId, updatedMsg.id, updatedMsg);
+        break;
+      }
+
+      case 'dm.reaction_update': {
+        const messageId = d.message_id as string;
+        const reactions = d.reactions as import('ecto-shared').ReactionGroup[];
+        // Find which peer conversation this message belongs to
+        for (const [peerId, msgs] of useDmStore.getState().messages) {
+          if (msgs.has(messageId)) {
+            useDmStore.getState().updateReactions(peerId, messageId, reactions);
+            break;
+          }
+        }
+        break;
+      }
     }
   }
 
