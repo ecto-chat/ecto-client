@@ -7,6 +7,7 @@ import { useAuthStore } from '../../stores/auth.js';
 import { useMemberStore } from '../../stores/member.js';
 import { useFriendStore } from '../../stores/friend.js';
 import { usePresence } from '../../hooks/usePresence.js';
+import { useCall } from '../../hooks/useCall.js';
 import { connectionManager } from '../../services/connection-manager.js';
 import type { Role } from 'ecto-shared';
 
@@ -46,6 +47,7 @@ function UserProfileContent({ data, onClose }: { data: ModalData; onClose: () =>
   const pendingOutgoing = useFriendStore((s) => s.pendingOutgoing);
   const blocked = useFriendStore((s) => s.blocked);
 
+  const { startCall } = useCall();
   const [roles, setRoles] = useState<Role[]>([]);
   const [requestSent, setRequestSent] = useState(false);
   const [error, setError] = useState('');
@@ -242,6 +244,12 @@ function UserProfileContent({ data, onClose }: { data: ModalData; onClose: () =>
         <div className="user-profile-actions">
           {isFriend && (
             <>
+              <button className="auth-button" onClick={() => { onClose(); startCall(userId, ['audio']); }}>
+                Call
+              </button>
+              <button className="auth-button" onClick={() => { onClose(); startCall(userId, ['audio', 'video']); }}>
+                Video Call
+              </button>
               <button className="auth-button" onClick={handleSendMessage}>
                 Send Message
               </button>

@@ -481,6 +481,19 @@ export interface CentralRouter {
       }) => Promise<{ success: boolean }>;
     };
   };
+
+  calls: {
+    history: {
+      query: (input: {
+        filter?: 'all' | 'missed' | 'incoming' | 'outgoing';
+        cursor?: string;
+        limit?: number;
+      }) => Promise<{ records: import('ecto-shared').CallRecord[]; has_more: boolean }>;
+    };
+    delete: {
+      mutate: (input: { call_record_id: string }) => Promise<{ success: boolean }>;
+    };
+  };
 }
 
 // ---------- tRPC Client Types ----------

@@ -4,9 +4,11 @@ import { useFriendStore } from '../../stores/friend.js';
 import { usePresenceStore } from '../../stores/presence.js';
 import { connectionManager } from '../../services/connection-manager.js';
 import { Avatar } from '../common/Avatar.js';
+import { CallHistory } from '../call/CallHistory.js';
+import { useCall } from '../../hooks/useCall.js';
 import type { PresenceStatus } from 'ecto-shared';
 
-type Tab = 'online' | 'all' | 'pending' | 'blocked' | 'add';
+type Tab = 'online' | 'all' | 'pending' | 'blocked' | 'calls' | 'add';
 
 export function FriendList() {
   const [activeTab, setActiveTab] = useState<Tab>('online');
@@ -16,6 +18,7 @@ export function FriendList() {
   const blocked = useFriendStore((s) => s.blocked);
   const presences = usePresenceStore((s) => s.presences);
   const navigate = useNavigate();
+  const { startCall } = useCall();
 
   const friendList = [...friends.values()];
   const onlineFriends = friendList.filter((f) => {
@@ -70,11 +73,16 @@ export function FriendList() {
     useFriendStore.getState().removeRequest(requestId);
   }, []);
 
+  const handleCall = useCallback((userId: string) => {
+    startCall(userId, ['audio']);
+  }, [startCall]);
+
   const tabs: { id: Tab; label: string; count?: number }[] = [
     { id: 'online', label: 'Online', count: onlineFriends.length },
     { id: 'all', label: 'All', count: friendList.length },
     { id: 'pending', label: 'Pending', count: pendingIncoming.size + pendingOutgoing.size },
     { id: 'blocked', label: 'Blocked', count: blocked.size },
+    { id: 'calls', label: 'Calls' },
     { id: 'add', label: 'Add Friend' },
   ];
 
@@ -108,6 +116,7 @@ export function FriendList() {
               avatarUrl={f.avatar_url}
               status={(presences.get(f.user_id)?.status ?? 'offline') as PresenceStatus}
               onMessage={handleMessage}
+              onCall={handleCall}
               onRemove={handleRemove}
               onBlock={handleBlock}
             />
@@ -122,6 +131,7 @@ export function FriendList() {
               avatarUrl={f.avatar_url}
               status={(presences.get(f.user_id)?.status ?? 'offline') as PresenceStatus}
               onMessage={handleMessage}
+              onCall={handleCall}
               onRemove={handleRemove}
               onBlock={handleBlock}
             />
@@ -160,6 +170,8 @@ export function FriendList() {
           </>
         )}
 
+        {activeTab === 'calls' && <CallHistory />}
+
         {activeTab === 'blocked' && (
           <>
             {[...blocked].map((userId) => (
@@ -187,6 +199,7 @@ function FriendRow({
   avatarUrl,
   status,
   onMessage,
+  onCall,
   onRemove,
   onBlock,
 }: {
@@ -195,6 +208,7 @@ function FriendRow({
   avatarUrl?: string | null;
   status: PresenceStatus;
   onMessage: (userId: string) => void;
+  onCall: (userId: string) => void;
   onRemove: (userId: string) => Promise<void>;
   onBlock: (userId: string) => Promise<void>;
 }) {
@@ -208,6 +222,9 @@ function FriendRow({
       <div className="friend-actions">
         <button className="icon-btn" onClick={() => onMessage(userId)} title="Message">
           &#128172;
+        </button>
+        <button className="icon-btn" onClick={() => onCall(userId)} title="Call">
+          &#128222;
         </button>
         <button className="icon-btn" onClick={() => onRemove(userId)} title="Remove">
           &times;

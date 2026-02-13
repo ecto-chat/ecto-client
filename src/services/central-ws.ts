@@ -92,6 +92,51 @@ export class CentralWebSocket {
     this.send('dm.typing', { recipient_id: recipientId });
   }
 
+  // Call helpers
+  callInvite(targetUserId: string, mediaTypes: ('audio' | 'video')[]) {
+    this.send('call.invite', { target_user_id: targetUserId, media_types: mediaTypes });
+  }
+
+  callAnswer(callId: string) {
+    this.send('call.answer', { call_id: callId });
+  }
+
+  callReject(callId: string) {
+    this.send('call.reject', { call_id: callId });
+  }
+
+  callEnd(callId: string) {
+    this.send('call.end', { call_id: callId });
+  }
+
+  callConnectTransport(callId: string, transportId: string, dtlsParameters: unknown) {
+    this.send('call.connect_transport', { call_id: callId, transport_id: transportId, dtls_parameters: dtlsParameters });
+  }
+
+  callProduce(callId: string, transportId: string, kind: 'audio' | 'video', rtpParameters: unknown, rtpCapabilities?: unknown) {
+    this.send('call.produce', { call_id: callId, transport_id: transportId, kind, rtp_parameters: rtpParameters, rtpCapabilities });
+  }
+
+  callProduceStop(callId: string, producerId: string) {
+    this.send('call.produce_stop', { call_id: callId, producer_id: producerId });
+  }
+
+  callProducerPause(callId: string, producerId: string) {
+    this.send('call.producer_pause', { call_id: callId, producer_id: producerId });
+  }
+
+  callProducerResume(callId: string, producerId: string) {
+    this.send('call.producer_resume', { call_id: callId, producer_id: producerId });
+  }
+
+  callConsumerResume(callId: string, consumerId: string) {
+    this.send('call.consumer_resume', { call_id: callId, consumer_id: consumerId });
+  }
+
+  callMuteUpdate(callId: string, selfMute: boolean, selfDeaf: boolean, videoEnabled: boolean) {
+    this.send('call.mute_update', { call_id: callId, self_mute: selfMute, self_deaf: selfDeaf, video_enabled: videoEnabled });
+  }
+
   disconnect() {
     this.cleanup();
   }

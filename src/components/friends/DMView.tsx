@@ -6,6 +6,7 @@ import { useDmStore } from '../../stores/dm.js';
 import { useFriendStore } from '../../stores/friend.js';
 import { usePresence } from '../../hooks/usePresence.js';
 import { useAuthStore } from '../../stores/auth.js';
+import { useCall } from '../../hooks/useCall.js';
 import { connectionManager } from '../../services/connection-manager.js';
 import { Avatar } from '../common/Avatar.js';
 import { generateUUIDv7 } from 'ecto-shared';
@@ -40,6 +41,7 @@ export function DMView() {
   const { status } = usePresence(userId ?? '');
   const currentUserId = useAuthStore((s) => s.user?.id);
 
+  const { startCall } = useCall();
   const [content, setContent] = useState('');
   const [hasMore, setHasMore] = useState(true);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -260,6 +262,22 @@ export function DMView() {
       <div className="channel-header">
         <Avatar src={friend?.avatar_url} username={username} size={28} status={status} />
         <span className="channel-header-name" style={{ marginLeft: 8 }}>{username}</span>
+        <div className="channel-header-actions" style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+          <button
+            className="icon-btn"
+            onClick={() => userId && startCall(userId, ['audio'])}
+            title="Voice Call"
+          >
+            &#128222;
+          </button>
+          <button
+            className="icon-btn"
+            onClick={() => userId && startCall(userId, ['audio', 'video'])}
+            title="Video Call"
+          >
+            &#127909;
+          </button>
+        </div>
       </div>
 
       <MessageList

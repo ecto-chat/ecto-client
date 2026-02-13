@@ -16,6 +16,7 @@ import { useFriendStore } from '../stores/friend.js';
 import { useDmStore } from '../stores/dm.js';
 import { useAuthStore } from '../stores/auth.js';
 import { useUiStore } from '../stores/ui.js';
+import { handleCallWsEvent } from '../hooks/useCall.js';
 
 interface ServerConnection {
   address: string;
@@ -477,6 +478,13 @@ export class ConnectionManager {
         }
         break;
       }
+
+      default:
+        // Route call.* events to call handler
+        if (event.startsWith('call.')) {
+          handleCallWsEvent(event, data);
+        }
+        break;
     }
   }
 

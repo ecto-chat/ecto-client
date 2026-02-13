@@ -17,6 +17,10 @@ import { connectionManager } from '../../services/connection-manager.js';
 import { useNotifications } from '../../hooks/useNotifications.js';
 import { AddServerModal } from '../servers/AddServerModal.js';
 import { UserProfileModal } from '../user/UserProfileModal.js';
+import { IncomingCallOverlay } from '../call/IncomingCallOverlay.js';
+import { ActiveCallOverlay } from '../call/ActiveCallOverlay.js';
+import { CallBanner } from '../call/CallBanner.js';
+import { useCallStore } from '../../stores/call.js';
 
 export function AppLayout() {
   const activeServerId = useUiStore((s) => s.activeServerId);
@@ -24,6 +28,7 @@ export function AppLayout() {
   const sidebarCollapsed = useUiStore((s) => s.sidebarCollapsed);
   const voiceServerId = useVoiceStore((s) => s.currentServerId);
   const showVoiceBanner = voiceServerId !== null && voiceServerId !== activeServerId;
+  const callState = useCallStore((s) => s.callState);
 
   useNotifications();
 
@@ -91,6 +96,7 @@ export function AppLayout() {
 
       <main className="main-content">
         {showVoiceBanner && <VoiceBanner />}
+        {callState === 'active' && <CallBanner />}
         <Routes>
           <Route path="friends" element={<FriendList />} />
           <Route path="dms/:userId" element={<DMView />} />
@@ -108,6 +114,8 @@ export function AppLayout() {
 
       <AddServerModal />
       <UserProfileModal />
+      <IncomingCallOverlay />
+      <ActiveCallOverlay />
     </div>
   );
 }
