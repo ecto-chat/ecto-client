@@ -1,68 +1,17 @@
 import { useCallback } from 'react';
-import { Device, type types as mediasoupTypes } from 'mediasoup-client';
+import { Device } from 'mediasoup-client';
 import { useVoiceStore } from '../stores/voice.js';
 import { useAuthStore } from '../stores/auth.js';
 import { connectionManager } from '../services/connection-manager.js';
-
-export type VideoQuality = 'low' | 'medium' | 'high' | 'source';
-export type ScreenQuality = 'low' | 'medium' | 'high' | 'source';
-
-const CAMERA_PRESETS: Record<VideoQuality, {
-  constraints: MediaTrackConstraints;
-  encodings: mediasoupTypes.RtpEncodingParameters[];
-}> = {
-  low: {
-    constraints: { width: { ideal: 640 }, height: { ideal: 360 }, frameRate: { ideal: 15 } },
-    encodings: [{ maxBitrate: 500_000, maxFramerate: 15 }],
-  },
-  medium: {
-    constraints: { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } },
-    encodings: [{ maxBitrate: 2_500_000, maxFramerate: 30 }],
-  },
-  high: {
-    constraints: { width: { ideal: 1920 }, height: { ideal: 1080 }, frameRate: { ideal: 30 } },
-    encodings: [{ maxBitrate: 6_000_000, maxFramerate: 30 }],
-  },
-  source: {
-    constraints: { width: { ideal: 1920 }, height: { ideal: 1080 }, frameRate: { ideal: 60 } },
-    encodings: [{ maxBitrate: 12_000_000, maxFramerate: 60 }],
-  },
-};
-
-const SCREEN_PRESETS: Record<ScreenQuality, {
-  constraints: DisplayMediaStreamOptions;
-  encodings: mediasoupTypes.RtpEncodingParameters[];
-  contentHint: 'detail' | 'motion';
-}> = {
-  low: {
-    constraints: { video: { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 10 } }, audio: true },
-    encodings: [{ maxBitrate: 1_500_000, maxFramerate: 10 }],
-    contentHint: 'detail',
-  },
-  medium: {
-    constraints: { video: { width: { ideal: 1920 }, height: { ideal: 1080 }, frameRate: { ideal: 30 } }, audio: true },
-    encodings: [{ maxBitrate: 5_000_000, maxFramerate: 30 }],
-    contentHint: 'detail',
-  },
-  high: {
-    constraints: { video: { width: { ideal: 1920 }, height: { ideal: 1080 }, frameRate: { ideal: 60 } }, audio: true },
-    encodings: [{ maxBitrate: 10_000_000, maxFramerate: 60 }],
-    contentHint: 'motion',
-  },
-  source: {
-    constraints: { video: { width: { ideal: 1920 }, height: { ideal: 1080 }, frameRate: { ideal: 60 } }, audio: true },
-    encodings: [{ maxBitrate: 15_000_000, maxFramerate: 60 }],
-    contentHint: 'motion',
-  },
-};
-
-function getVideoQuality(): VideoQuality {
-  return (localStorage.getItem('ecto-video-quality') as VideoQuality) || 'medium';
-}
-
-function getScreenQuality(): ScreenQuality {
-  return (localStorage.getItem('ecto-screen-quality') as ScreenQuality) || 'high';
-}
+import {
+  CAMERA_PRESETS,
+  SCREEN_PRESETS,
+  getVideoQuality,
+  getScreenQuality,
+  setVideoQuality,
+  setScreenQuality,
+} from '../lib/media-presets.js';
+export type { VideoQuality, ScreenQuality } from '../lib/media-presets.js';
 
 let speakingCleanup: (() => void) | null = null;
 let voiceEventQueue: Promise<void> = Promise.resolve();
@@ -329,13 +278,7 @@ export function useVoice() {
     }
   }, []);
 
-  const setVideoQuality = useCallback((quality: VideoQuality) => {
-    localStorage.setItem('ecto-video-quality', quality);
-  }, []);
-
-  const setScreenQuality = useCallback((quality: ScreenQuality) => {
-    localStorage.setItem('ecto-screen-quality', quality);
-  }, []);
+  // setVideoQuality / setScreenQuality imported from shared media-presets
 
   /** Mute/unmute screen audio. Owner pauses producer for everyone; viewer mutes local element. */
   const toggleScreenAudioMute = useCallback((streamUserId: string): boolean => {
@@ -415,6 +358,8 @@ async function handleVoiceEvent(ws: ReturnType<typeof connectionManager.getMainW
       const device = new Device();
       await device.load({ routerRtpCapabilities: d.rtpCapabilities as Parameters<typeof device.load>[0]['routerRtpCapabilities'] });
       useVoiceStore.getState().setDevice(device);
+      // Send device capabilities so server can create consumers with correct codec params
+      ws.voiceCapabilities(device.rtpCapabilities);
       break;
     }
 
@@ -481,7 +426,21 @@ async function handleVoiceEvent(ws: ReturnType<typeof connectionManager.getMainW
         userId: d.user_id as string,
         source: consumerSource,
       });
-      ws.voiceConsumerResume(consumer.id);
+
+      // Wait for transport to be connected before resuming so the
+      // server-side keyframe isn't dropped during ICE/DTLS handshake
+      const recvT = useVoiceStore.getState().recvTransport!;
+      if (recvT.connectionState === 'connected') {
+        ws.voiceConsumerResume(consumer.id);
+      } else {
+        const onState = (state: string) => {
+          if (state === 'connected') {
+            ws.voiceConsumerResume(consumer.id);
+            recvT.removeListener('connectionstatechange', onState);
+          }
+        };
+        recvT.on('connectionstatechange', onState);
+      }
 
       if (consumer.kind === 'audio') {
         const audio = document.createElement('audio');

@@ -1,19 +1,10 @@
 import { useEffect, useRef } from 'react';
 import { useCall } from '../../hooks/useCall.js';
-import { usePresenceStore } from '../../stores/presence.js';
 import { Avatar } from '../common/Avatar.js';
 
 export function IncomingCallOverlay() {
   const { callState, peer, mediaTypes, answerCall, rejectCall } = useCall();
-  const audioRef = useRef<HTMLAudioElement>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout>>(null);
-
-  // Get user's presence to suppress ring sound for DND
-  const myPresence = usePresenceStore((s) => {
-    // Find own presence — check if any entry is dnd
-    // In practice, the store tracks others' presences, not self
-    return null;
-  });
 
   useEffect(() => {
     if (callState !== 'incoming_ringing') return;
@@ -30,7 +21,8 @@ export function IncomingCallOverlay() {
 
   if (callState !== 'incoming_ringing' || !peer) return null;
 
-  const callTypeLabel = mediaTypes.includes('video') ? 'Video Call' : 'Audio Call';
+  const isVideoCall = mediaTypes.includes('video');
+  const callTypeLabel = isVideoCall ? 'Video Call' : 'Audio Call';
 
   return (
     <div className="call-incoming-overlay">
@@ -47,13 +39,32 @@ export function IncomingCallOverlay() {
           <div className="call-incoming-label">{callTypeLabel}</div>
         </div>
         <div className="call-incoming-actions">
-          <button
-            className="call-accept-btn"
-            onClick={answerCall}
-            title="Accept"
-          >
-            &#128222;
-          </button>
+          {isVideoCall ? (
+            <>
+              <button
+                className="call-accept-btn"
+                onClick={() => answerCall(true)}
+                title="Answer with Video"
+              >
+                &#127909;
+              </button>
+              <button
+                className="call-accept-btn audio-only"
+                onClick={() => answerCall(false)}
+                title="Answer with Audio"
+              >
+                &#128222;
+              </button>
+            </>
+          ) : (
+            <button
+              className="call-accept-btn"
+              onClick={() => answerCall(false)}
+              title="Accept"
+            >
+              &#128222;
+            </button>
+          )}
           <button
             className="call-reject-btn"
             onClick={rejectCall}

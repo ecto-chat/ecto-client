@@ -35,17 +35,36 @@ export function ActiveCallOverlay() {
     return () => clearInterval(interval);
   }, [callState, startedAt]);
 
-  // Attach remote video
+  // Attach remote video — re-run when screen share state changes (ref swaps element)
   useEffect(() => {
+    console.log('[call:debug:overlay] remoteVideo effect:', {
+      hasRef: !!remoteVideoRef.current,
+      hasStream: !!remoteVideoStream,
+      hasScreenStream: !!remoteScreenStream,
+      trackCount: remoteVideoStream?.getTracks().length,
+      trackState: remoteVideoStream?.getVideoTracks()[0]?.readyState,
+      trackEnabled: remoteVideoStream?.getVideoTracks()[0]?.enabled,
+      trackMuted: remoteVideoStream?.getVideoTracks()[0]?.muted,
+    });
     if (remoteVideoRef.current && remoteVideoStream) {
       remoteVideoRef.current.srcObject = remoteVideoStream;
+      console.log('[call:debug:overlay] set remoteVideo srcObject OK, videoWidth:', remoteVideoRef.current.videoWidth, 'videoHeight:', remoteVideoRef.current.videoHeight);
+      const el = remoteVideoRef.current;
+      el.onloadeddata = () => {
+        console.log('[call:debug:overlay] remoteVideo loadeddata — videoWidth:', el.videoWidth, 'videoHeight:', el.videoHeight);
+      };
     }
-  }, [remoteVideoStream]);
+  }, [remoteVideoStream, !!remoteScreenStream]);
 
   // Attach remote screen
   useEffect(() => {
+    console.log('[call:debug:overlay] remoteScreen effect:', {
+      hasRef: !!remoteScreenRef.current,
+      hasStream: !!remoteScreenStream,
+    });
     if (remoteScreenRef.current && remoteScreenStream) {
       remoteScreenRef.current.srcObject = remoteScreenStream;
+      console.log('[call:debug:overlay] set remoteScreen srcObject OK');
     }
   }, [remoteScreenStream]);
 

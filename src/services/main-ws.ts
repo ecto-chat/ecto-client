@@ -208,6 +208,10 @@ export class MainWebSocket {
     this.send('voice.mute', { self_mute: selfMute, self_deaf: selfDeaf });
   }
 
+  voiceCapabilities(rtpCapabilities: unknown) {
+    this.send('voice.capabilities', { rtp_capabilities: rtpCapabilities });
+  }
+
   voiceConnectTransport(transportId: string, dtlsParameters: unknown) {
     this.send('voice.connect_transport', { transport_id: transportId, dtls_parameters: dtlsParameters });
   }
