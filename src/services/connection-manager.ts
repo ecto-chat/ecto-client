@@ -21,6 +21,7 @@ import { useRoleStore } from '../stores/role.js';
 import { handleCallWsEvent } from '../hooks/useCall.js';
 
 const SERVER_TOKENS_KEY = 'ecto-server-tokens';
+const LOCAL_CREDENTIALS_KEY = 'ecto-local-credentials';
 
 interface StoredServerSession {
   address: string;
@@ -86,6 +87,80 @@ export class ConnectionManager {
 
   clearStoredServerSessions(): void {
     localStorage.removeItem(SERVER_TOKENS_KEY);
+  }
+
+  // Local credential storage for multi-server auto-join
+
+  storeLocalCredentials(username: string, password: string): void {
+    try {
+      localStorage.setItem(LOCAL_CREDENTIALS_KEY, JSON.stringify({ username, password }));
+    } catch {
+      // Storage full or unavailable
+    }
+  }
+
+  getStoredLocalCredentials(): { username: string; password: string } | null {
+    try {
+      const raw = localStorage.getItem(LOCAL_CREDENTIALS_KEY);
+      if (!raw) return null;
+      return JSON.parse(raw) as { username: string; password: string };
+    } catch {
+      return null;
+    }
+  }
+
+  clearLocalCredentials(): void {
+    localStorage.removeItem(LOCAL_CREDENTIALS_KEY);
+  }
+
+  /** Attempt to join a server with local credentials (register flow) */
+  async attemptLocalJoin(
+    address: string,
+    options: { username: string; password: string; inviteCode?: string },
+  ): Promise<{ serverId: string } | { error: { ectoCode: number; message: string } }> {
+    const serverUrl = address.startsWith('http') ? address : `http://${address}`;
+
+    try {
+      const body: Record<string, string> = {
+        username: options.username,
+        password: options.password,
+        action: 'register',
+      };
+      if (options.inviteCode) {
+        body.invite_code = options.inviteCode;
+      }
+
+      const res = await fetch(`${serverUrl}/trpc/server.join`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+
+      if (!res.ok) {
+        const errData = (await res.json().catch(() => ({}))) as {
+          error?: { message?: string; data?: { ecto_code?: number; ecto_error?: string } };
+        };
+        const ectoCode = errData.error?.data?.ecto_code ?? 0;
+        const message = errData.error?.data?.ecto_error ?? errData.error?.message ?? 'Failed to join server';
+        return { error: { ectoCode, message } };
+      }
+
+      const data = (await res.json()) as {
+        result: {
+          data: {
+            server_token: string;
+            server: { id: string; name: string };
+          };
+        };
+      };
+
+      const { server_token, server } = data.result.data;
+      this.storeServerSession(server.id, serverUrl, server_token);
+      const serverId = await this.connectToServerLocal(serverUrl, server_token);
+      return { serverId };
+    } catch {
+      return { error: { ectoCode: 0, message: 'Could not reach server' } };
+    }
   }
 
   // Central connection

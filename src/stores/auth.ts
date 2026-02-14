@@ -171,6 +171,7 @@ export const useAuthStore = create<AuthStore>()((set, get) => {
       }
       await clearTokens();
       localStorage.removeItem(SERVER_TOKENS_KEY);
+      localStorage.removeItem('ecto-local-credentials');
       set({
         user: null,
         token: null,
