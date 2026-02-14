@@ -561,6 +561,54 @@ export class ConnectionManager {
         useChannelStore.getState().removeChannel(serverId, d.id as string);
         break;
 
+      case 'channel.reorder':
+        useChannelStore.getState().setChannels(serverId, d as unknown as Channel[]);
+        break;
+
+      case 'category.create':
+        useChannelStore.getState().addCategory(serverId, d as unknown as Category);
+        break;
+
+      case 'category.update':
+        useChannelStore.getState().updateCategory(serverId, d as unknown as Category & { id: string });
+        break;
+
+      case 'category.delete':
+        useChannelStore.getState().removeCategory(serverId, d.id as string);
+        break;
+
+      case 'category.reorder':
+        useChannelStore.getState().setCategories(serverId, d as unknown as Category[]);
+        break;
+
+      case 'role.create':
+        useRoleStore.getState().addRole(serverId, d as unknown as Role);
+        break;
+
+      case 'role.update':
+        useRoleStore.getState().updateRole(serverId, d.id as string, d as Partial<Role>);
+        break;
+
+      case 'role.delete':
+        useRoleStore.getState().removeRole(serverId, d.id as string);
+        break;
+
+      case 'role.reorder':
+        useRoleStore.getState().setRoles(serverId, d as unknown as Role[]);
+        break;
+
+      case 'server.update':
+        useServerStore.getState().updateServer(serverId, d as Partial<import('ecto-shared').ServerListEntry>);
+        break;
+
+      case 'invite.create':
+        useServerStore.getState().incrementEventSeq(serverId);
+        break;
+
+      case 'invite.delete':
+        useServerStore.getState().incrementEventSeq(serverId);
+        break;
+
       case 'member.join':
         useMemberStore.getState().addMember(serverId, d as unknown as Member);
         break;

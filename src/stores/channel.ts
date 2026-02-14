@@ -14,6 +14,9 @@ interface ChannelStore {
   updateChannel: (serverId: string, channel: Partial<Channel> & { id: string }) => void;
   removeChannel: (serverId: string, channelId: string) => void;
   setCategories: (serverId: string, categories: Category[]) => void;
+  addCategory: (serverId: string, category: Category) => void;
+  updateCategory: (serverId: string, category: Partial<Category> & { id: string }) => void;
+  removeCategory: (serverId: string, categoryId: string) => void;
   clearServer: (serverId: string) => void;
 }
 
@@ -44,8 +47,10 @@ export const useChannelStore = create<ChannelStore>()((set) => ({
       const serverChannels = new Map(channels.get(serverId) ?? new Map());
       serverChannels.set(channel.id, channel);
       channels.set(serverId, serverChannels);
-      const order = [...(channelOrder.get(serverId) ?? []), channel.id];
-      channelOrder.set(serverId, order);
+      const existing = channelOrder.get(serverId) ?? [];
+      if (!existing.includes(channel.id)) {
+        channelOrder.set(serverId, [...existing, channel.id]);
+      }
       return { channels, channelOrder };
     }),
 
@@ -82,6 +87,53 @@ export const useChannelStore = create<ChannelStore>()((set) => ({
         serverCategories.set(cat.id, cat);
       }
       categories.set(serverId, serverCategories);
+      return { categories };
+    }),
+
+  addCategory: (serverId, category) =>
+    set((state) => {
+      const categories = new Map(state.categories);
+      const serverCategories = new Map(categories.get(serverId) ?? new Map());
+      serverCategories.set(category.id, category);
+      categories.set(serverId, serverCategories);
+      return { categories };
+    }),
+
+  updateCategory: (serverId, category) =>
+    set((state) => {
+      const existing = state.categories.get(serverId)?.get(category.id);
+      if (!existing) return state;
+      const categories = new Map(state.categories);
+      const serverCategories = new Map(categories.get(serverId)!);
+      serverCategories.set(category.id, { ...existing, ...category });
+      categories.set(serverId, serverCategories);
+      return { categories };
+    }),
+
+  removeCategory: (serverId, categoryId) =>
+    set((state) => {
+      const categories = new Map(state.categories);
+      const serverCategories = new Map(categories.get(serverId) ?? new Map());
+      serverCategories.delete(categoryId);
+      categories.set(serverId, serverCategories);
+
+      // Move channels from the deleted category to uncategorized (mirrors DB FK ON DELETE SET NULL)
+      const channels = new Map(state.channels);
+      const serverChannels = state.channels.get(serverId);
+      if (serverChannels) {
+        const updated = new Map(serverChannels);
+        let changed = false;
+        for (const [id, ch] of updated) {
+          if (ch.category_id === categoryId) {
+            updated.set(id, { ...ch, category_id: null });
+            changed = true;
+          }
+        }
+        if (changed) {
+          channels.set(serverId, updated);
+          return { categories, channels };
+        }
+      }
       return { categories };
     }),
 

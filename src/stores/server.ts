@@ -14,6 +14,8 @@ interface ServerStore {
   serverOrder: string[];
   /** Per-server metadata from system.ready (setup state, admin) */
   serverMeta: Map<string, ServerMeta>;
+  /** Per-server event counter — bumped on invite/ban events as a refetch trigger */
+  eventSeq: Map<string, number>;
 
   setServers: (entries: ServerListEntry[]) => void;
   addServer: (entry: ServerListEntry) => void;
@@ -21,12 +23,14 @@ interface ServerStore {
   updateServer: (id: string, updates: Partial<ServerListEntry>) => void;
   reorderServers: (order: string[]) => void;
   setServerMeta: (id: string, meta: ServerMeta) => void;
+  incrementEventSeq: (id: string) => void;
 }
 
 export const useServerStore = create<ServerStore>()((set) => ({
   servers: new Map(),
   serverOrder: [],
   serverMeta: new Map(),
+  eventSeq: new Map(),
 
   setServers: (entries) => {
     const servers = new Map<string, ServerListEntry>();
@@ -74,5 +78,12 @@ export const useServerStore = create<ServerStore>()((set) => ({
       const serverMeta = new Map(state.serverMeta);
       serverMeta.set(id, meta);
       return { serverMeta };
+    }),
+
+  incrementEventSeq: (id) =>
+    set((state) => {
+      const eventSeq = new Map(state.eventSeq);
+      eventSeq.set(id, (eventSeq.get(id) ?? 0) + 1);
+      return { eventSeq };
     }),
 }));

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo, type FormEvent } from 'react';
 import { useUiStore } from '../../stores/ui.js';
+import { useServerStore } from '../../stores/server.js';
 import { usePermissions } from '../../hooks/usePermissions.js';
 import { connectionManager } from '../../services/connection-manager.js';
 import { LoadingSpinner } from '../common/LoadingSpinner.js';
@@ -232,6 +233,7 @@ function OverviewTab({ serverId }: { serverId: string }) {
 function BansTab({ serverId }: { serverId: string }) {
   const [bans, setBans] = useState<Ban[]>([]);
   const [loading, setLoading] = useState(true);
+  const eventSeq = useServerStore((s) => s.eventSeq.get(serverId) ?? 0);
 
   useEffect(() => {
     const trpc = connectionManager.getServerTrpc(serverId);
@@ -240,7 +242,7 @@ function BansTab({ serverId }: { serverId: string }) {
       .then((result) => setBans(result))
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [serverId]);
+  }, [serverId, eventSeq]);
 
   const handleUnban = async (userId: string) => {
     const trpc = connectionManager.getServerTrpc(serverId);
@@ -310,6 +312,7 @@ function InvitesTab({ serverId }: { serverId: string }) {
   const [invites, setInvites] = useState<Invite[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
+  const eventSeq = useServerStore((s) => s.eventSeq.get(serverId) ?? 0);
 
   useEffect(() => {
     const trpc = connectionManager.getServerTrpc(serverId);
@@ -318,7 +321,7 @@ function InvitesTab({ serverId }: { serverId: string }) {
       .then((result) => setInvites(result))
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [serverId]);
+  }, [serverId, eventSeq]);
 
   const handleCreate = async () => {
     const trpc = connectionManager.getServerTrpc(serverId);
