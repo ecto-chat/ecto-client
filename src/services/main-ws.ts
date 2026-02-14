@@ -199,8 +199,8 @@ export class MainWebSocket {
     this.send('presence.update', { status, custom_text: customText });
   }
 
-  voiceJoin(channelId: string) {
-    this.send('voice.join', { channel_id: channelId });
+  voiceJoin(channelId: string, force?: boolean) {
+    this.send('voice.join', { channel_id: channelId, ...(force ? { force: true } : {}) });
   }
 
   voiceLeave(channelId: string) {

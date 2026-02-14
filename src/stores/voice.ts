@@ -21,6 +21,14 @@ interface VoiceStore {
   recvTransport: mediasoupTypes.Transport | null;
   device: mediasoupTypes.Device | null;
 
+  pendingTransfer: {
+    serverId: string;
+    channelId: string;
+    currentChannelId: string;
+    sameSession: boolean;
+  } | null;
+
+  setPendingTransfer: (transfer: VoiceStore['pendingTransfer']) => void;
   setChannel: (serverId: string, channelId: string) => void;
   setVoiceStatus: (status: VoiceStatus) => void;
   leaveChannel: () => void;
@@ -58,7 +66,9 @@ export const useVoiceStore = create<VoiceStore>()((set, get) => ({
   sendTransport: null,
   recvTransport: null,
   device: null,
+  pendingTransfer: null,
 
+  setPendingTransfer: (transfer) => set({ pendingTransfer: transfer }),
   setChannel: (serverId, channelId) =>
     set({ currentServerId: serverId, currentChannelId: channelId, voiceStatus: 'connecting' }),
 
@@ -73,6 +83,7 @@ export const useVoiceStore = create<VoiceStore>()((set, get) => ({
       selfDeafened: false,
       speaking: new Set(),
       participants: new Map(),
+      pendingTransfer: null,
     }),
 
   toggleMute: () => set((state) => ({ selfMuted: !state.selfMuted })),
@@ -190,6 +201,7 @@ export const useVoiceStore = create<VoiceStore>()((set, get) => ({
       consumerMeta: new Map(),
       sendTransport: null,
       recvTransport: null,
+      pendingTransfer: null,
     });
   },
 }));

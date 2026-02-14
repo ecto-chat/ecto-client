@@ -30,7 +30,7 @@ function FriendListInner() {
   const blocked = useFriendStore((s) => s.blocked);
   const presences = usePresenceStore((s) => s.presences);
   const navigate = useNavigate();
-  const { startCall } = useCall();
+  const { startCall, isInCall } = useCall();
 
   const friendList = [...friends.values()];
   const onlineFriends = friendList.filter((f) => {
@@ -131,6 +131,7 @@ function FriendListInner() {
               onCall={handleCall}
               onRemove={handleRemove}
               onBlock={handleBlock}
+              isInCall={isInCall}
             />
           ))}
 
@@ -146,6 +147,7 @@ function FriendListInner() {
               onCall={handleCall}
               onRemove={handleRemove}
               onBlock={handleBlock}
+              isInCall={isInCall}
             />
           ))}
 
@@ -214,6 +216,7 @@ function FriendRow({
   onCall,
   onRemove,
   onBlock,
+  isInCall,
 }: {
   userId: string;
   username: string;
@@ -223,6 +226,7 @@ function FriendRow({
   onCall: (userId: string) => void;
   onRemove: (userId: string) => Promise<void>;
   onBlock: (userId: string) => Promise<void>;
+  isInCall?: boolean;
 }) {
   return (
     <div className="friend-row">
@@ -235,7 +239,7 @@ function FriendRow({
         <button className="icon-btn" onClick={() => onMessage(userId)} title="Message">
           &#128172;
         </button>
-        <button className="icon-btn" onClick={() => onCall(userId)} title="Call">
+        <button className="icon-btn" onClick={() => onCall(userId)} disabled={isInCall} title={isInCall ? 'Already in a call' : 'Call'}>
           &#128222;
         </button>
         <button className="icon-btn" onClick={() => onRemove(userId)} title="Remove">

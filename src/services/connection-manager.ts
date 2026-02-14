@@ -18,6 +18,7 @@ import { useAuthStore } from '../stores/auth.js';
 import { useUiStore } from '../stores/ui.js';
 import { useServerStore } from '../stores/server.js';
 import { useRoleStore } from '../stores/role.js';
+import { useCallStore } from '../stores/call.js';
 import { handleCallWsEvent } from '../hooks/useCall.js';
 
 const SERVER_TOKENS_KEY = 'ecto-server-tokens';
@@ -192,6 +193,13 @@ export class ConnectionManager {
       this.centralTrpc!.dms.list.query().then((convos) => {
         useDmStore.getState().setConversations(convos as import('ecto-shared').DMConversation[]);
       }).catch(() => {});
+
+      // If user has an active call on another session, show "on another device" banner
+      if (ready.active_call && useCallStore.getState().callState === 'idle') {
+        const ac = ready.active_call as { call_id: string; peer: import('ecto-shared').CallPeerInfo; media_types: ('audio' | 'video')[] };
+        useCallStore.getState().setOutgoingCall(ac.call_id, ac.peer, ac.media_types);
+        useCallStore.getState().setAnsweredElsewhere();
+      }
     }
   }
 
@@ -283,6 +291,13 @@ export class ConnectionManager {
       this.centralTrpc!.dms.list.query().then((convos) => {
         useDmStore.getState().setConversations(convos as import('ecto-shared').DMConversation[]);
       }).catch(() => {});
+
+      // If user has an active call on another session, show "on another device" banner
+      if (ready.active_call && useCallStore.getState().callState === 'idle') {
+        const ac = ready.active_call as { call_id: string; peer: import('ecto-shared').CallPeerInfo; media_types: ('audio' | 'video')[] };
+        useCallStore.getState().setOutgoingCall(ac.call_id, ac.peer, ac.media_types);
+        useCallStore.getState().setAnsweredElsewhere();
+      }
     }
   }
 
@@ -582,10 +597,6 @@ export class ConnectionManager {
   private handleMainEvent(serverId: string, event: string, data: unknown, _seq: number) {
     const d = data as Record<string, unknown>;
 
-    if (event.startsWith('voice.')) {
-      console.log('[ws:client] received event:', event, JSON.stringify(d));
-    }
-
     switch (event) {
       case 'message.create':
         useMessageStore.getState().addMessage(d.channel_id as string, d as unknown as Message);
@@ -706,12 +717,9 @@ export class ConnectionManager {
 
       case 'voice.state_update':
         if (d._removed) {
-          console.log('[ws:client] removing participant:', d.user_id);
           useVoiceStore.getState().removeParticipant(d.user_id as string);
         } else {
-          console.log('[ws:client] adding participant:', d.user_id, 'channel:', d.channel_id);
           useVoiceStore.getState().addParticipant(d as unknown as VoiceState);
-          console.log('[ws:client] participants after add:', [...useVoiceStore.getState().participants.keys()]);
         }
         break;
 
@@ -723,6 +731,9 @@ export class ConnectionManager {
       case 'voice.producer_closed':
       case 'voice.server_muted':
       case 'voice.quality_update':
+      case 'voice.already_connected':
+      case 'voice.transferred':
+      case 'voice.error':
         // These are dispatched to voice event listeners
         break;
     }

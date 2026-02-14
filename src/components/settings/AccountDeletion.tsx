@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { useAuthStore } from '../../stores/auth.js';
 import { connectionManager } from '../../services/connection-manager.js';
+import { fullLogout } from '../../stores/reset.js';
 import { LoadingSpinner } from '../common/LoadingSpinner.js';
 
 export function AccountDeletion() {
@@ -40,9 +41,9 @@ export function AccountDeletion() {
       setPassword('');
       setConfirmOpen(false);
 
-      // Log out after a brief delay so the user can read the message
+      // Full session teardown after a brief delay so the user can read the message
       setTimeout(() => {
-        logout().catch(() => {});
+        fullLogout().catch(() => {});
       }, 4000);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to delete account');

@@ -6,8 +6,8 @@ import { useUiStore } from '../../stores/ui.js';
 import { useNotifyStore } from '../../stores/notify.js';
 import { useReadStateStore } from '../../stores/read-state.js';
 import { useConnectionStore } from '../../stores/connection.js';
-import { useAuthStore } from '../../stores/auth.js';
 import { connectionManager } from '../../services/connection-manager.js';
+import { fullLogout } from '../../stores/reset.js';
 import { Avatar } from '../common/Avatar.js';
 
 interface ContextMenu {
@@ -175,8 +175,7 @@ export function ServerSidebar() {
       <div
         className="server-icon sign-out-icon"
         onClick={() => {
-          useAuthStore.getState().logout().then(() => {
-            connectionManager.clearStoredServerSessions();
+          fullLogout().then(() => {
             navigate('/landing');
           });
         }}

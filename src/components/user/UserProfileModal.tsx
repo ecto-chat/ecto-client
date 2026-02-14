@@ -47,7 +47,7 @@ function UserProfileContent({ data, onClose }: { data: ModalData; onClose: () =>
   const pendingOutgoing = useFriendStore((s) => s.pendingOutgoing);
   const blocked = useFriendStore((s) => s.blocked);
 
-  const { startCall } = useCall();
+  const { startCall, isInCall } = useCall();
   const [roles, setRoles] = useState<Role[]>([]);
   const [requestSent, setRequestSent] = useState(false);
   const [error, setError] = useState('');
@@ -244,10 +244,10 @@ function UserProfileContent({ data, onClose }: { data: ModalData; onClose: () =>
         <div className="user-profile-actions">
           {isFriend && (
             <>
-              <button className="auth-button" onClick={() => { onClose(); startCall(userId, ['audio']); }}>
+              <button className="auth-button" onClick={() => { onClose(); startCall(userId, ['audio']); }} disabled={isInCall} title={isInCall ? 'Already in a call' : undefined}>
                 Call
               </button>
-              <button className="auth-button" onClick={() => { onClose(); startCall(userId, ['audio', 'video']); }}>
+              <button className="auth-button" onClick={() => { onClose(); startCall(userId, ['audio', 'video']); }} disabled={isInCall} title={isInCall ? 'Already in a call' : undefined}>
                 Video Call
               </button>
               <button className="auth-button" onClick={handleSendMessage}>

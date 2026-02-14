@@ -41,6 +41,9 @@ interface CallStore {
   localSpeaking: boolean;
   remoteSpeaking: boolean;
 
+  // Multi-session
+  answeredElsewhere: boolean;
+
   // Call history
   callHistory: CallRecord[];
   historyHasMore: boolean;
@@ -49,6 +52,7 @@ interface CallStore {
   // Actions
   setIncomingCall: (callId: string, peer: CallPeerInfo, mediaTypes: ('audio' | 'video')[]) => void;
   setOutgoingCall: (callId: string, peer: CallPeerInfo, mediaTypes: ('audio' | 'video')[]) => void;
+  setAnsweredElsewhere: () => void;
   setConnecting: () => void;
   setActive: () => void;
   setEnded: (reason: CallEndReason) => void;
@@ -113,6 +117,8 @@ export const useCallStore = create<CallStore>()((set, get) => ({
   localSpeaking: false,
   remoteSpeaking: false,
 
+  answeredElsewhere: false,
+
   callHistory: [],
   historyHasMore: true,
   historyFilter: 'all',
@@ -125,6 +131,7 @@ export const useCallStore = create<CallStore>()((set, get) => ({
       mediaTypes,
       isInitiator: false,
       endReason: null,
+      answeredElsewhere: false,
     }),
 
   setOutgoingCall: (callId, peer, mediaTypes) =>
@@ -135,7 +142,10 @@ export const useCallStore = create<CallStore>()((set, get) => ({
       mediaTypes,
       isInitiator: true,
       endReason: null,
+      answeredElsewhere: false,
     }),
+
+  setAnsweredElsewhere: () => set({ answeredElsewhere: true }),
 
   setConnecting: () => set({ callState: 'connecting' }),
 
@@ -263,6 +273,7 @@ export const useCallStore = create<CallStore>()((set, get) => ({
       remoteScreenStream: null,
       localSpeaking: false,
       remoteSpeaking: false,
+      answeredElsewhere: false,
     });
   },
 }));

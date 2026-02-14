@@ -374,6 +374,7 @@ export function VoiceView() {
   const {
     selfMuted,
     selfDeafened,
+    pendingTransfer,
     joinVoice,
     leaveVoice,
     toggleMute,
@@ -383,6 +384,8 @@ export function VoiceView() {
     switchAudioDevice,
     switchAudioOutput,
     switchVideoDevice,
+    confirmTransfer,
+    cancelTransfer,
   } = useVoice();
 
   const [deviceMenu, setDeviceMenu] = useState<'audio' | 'video' | 'output' | 'video-quality' | 'screen-quality' | null>(null);
@@ -477,6 +480,23 @@ export function VoiceView() {
       </div>
 
       <div className="voice-view-bar">
+        {pendingTransfer && (
+          <div className="voice-transfer-confirm">
+            <p>
+              {pendingTransfer.currentChannelId === 'call'
+                ? "You're in a call. End call and join voice?"
+                : pendingTransfer.sameSession
+                  ? 'Switch voice channel?'
+                  : "You're connected on another session. Transfer here?"}
+            </p>
+            <div className="voice-transfer-actions">
+              <button onClick={cancelTransfer} className="btn-secondary">Cancel</button>
+              <button onClick={confirmTransfer} className="auth-button">
+                {pendingTransfer.currentChannelId === 'call' ? 'End Call & Join' : 'Transfer'}
+              </button>
+            </div>
+          </div>
+        )}
         {isConnectedHere ? (
           <div className="voice-bar-controls">
             <div className="voice-bar-group">

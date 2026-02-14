@@ -3,7 +3,7 @@ import { useCall } from '../../hooks/useCall.js';
 import { Avatar } from '../common/Avatar.js';
 
 export function IncomingCallOverlay() {
-  const { callState, peer, mediaTypes, answerCall, rejectCall } = useCall();
+  const { callState, peer, mediaTypes, answeredElsewhere, answerCall, rejectCall, transferCall, dismissCall } = useCall();
   const timerRef = useRef<ReturnType<typeof setTimeout>>(null);
 
   useEffect(() => {
@@ -19,7 +19,8 @@ export function IncomingCallOverlay() {
     };
   }, [callState]);
 
-  if (callState !== 'incoming_ringing' || !peer) return null;
+  // Don't show the full overlay when answered on another device — CallBanner handles it
+  if (callState !== 'incoming_ringing' || !peer || answeredElsewhere) return null;
 
   const isVideoCall = mediaTypes.includes('video');
   const callTypeLabel = isVideoCall ? 'Video Call' : 'Audio Call';
@@ -36,10 +37,29 @@ export function IncomingCallOverlay() {
           <div className="call-incoming-name">
             {peer.display_name ?? peer.username}
           </div>
-          <div className="call-incoming-label">{callTypeLabel}</div>
+          <div className="call-incoming-label">
+            {answeredElsewhere ? 'Call active on another device' : callTypeLabel}
+          </div>
         </div>
         <div className="call-incoming-actions">
-          {isVideoCall ? (
+          {answeredElsewhere ? (
+            <>
+              <button
+                className="call-accept-btn"
+                onClick={transferCall}
+                title="Transfer Here"
+              >
+                &#128241;
+              </button>
+              <button
+                className="call-reject-btn"
+                onClick={dismissCall}
+                title="Dismiss"
+              >
+                &#10005;
+              </button>
+            </>
+          ) : isVideoCall ? (
             <>
               <button
                 className="call-accept-btn"
@@ -55,23 +75,32 @@ export function IncomingCallOverlay() {
               >
                 &#128222;
               </button>
+              <button
+                className="call-reject-btn"
+                onClick={rejectCall}
+                title="Decline"
+              >
+                &#128222;
+              </button>
             </>
           ) : (
-            <button
-              className="call-accept-btn"
-              onClick={() => answerCall(false)}
-              title="Accept"
-            >
-              &#128222;
-            </button>
+            <>
+              <button
+                className="call-accept-btn"
+                onClick={() => answerCall(false)}
+                title="Accept"
+              >
+                &#128222;
+              </button>
+              <button
+                className="call-reject-btn"
+                onClick={rejectCall}
+                title="Decline"
+              >
+                &#128222;
+              </button>
+            </>
           )}
-          <button
-            className="call-reject-btn"
-            onClick={rejectCall}
-            title="Decline"
-          >
-            &#128222;
-          </button>
         </div>
       </div>
     </div>

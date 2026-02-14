@@ -18,6 +18,7 @@ export function ActiveCallOverlay() {
     remoteScreenStream,
     localSpeaking,
     remoteSpeaking,
+    answeredElsewhere,
   } = useCall();
 
   const [elapsed, setElapsed] = useState(0);
@@ -81,6 +82,9 @@ export function ActiveCallOverlay() {
       localScreenRef.current.srcObject = localScreenStream;
     }
   }, [localScreenStream]);
+
+  // Don't show the full call overlay when the call is on another device
+  if (answeredElsewhere) return null;
 
   const isVisible =
     callState === 'outgoing_ringing' ||

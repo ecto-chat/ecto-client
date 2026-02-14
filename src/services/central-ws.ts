@@ -8,6 +8,7 @@ export interface CentralReadyData {
   presences: unknown[];
   pending_dms: unknown[];
   dm_read_states: unknown[];
+  active_call: { call_id: string; peer: unknown; media_types: ('audio' | 'video')[] } | null;
 }
 
 export class CentralWebSocket {
@@ -61,7 +62,11 @@ export class CentralWebSocket {
           return;
         }
 
-        // Dispatch events: friend.*, dm.*
+        if (msg.event === 'system.error') {
+          console.error('[central-ws:client] ← system.error from server:', JSON.stringify(msg.data));
+        }
+
+        // Dispatch events: friend.*, dm.*, call.*
         this.onEvent?.(msg.event, msg.data);
       };
 

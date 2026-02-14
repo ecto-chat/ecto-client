@@ -34,6 +34,7 @@ export function AppLayout() {
   const voiceServerId = useVoiceStore((s) => s.currentServerId);
   const showVoiceBanner = voiceServerId !== null && voiceServerId !== activeServerId;
   const callState = useCallStore((s) => s.callState);
+  const answeredElsewhere = useCallStore((s) => s.answeredElsewhere);
   const centralAuthState = useAuthStore((s) => s.centralAuthState);
   const showSetupWizard = useUiStore((s) => s.activeModal === 'setup-wizard');
 
@@ -232,7 +233,7 @@ export function AppLayout() {
 
       <main className="main-content">
         {showVoiceBanner && <VoiceBanner />}
-        {callState === 'active' && <CallBanner />}
+        {(callState === 'active' || answeredElsewhere) && <CallBanner />}
         {showSetupWizard ? (
           <SetupWizard onClose={() => useUiStore.getState().closeModal()} />
         ) : isServerOffline ? (

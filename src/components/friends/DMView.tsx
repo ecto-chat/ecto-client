@@ -41,7 +41,7 @@ export function DMView() {
   const { status } = usePresence(userId ?? '');
   const currentUserId = useAuthStore((s) => s.user?.id);
 
-  const { startCall } = useCall();
+  const { startCall, isInCall } = useCall();
   const [content, setContent] = useState('');
   const [hasMore, setHasMore] = useState(true);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -266,14 +266,16 @@ export function DMView() {
           <button
             className="icon-btn"
             onClick={() => userId && startCall(userId, ['audio'])}
-            title="Voice Call"
+            disabled={isInCall}
+            title={isInCall ? 'Already in a call' : 'Voice Call'}
           >
             &#128222;
           </button>
           <button
             className="icon-btn"
             onClick={() => userId && startCall(userId, ['audio', 'video'])}
-            title="Video Call"
+            disabled={isInCall}
+            title={isInCall ? 'Already in a call' : 'Video Call'}
           >
             &#127909;
           </button>

@@ -4,6 +4,7 @@ import { useVoiceStore } from '../stores/voice.js';
 import { useAuthStore } from '../stores/auth.js';
 import { useServerStore } from '../stores/server.js';
 import { connectionManager } from '../services/connection-manager.js';
+import { useCallStore } from '../stores/call.js';
 import {
   CAMERA_PRESETS,
   SCREEN_PRESETS,
@@ -68,13 +69,55 @@ export function useVoice() {
   const selfDeafened = useVoiceStore((s) => s.selfDeafened);
   const participants = useVoiceStore((s) => s.participants);
   const speaking = useVoiceStore((s) => s.speaking);
+  const pendingTransfer = useVoiceStore((s) => s.pendingTransfer);
 
-  const joinVoice = useCallback(async (serverId: string, channelId: string) => {
+  const joinVoice = useCallback(async (serverId: string, channelId: string, force?: boolean) => {
     const ws = connectionManager.getMainWs(serverId);
     if (!ws) return;
 
+    const { currentChannelId: curChannel, currentServerId: curServer } = useVoiceStore.getState();
+    const callState = useCallStore.getState().callState;
+
+    // Already in a 1:1 call — store pending transfer for UI to confirm
+    if (callState !== 'idle' && !force) {
+      useVoiceStore.getState().setPendingTransfer({
+        serverId,
+        channelId,
+        currentChannelId: 'call',
+        sameSession: true,
+      });
+      return;
+    }
+
+    // Already connected to the same channel on this session — no-op
+    if (curChannel === channelId && curServer === serverId) {
+      return;
+    }
+
+    // Connected to a different channel on this session — store pending transfer for UI
+    if (curChannel && !force) {
+      useVoiceStore.getState().setPendingTransfer({
+        serverId,
+        channelId,
+        currentChannelId: curChannel,
+        sameSession: true,
+      });
+      return;
+    }
+
+    // If force-joining from same session, leave current first
+    if (curChannel && force) {
+      const curWs = curServer ? connectionManager.getMainWs(curServer) : null;
+      curWs?.voiceLeave(curChannel);
+      speakingCleanup?.();
+      speakingCleanup = null;
+      for (const cleanup of consumerSpeakingCleanups.values()) cleanup();
+      consumerSpeakingCleanups.clear();
+      useVoiceStore.getState().cleanup();
+    }
+
     useVoiceStore.getState().setChannel(serverId, channelId);
-    ws.voiceJoin(channelId);
+    ws.voiceJoin(channelId, force);
 
     // Voice events are queued to prevent race conditions between async handlers
     voiceEventQueue = Promise.resolve();
@@ -326,6 +369,28 @@ export function useVoice() {
     }
   }, []);
 
+  const confirmTransfer = useCallback(() => {
+    const pending = useVoiceStore.getState().pendingTransfer;
+    if (!pending) return;
+
+    // If switching away from a call, end the call first
+    if (pending.currentChannelId === 'call') {
+      const { callId } = useCallStore.getState();
+      if (callId) {
+        const centralWs = connectionManager.getCentralWs();
+        centralWs?.send('call.end', { call_id: callId });
+        useCallStore.getState().cleanup();
+      }
+    }
+
+    useVoiceStore.getState().setPendingTransfer(null);
+    joinVoice(pending.serverId, pending.channelId, true);
+  }, [joinVoice]);
+
+  const cancelTransfer = useCallback(() => {
+    useVoiceStore.getState().setPendingTransfer(null);
+  }, []);
+
   return {
     currentChannelId,
     currentServerId,
@@ -334,6 +399,7 @@ export function useVoice() {
     selfDeafened,
     participants,
     speaking,
+    pendingTransfer,
     isInVoice: currentChannelId !== null,
     joinVoice,
     leaveVoice,
@@ -347,6 +413,8 @@ export function useVoice() {
     setVideoQuality,
     setScreenQuality,
     toggleScreenAudioMute,
+    confirmTransfer,
+    cancelTransfer,
   };
 }
 
@@ -510,6 +578,37 @@ async function handleVoiceEvent(ws: ReturnType<typeof connectionManager.getMainW
           }
         }
       }
+      break;
+    }
+
+    case 'voice.already_connected': {
+      // Server says we're already in voice (on another session or channel)
+      // Capture the target channel we were trying to join before resetting it
+      const { currentChannelId: targetChannel, currentServerId: targetServer } = useVoiceStore.getState();
+      // Only reset the optimistic connection state — preserve participants so
+      // the voice channel still shows who's in it
+      useVoiceStore.setState({
+        currentChannelId: null,
+        currentServerId: null,
+        voiceStatus: 'disconnected' as const,
+        pendingTransfer: {
+          serverId: targetServer ?? '',
+          channelId: targetChannel ?? '',
+          currentChannelId: d.channel_id as string,
+          sameSession: d.same_session as boolean,
+        },
+      });
+      break;
+    }
+
+    case 'voice.transferred': {
+      // Another session took over our voice connection — clean up locally
+      speakingCleanup?.();
+      speakingCleanup = null;
+      for (const cleanup of consumerSpeakingCleanups.values()) cleanup();
+      consumerSpeakingCleanups.clear();
+      pendingProduceResolve = null;
+      useVoiceStore.getState().cleanup();
       break;
     }
   }
