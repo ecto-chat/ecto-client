@@ -22,7 +22,16 @@ export function LeaveServerModal() {
       if (trpc) {
         await trpc.server.leave.mutate();
       }
+
+      // Remove from Central server list (Path A) so it doesn't reappear on refresh
+      const server = useServerStore.getState().servers.get(modalData.serverId);
+      const centralTrpc = connectionManager.getCentralTrpc();
+      if (centralTrpc && server?.server_address) {
+        centralTrpc.servers.remove.mutate({ server_address: server.server_address }).catch(() => {});
+      }
+
       connectionManager.disconnectFromServer(modalData.serverId);
+      connectionManager.removeStoredServerSession(modalData.serverId);
       useServerStore.getState().removeServer(modalData.serverId);
       useUiStore.getState().setActiveServer(null);
       close();

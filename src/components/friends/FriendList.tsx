@@ -2,8 +2,10 @@ import { useState, useCallback, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useFriendStore } from '../../stores/friend.js';
 import { usePresenceStore } from '../../stores/presence.js';
+import { useAuthStore } from '../../stores/auth.js';
 import { connectionManager } from '../../services/connection-manager.js';
 import { Avatar } from '../common/Avatar.js';
+import { CentralSignInPrompt } from '../common/CentralSignInPrompt.js';
 import { CallHistory } from '../call/CallHistory.js';
 import { useCall } from '../../hooks/useCall.js';
 import type { PresenceStatus } from 'ecto-shared';
@@ -11,6 +13,16 @@ import type { PresenceStatus } from 'ecto-shared';
 type Tab = 'online' | 'all' | 'pending' | 'blocked' | 'calls' | 'add';
 
 export function FriendList() {
+  const centralAuthState = useAuthStore((s) => s.centralAuthState);
+
+  if (centralAuthState !== 'authenticated') {
+    return <CentralSignInPrompt message="Sign in to Ecto Central to add friends and see who's online." />;
+  }
+
+  return <FriendListInner />;
+}
+
+function FriendListInner() {
   const [activeTab, setActiveTab] = useState<Tab>('online');
   const friends = useFriendStore((s) => s.friends);
   const pendingIncoming = useFriendStore((s) => s.pendingIncoming);

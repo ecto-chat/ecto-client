@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { connectionManager } from '../../services/connection-manager.js';
 import { useUiStore } from '../../stores/ui.js';
+import { useServerStore } from '../../stores/server.js';
 import { LoadingSpinner } from '../common/LoadingSpinner.js';
 import type { Invite } from 'ecto-shared';
 
@@ -10,19 +11,29 @@ const STEP_LABELS = [
   'Welcome',
   'Admin Account',
   'Server Identity',
-  'Connectivity',
+  'Server Settings',
   'Channels',
   'First Invite',
+] as const;
+
+const UPLOAD_SIZE_OPTIONS = [
+  { label: '5 MB', value: 5 * 1024 * 1024 },
+  { label: '10 MB', value: 10 * 1024 * 1024 },
+  { label: '25 MB', value: 25 * 1024 * 1024 },
+  { label: '50 MB', value: 50 * 1024 * 1024 },
+  { label: '100 MB', value: 100 * 1024 * 1024 },
 ] as const;
 
 interface WizardState {
   // Step 3: Server identity
   serverName: string;
   serverDescription: string;
-  serverIcon: string;
-  // Step 4: Connectivity (display only)
-  port: string;
-  domain: string;
+  serverIconUrl: string | null;
+  // Step 4: Server settings
+  requireInvite: boolean;
+  allowLocalAccounts: boolean;
+  allowMemberDms: boolean;
+  maxUploadSizeBytes: number;
   // Step 5: Channels
   textChannelName: string;
   voiceChannelName: string;
@@ -62,13 +73,16 @@ export function SetupWizard({ onClose }: { onClose: () => void }) {
   const [step, setStep] = useState<WizardStep>(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [state, setState] = useState<WizardState>({
     serverName: '',
     serverDescription: '',
-    serverIcon: '',
-    port: '3000',
-    domain: '',
+    serverIconUrl: null,
+    requireInvite: false,
+    allowLocalAccounts: true,
+    allowMemberDms: false,
+    maxUploadSizeBytes: 5 * 1024 * 1024,
     textChannelName: 'general',
     voiceChannelName: 'General',
     channelsCreated: false,
@@ -94,6 +108,34 @@ export function SetupWizard({ onClose }: { onClose: () => void }) {
     }
   };
 
+  const handleIconUpload = async (file: File) => {
+    if (!serverId) return;
+    const conn = connectionManager.getServerConnection(serverId);
+    if (!conn) return;
+
+    setError('');
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const res = await fetch(`${conn.address}/upload/icon`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${conn.token}` },
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({ error: 'Upload failed' })) as { error?: string };
+        throw new Error(data.error ?? 'Upload failed');
+      }
+
+      const data = await res.json() as { icon_url: string };
+      updateState({ serverIconUrl: data.icon_url });
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to upload icon');
+    }
+  };
+
   const handleSaveServerIdentity = async () => {
     if (!serverId) return;
     const trpc = connectionManager.getServerTrpc(serverId);
@@ -112,9 +154,38 @@ export function SetupWizard({ onClose }: { onClose: () => void }) {
         name: state.serverName.trim(),
         description: state.serverDescription.trim() || undefined,
       });
+
+      // Update the client-side server store so sidebar reflects new name
+      useServerStore.getState().updateServer(serverId, {
+        server_name: state.serverName.trim(),
+      });
+
       goNext();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to update server');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSaveServerSettings = async () => {
+    if (!serverId) return;
+    const trpc = connectionManager.getServerTrpc(serverId);
+    if (!trpc) return;
+
+    setLoading(true);
+    setError('');
+
+    try {
+      await trpc.serverConfig.update.mutate({
+        require_invite: state.requireInvite,
+        allow_local_accounts: state.allowLocalAccounts,
+        allow_member_dms: state.allowMemberDms,
+        max_upload_size_bytes: state.maxUploadSizeBytes,
+      });
+      goNext();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to save settings');
     } finally {
       setLoading(false);
     }
@@ -237,6 +308,33 @@ export function SetupWizard({ onClose }: { onClose: () => void }) {
             <h2>Server Identity</h2>
             <p>Give your server a name and description so people know what it is about.</p>
 
+            <div className="wizard-icon-upload">
+              <div
+                className="wizard-icon-preview"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                {state.serverIconUrl ? (
+                  <img src={state.serverIconUrl} alt="Server icon" />
+                ) : (
+                  <span className="wizard-icon-placeholder">
+                    {state.serverName ? state.serverName.charAt(0).toUpperCase() : '?'}
+                  </span>
+                )}
+                <div className="wizard-icon-overlay">Upload</div>
+              </div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                hidden
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleIconUpload(file);
+                }}
+              />
+              <span className="wizard-icon-hint">Click to upload an icon</span>
+            </div>
+
             <label className="auth-label">
               Server Name
               <input
@@ -260,59 +358,82 @@ export function SetupWizard({ onClose }: { onClose: () => void }) {
                 rows={3}
               />
             </label>
-
-            <label className="auth-label">
-              Server Icon URL (optional)
-              <input
-                type="text"
-                value={state.serverIcon}
-                onChange={(e) => updateState({ serverIcon: e.target.value })}
-                placeholder="https://example.com/icon.png"
-                className="auth-input"
-              />
-            </label>
           </div>
         )}
 
-        {/* Step 4: Connectivity */}
+        {/* Step 4: Server Settings */}
         {step === 4 && (
           <div className="wizard-step">
-            <h2>Connectivity</h2>
-            <p>
-              Review your server connectivity settings. These are typically
-              configured in your server environment or Docker setup.
-            </p>
+            <h2>Server Settings</h2>
+            <p>Configure how your server works. You can change these later in the admin panel.</p>
 
-            <label className="auth-label">
-              Port
-              <input
-                type="text"
-                value={state.port}
-                onChange={(e) => updateState({ port: e.target.value })}
-                placeholder="3000"
-                className="auth-input"
-                disabled
-              />
-            </label>
+            <div className="wizard-setting-row">
+              <div className="wizard-setting-info">
+                <div className="wizard-setting-label">Require Invite to Join</div>
+                <div className="wizard-setting-desc">
+                  When enabled, new members must have a valid invite code to join this server.
+                </div>
+              </div>
+              <label className="wizard-toggle">
+                <input
+                  type="checkbox"
+                  checked={state.requireInvite}
+                  onChange={(e) => updateState({ requireInvite: e.target.checked })}
+                />
+                <span className="wizard-toggle-slider" />
+              </label>
+            </div>
 
-            <label className="auth-label">
-              Domain (optional)
-              <input
-                type="text"
-                value={state.domain}
-                onChange={(e) => updateState({ domain: e.target.value })}
-                placeholder="chat.example.com"
-                className="auth-input"
-                disabled
-              />
-            </label>
+            <div className="wizard-setting-row">
+              <div className="wizard-setting-info">
+                <div className="wizard-setting-label">Allow Local Accounts</div>
+                <div className="wizard-setting-desc">
+                  Allow users to create accounts directly on this server without a central Ecto account.
+                </div>
+              </div>
+              <label className="wizard-toggle">
+                <input
+                  type="checkbox"
+                  checked={state.allowLocalAccounts}
+                  onChange={(e) => updateState({ allowLocalAccounts: e.target.checked })}
+                />
+                <span className="wizard-toggle-slider" />
+              </label>
+            </div>
 
-            <div className="wizard-info-box">
-              <p>
-                Port and domain are configured through your server environment
-                variables or Docker Compose file. These values are shown here
-                for reference only.
-              </p>
+            <div className="wizard-setting-row">
+              <div className="wizard-setting-info">
+                <div className="wizard-setting-label">Allow Member DMs</div>
+                <div className="wizard-setting-desc">
+                  Allow members to send direct messages to each other within this server.
+                </div>
+              </div>
+              <label className="wizard-toggle">
+                <input
+                  type="checkbox"
+                  checked={state.allowMemberDms}
+                  onChange={(e) => updateState({ allowMemberDms: e.target.checked })}
+                />
+                <span className="wizard-toggle-slider" />
+              </label>
+            </div>
+
+            <div className="wizard-setting-row">
+              <div className="wizard-setting-info">
+                <div className="wizard-setting-label">Max Upload Size</div>
+                <div className="wizard-setting-desc">
+                  Maximum file size members can upload in messages.
+                </div>
+              </div>
+              <select
+                className="auth-input wizard-select"
+                value={state.maxUploadSizeBytes}
+                onChange={(e) => updateState({ maxUploadSizeBytes: Number(e.target.value) })}
+              >
+                {UPLOAD_SIZE_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
             </div>
           </div>
         )}
@@ -388,7 +509,19 @@ export function SetupWizard({ onClose }: { onClose: () => void }) {
                 </div>
 
                 <div className="wizard-complete-actions">
-                  <button className="auth-button" onClick={onClose}>
+                  <button className="auth-button" onClick={() => {
+                    if (serverId) {
+                      const trpc = connectionManager.getServerTrpc(serverId);
+                      if (trpc) {
+                        trpc.serverConfig.completeSetup.mutate().catch(() => {});
+                      }
+                      const meta = useServerStore.getState().serverMeta.get(serverId);
+                      if (meta) {
+                        useServerStore.getState().setServerMeta(serverId, { ...meta, setup_completed: true });
+                      }
+                    }
+                    onClose();
+                  }}>
                     Close Setup Wizard
                   </button>
                 </div>
@@ -442,8 +575,12 @@ export function SetupWizard({ onClose }: { onClose: () => void }) {
           </button>
         )}
         {step === 4 && (
-          <button className="auth-button" onClick={goNext}>
-            Next
+          <button
+            className="auth-button"
+            onClick={handleSaveServerSettings}
+            disabled={loading}
+          >
+            {loading ? <LoadingSpinner size={18} /> : 'Save & Continue'}
           </button>
         )}
         {step === 5 && !state.channelsCreated && (

@@ -2,16 +2,22 @@ import { create } from 'zustand';
 import type { GlobalUser } from 'ecto-shared';
 import { createCentralTrpcClient } from '../services/trpc.js';
 import type { CentralTrpcClient } from '../types/trpc.js';
+import { useUiStore } from './ui.js';
 
 type AuthState = 'idle' | 'loading' | 'authenticated' | 'unauthenticated';
+type CentralAuthState = 'idle' | 'loading' | 'authenticated' | 'unauthenticated';
+
+const SERVER_TOKENS_KEY = 'ecto-server-tokens';
 
 interface AuthStore {
   user: GlobalUser | null;
   token: string | null;
   refreshToken_: string | null;
   authState: AuthState;
+  centralAuthState: CentralAuthState;
   centralUrl: string;
 
+  isCentralAuth: () => boolean;
   login: (email: string, password: string) => Promise<void>;
   loginGoogle: (googleToken: string) => Promise<void>;
   register: (email: string, password: string, username: string) => Promise<void>;
@@ -21,6 +27,9 @@ interface AuthStore {
   restoreSession: () => Promise<void>;
   getToken: () => string | null;
   getCentralTrpc: () => CentralTrpcClient;
+  enterLocalOnly: () => void;
+  signInToCentral: () => void;
+  signInToCentralFromModal: (email: string, password: string) => Promise<void>;
 }
 
 const DEFAULT_CENTRAL_URL = 'http://localhost:4000';
@@ -72,19 +81,44 @@ export const useAuthStore = create<AuthStore>()((set, get) => {
     return localStorage.getItem('refresh_token');
   }
 
+  function hasStoredServerSessions(): boolean {
+    try {
+      const raw = localStorage.getItem(SERVER_TOKENS_KEY);
+      if (!raw) return false;
+      const parsed = JSON.parse(raw) as Record<string, unknown>;
+      return Object.keys(parsed).length > 0;
+    } catch {
+      return false;
+    }
+  }
+
   return {
     user: null,
     token: null,
     refreshToken_: null,
     authState: 'idle',
+    centralAuthState: 'idle',
     centralUrl: DEFAULT_CENTRAL_URL,
 
     getToken: () => get().token,
 
+    isCentralAuth: () => get().centralAuthState === 'authenticated',
+
     getCentralTrpc: () => createCentralTrpcClient(get().centralUrl, () => get().token),
 
+    enterLocalOnly: () => {
+      set({
+        authState: 'authenticated',
+        centralAuthState: 'unauthenticated',
+      });
+    },
+
+    signInToCentral: () => {
+      useUiStore.getState().openModal('central-sign-in');
+    },
+
     login: async (email, password) => {
-      set({ authState: 'loading' });
+      set({ authState: 'loading', centralAuthState: 'loading' });
       const trpc = createCentralTrpcClient(get().centralUrl, () => null);
       const result = await trpc.auth.login.mutate({ email, password });
       await storeTokens(result.access_token, result.refresh_token);
@@ -94,11 +128,12 @@ export const useAuthStore = create<AuthStore>()((set, get) => {
         token: result.access_token,
         refreshToken_: result.refresh_token,
         authState: 'authenticated',
+        centralAuthState: 'authenticated',
       });
     },
 
     loginGoogle: async (googleToken) => {
-      set({ authState: 'loading' });
+      set({ authState: 'loading', centralAuthState: 'loading' });
       const trpc = createCentralTrpcClient(get().centralUrl, () => null);
       const result = await trpc.auth.loginGoogle.mutate({ google_token: googleToken });
       await storeTokens(result.access_token, result.refresh_token);
@@ -108,11 +143,12 @@ export const useAuthStore = create<AuthStore>()((set, get) => {
         token: result.access_token,
         refreshToken_: result.refresh_token,
         authState: 'authenticated',
+        centralAuthState: 'authenticated',
       });
     },
 
     register: async (email, password, username) => {
-      set({ authState: 'loading' });
+      set({ authState: 'loading', centralAuthState: 'loading' });
       const trpc = createCentralTrpcClient(get().centralUrl, () => null);
       const result = await trpc.auth.register.mutate({ email, password, username });
       await storeTokens(result.access_token, result.refresh_token);
@@ -122,6 +158,7 @@ export const useAuthStore = create<AuthStore>()((set, get) => {
         token: result.access_token,
         refreshToken_: result.refresh_token,
         authState: 'authenticated',
+        centralAuthState: 'authenticated',
       });
     },
 
@@ -133,7 +170,14 @@ export const useAuthStore = create<AuthStore>()((set, get) => {
         await trpc.auth.logout.mutate({ refresh_token: rt }).catch(() => {});
       }
       await clearTokens();
-      set({ user: null, token: null, refreshToken_: null, authState: 'unauthenticated' });
+      localStorage.removeItem(SERVER_TOKENS_KEY);
+      set({
+        user: null,
+        token: null,
+        refreshToken_: null,
+        authState: 'unauthenticated',
+        centralAuthState: 'unauthenticated',
+      });
     },
 
     refreshToken: async () => {
@@ -152,11 +196,20 @@ export const useAuthStore = create<AuthStore>()((set, get) => {
     setUser: (user) => set({ user }),
 
     restoreSession: async () => {
-      set({ authState: 'loading' });
+      set({ authState: 'loading', centralAuthState: 'loading' });
       try {
         const rt = await getStoredRefreshToken();
         if (!rt) {
-          set({ authState: 'unauthenticated' });
+          // No Central refresh token — check for stored server sessions (Branch B)
+          if (hasStoredServerSessions()) {
+            set({
+              authState: 'authenticated',
+              centralAuthState: 'unauthenticated',
+            });
+          } else {
+            // Nothing stored at all (Branch C — show LandingPage)
+            set({ authState: 'unauthenticated', centralAuthState: 'unauthenticated' });
+          }
           return;
         }
         const trpc = createCentralTrpcClient(get().centralUrl, () => null);
@@ -170,9 +223,42 @@ export const useAuthStore = create<AuthStore>()((set, get) => {
         // Parse user_id from JWT
         const payload = JSON.parse(atob(result.access_token.split('.')[1]!));
         const user = await userTrpc.profile.get.query({ user_id: payload.sub as string });
-        set({ user, authState: 'authenticated' });
+        set({ user, authState: 'authenticated', centralAuthState: 'authenticated' });
       } catch {
-        set({ authState: 'unauthenticated' });
+        // Central refresh failed — check for stored server sessions (Branch B)
+        if (hasStoredServerSessions()) {
+          set({
+            authState: 'authenticated',
+            centralAuthState: 'unauthenticated',
+          });
+        } else {
+          set({ authState: 'unauthenticated', centralAuthState: 'unauthenticated' });
+        }
+      }
+    },
+
+    signInToCentralFromModal: async (email, password) => {
+      set({ centralAuthState: 'loading' });
+      try {
+        const trpc = createCentralTrpcClient(get().centralUrl, () => null);
+        const result = await trpc.auth.login.mutate({ email, password });
+        await storeTokens(result.access_token, result.refresh_token);
+        scheduleRefresh(result.access_token);
+
+        // Fetch user profile
+        const userTrpc = createCentralTrpcClient(get().centralUrl, () => result.access_token);
+        const payload = JSON.parse(atob(result.access_token.split('.')[1]!));
+        const user = await userTrpc.profile.get.query({ user_id: payload.sub as string });
+
+        set({
+          user,
+          token: result.access_token,
+          refreshToken_: result.refresh_token,
+          centralAuthState: 'authenticated',
+        });
+      } catch (err) {
+        set({ centralAuthState: 'unauthenticated' });
+        throw err;
       }
     },
   };

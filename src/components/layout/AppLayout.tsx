@@ -21,6 +21,9 @@ import { UserProfileModal } from '../user/UserProfileModal.js';
 import { IncomingCallOverlay } from '../call/IncomingCallOverlay.js';
 import { ActiveCallOverlay } from '../call/ActiveCallOverlay.js';
 import { CallBanner } from '../call/CallBanner.js';
+import { CentralSignInModal } from '../auth/CentralSignInModal.js';
+import { LeaveServerModal } from '../servers/LeaveServerModal.js';
+import { SetupWizard } from '../admin/SetupWizard.js';
 import { useCallStore } from '../../stores/call.js';
 
 export function AppLayout() {
@@ -30,70 +33,179 @@ export function AppLayout() {
   const voiceServerId = useVoiceStore((s) => s.currentServerId);
   const showVoiceBanner = voiceServerId !== null && voiceServerId !== activeServerId;
   const callState = useCallStore((s) => s.callState);
+  const centralAuthState = useAuthStore((s) => s.centralAuthState);
+  const showSetupWizard = useUiStore((s) => s.activeModal === 'setup-wizard');
 
   useNotifications();
 
-  // Initialize connections on mount
+  // Initialize connections on mount — dual-mode
   useEffect(() => {
-    const { centralUrl, getToken } = useAuthStore.getState();
-    const token = getToken();
-    if (!token) return;
+    console.log('[AppLayout] init useEffect fired, centralAuthState:', centralAuthState);
+    if (centralAuthState === 'authenticated') {
+      // Path A: Central-authenticated — parallel connections
+      const { centralUrl, getToken } = useAuthStore.getState();
+      const token = getToken();
+      if (!token) return;
 
-    connectionManager.initialize(centralUrl, () => useAuthStore.getState().token).then(async () => {
-      // Fetch server list and connect
-      const centralTrpc = connectionManager.getCentralTrpc();
-      if (!centralTrpc) return;
-      try {
-        const servers = await centralTrpc.servers.list.query();
-        // Connect to each server — connectToServer resolves the real UUID
-        const realIds: string[] = [];
-        for (const server of servers) {
-          try {
-            const realId = await connectionManager.connectToServer(
-              server.server_address,
-              server.server_address,
-              token,
-            );
-            realIds.push(realId);
-            // Update store entry with real server ID
-            useServerStore.getState().addServer({
-              ...server,
-              id: realId,
-            });
-          } catch {
-            // Server unreachable — add to sidebar with disconnected status + start retry
-            useServerStore.getState().addServer(server);
-            useConnectionStore.getState().setStatus(server.id, 'disconnected');
-            connectionManager.startServerRetry(server.server_address, (realId) => {
-              // Clean up stale entries
+      connectionManager.initialize(centralUrl, () => useAuthStore.getState().token).then(async () => {
+        const centralTrpc = connectionManager.getCentralTrpc();
+        if (!centralTrpc) return;
+        try {
+          const servers = await centralTrpc.servers.list.query();
+
+          // Connect all in parallel
+          const results = await Promise.allSettled(
+            servers.map(async (server) => {
+              const realId = await connectionManager.connectToServer(
+                server.server_address,
+                server.server_address,
+                token,
+              );
+              // Remove the placeholder entry (keyed by Central's row ID) and
+              // re-add with the real server UUID
               if (realId !== server.id) {
                 useConnectionStore.getState().removeConnection(server.id);
                 useServerStore.getState().removeServer(server.id);
               }
               useServerStore.getState().addServer({ ...server, id: realId });
-              // If no active server or was viewing this offline server, switch to it
+
+              // Fetch real server name/icon from the server itself
+              const trpc = connectionManager.getServerTrpc(realId);
+              if (trpc) {
+                trpc.server.info.query().then((info) => {
+                  const srv = info as unknown as { server: { name?: string; icon_url?: string } };
+                  useServerStore.getState().updateServer(realId, {
+                    server_name: srv.server.name ?? server.server_address,
+                    server_icon: srv.server.icon_url ?? null,
+                  });
+                }).catch(() => {});
+              }
+
+              return { server, realId };
+            }),
+          );
+
+          const realIds: string[] = [];
+          for (const result of results) {
+            if (result.status === 'fulfilled') {
+              realIds.push(result.value.realId);
+            } else {
+              // Find which server failed — match by index
+              const idx = results.indexOf(result);
+              const server = servers[idx]!;
+              useServerStore.getState().addServer(server);
+              useConnectionStore.getState().setStatus(server.id, 'disconnected');
+              connectionManager.startServerRetry(server.server_address, (realId) => {
+                if (realId !== server.id) {
+                  useConnectionStore.getState().removeConnection(server.id);
+                  useServerStore.getState().removeServer(server.id);
+                }
+                useServerStore.getState().addServer({ ...server, id: realId });
+                // Fetch real server name/icon after reconnect
+                const trpc = connectionManager.getServerTrpc(realId);
+                if (trpc) {
+                  trpc.server.info.query().then((info) => {
+                    const srv = info as unknown as { server: { name?: string; icon_url?: string } };
+                    useServerStore.getState().updateServer(realId, {
+                      server_name: srv.server.name ?? server.server_address,
+                      server_icon: srv.server.icon_url ?? null,
+                    });
+                  }).catch(() => {});
+                }
+                const current = useUiStore.getState().activeServerId;
+                if (!current || current === server.id) {
+                  useUiStore.getState().setActiveServer(realId);
+                  connectionManager.switchServer(realId).catch(() => {});
+                }
+              });
+            }
+          }
+
+          const savedServerId = useUiStore.getState().activeServerId;
+          if (savedServerId && realIds.includes(savedServerId)) {
+            connectionManager.switchServer(savedServerId).catch(() => {});
+          } else if (realIds.length > 0) {
+            useUiStore.getState().setActiveServer(realIds[0]!);
+            connectionManager.switchServer(realIds[0]!).catch(() => {});
+          }
+        } catch {
+          // Central unreachable
+        }
+      }).catch(() => {});
+    } else if (centralAuthState === 'unauthenticated') {
+      // Path B: Local-only mode — parallel connections from localStorage
+      console.log('[AppLayout] Path B: parallel initializeLocalOnly');
+      const sessions = connectionManager.getStoredServerSessions();
+
+      // Fire all connections in parallel — servers appear once confirmed
+      connectionManager.initializeLocalOnly().then(() => {
+        for (const session of sessions) {
+          const trpc = connectionManager.getServerTrpc(session.id);
+          if (trpc) {
+            // Connected — add to store and fetch real name/icon
+            useServerStore.getState().addServer({
+              id: session.id,
+              server_address: session.address,
+              server_name: session.address,
+              server_icon: null,
+              position: useServerStore.getState().serverOrder.length,
+              joined_at: new Date().toISOString(),
+            });
+            trpc.server.info.query().then((info) => {
+              const srv = info as unknown as { server: { name?: string; icon_url?: string } };
+              useServerStore.getState().updateServer(session.id, {
+                server_name: srv.server.name ?? session.address,
+                server_icon: srv.server.icon_url ?? null,
+              });
+            }).catch(() => {});
+          } else {
+            // Failed — add as disconnected, start retry
+            useServerStore.getState().addServer({
+              id: session.id,
+              server_address: session.address,
+              server_name: session.address,
+              server_icon: null,
+              position: useServerStore.getState().serverOrder.length,
+              joined_at: new Date().toISOString(),
+            });
+            useConnectionStore.getState().setStatus(session.id, 'disconnected');
+            connectionManager.startServerRetry(session.address, (realId) => {
+              if (realId !== session.id) {
+                useConnectionStore.getState().removeConnection(session.id);
+                useServerStore.getState().removeServer(session.id);
+              }
+              useServerStore.getState().addServer({
+                id: realId,
+                server_address: session.address,
+                server_name: session.address,
+                server_icon: null,
+                position: useServerStore.getState().serverOrder.length,
+                joined_at: new Date().toISOString(),
+              });
               const current = useUiStore.getState().activeServerId;
-              if (!current || current === server.id) {
+              if (!current || current === session.id) {
                 useUiStore.getState().setActiveServer(realId);
                 connectionManager.switchServer(realId).catch(() => {});
               }
             });
           }
         }
-        // Switch to previously active server (if it resolved to a valid UUID)
+
+        // Switch to previously active server or first available
         const savedServerId = useUiStore.getState().activeServerId;
-        if (savedServerId && realIds.includes(savedServerId)) {
+        const connectedIds = sessions.map((s) => s.id).filter((id) =>
+          connectionManager.getServerConnection(id) !== null,
+        );
+        if (savedServerId && connectedIds.includes(savedServerId)) {
           connectionManager.switchServer(savedServerId).catch(() => {});
-        } else if (realIds.length > 0) {
-          // Saved ID was stale (e.g. old address string), switch to first server
-          useUiStore.getState().setActiveServer(realIds[0]!);
-          connectionManager.switchServer(realIds[0]!).catch(() => {});
+        } else if (connectedIds.length > 0) {
+          useUiStore.getState().setActiveServer(connectedIds[0]!);
+          connectionManager.switchServer(connectedIds[0]!).catch(() => {});
         }
-      } catch {
-        // Central unreachable
-      }
-    }).catch(() => {});
-  }, []);
+      }).catch(() => {});
+    }
+  }, [centralAuthState]);
+
 
   // Determine whether we're in DM/friends mode or server mode
   const location = useLocation();
@@ -120,7 +232,9 @@ export function AppLayout() {
       <main className="main-content">
         {showVoiceBanner && <VoiceBanner />}
         {callState === 'active' && <CallBanner />}
-        {isServerOffline ? (
+        {showSetupWizard ? (
+          <SetupWizard onClose={() => useUiStore.getState().closeModal()} />
+        ) : isServerOffline ? (
           <div className="server-offline-view">
             <svg width="64" height="64" viewBox="0 0 24 24" fill="none" className="server-offline-view-icon">
               <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4C9.11 4 6.6 5.64 5.35 8.04C2.34 8.36 0 10.91 0 14C0 17.31 2.69 20 6 20H19C21.76 20 24 17.76 24 15C24 12.36 21.95 10.22 19.35 10.04Z" fill="currentColor" opacity="0.3"/>
@@ -147,7 +261,9 @@ export function AppLayout() {
       {!isHomeMode && !isServerOffline && memberListVisible && <MemberList />}
 
       <AddServerModal />
+      <LeaveServerModal />
       <UserProfileModal />
+      <CentralSignInModal />
       <IncomingCallOverlay />
       <ActiveCallOverlay />
     </div>

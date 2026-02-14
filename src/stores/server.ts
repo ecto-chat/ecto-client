@@ -1,22 +1,32 @@
 import { create } from 'zustand';
 import type { ServerListEntry } from 'ecto-shared';
 
+interface ServerMeta {
+  setup_completed: boolean;
+  admin_user_id: string | null;
+  user_id: string | null;
+}
+
 interface ServerStore {
   /** Map keyed by server UUID (id), not address */
   servers: Map<string, ServerListEntry>;
   /** Ordered list of server UUIDs */
   serverOrder: string[];
+  /** Per-server metadata from system.ready (setup state, admin) */
+  serverMeta: Map<string, ServerMeta>;
 
   setServers: (entries: ServerListEntry[]) => void;
   addServer: (entry: ServerListEntry) => void;
   removeServer: (id: string) => void;
   updateServer: (id: string, updates: Partial<ServerListEntry>) => void;
   reorderServers: (order: string[]) => void;
+  setServerMeta: (id: string, meta: ServerMeta) => void;
 }
 
 export const useServerStore = create<ServerStore>()((set) => ({
   servers: new Map(),
   serverOrder: [],
+  serverMeta: new Map(),
 
   setServers: (entries) => {
     const servers = new Map<string, ServerListEntry>();
@@ -58,4 +68,11 @@ export const useServerStore = create<ServerStore>()((set) => ({
     }),
 
   reorderServers: (order) => set({ serverOrder: order }),
+
+  setServerMeta: (id, meta) =>
+    set((state) => {
+      const serverMeta = new Map(state.serverMeta);
+      serverMeta.set(id, meta);
+      return { serverMeta };
+    }),
 }));

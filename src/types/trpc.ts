@@ -312,6 +312,9 @@ export interface ServerRouter {
         allow_member_dms?: boolean;
       }) => Promise<{ success: boolean }>;
     };
+    completeSetup: {
+      mutate: () => Promise<{ success: boolean }>;
+    };
   };
 }
 

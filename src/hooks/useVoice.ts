@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { Device } from 'mediasoup-client';
 import { useVoiceStore } from '../stores/voice.js';
 import { useAuthStore } from '../stores/auth.js';
+import { useServerStore } from '../stores/server.js';
 import { connectionManager } from '../services/connection-manager.js';
 import {
   CAMERA_PRESETS,
@@ -12,6 +13,15 @@ import {
   setScreenQuality,
 } from '../lib/media-presets.js';
 export type { VideoQuality, ScreenQuality } from '../lib/media-presets.js';
+
+/** Get local user ID — Central account user ID, or server-specific user ID for local accounts */
+function getLocalUserId(): string | undefined {
+  const centralUser = useAuthStore.getState().user?.id;
+  if (centralUser) return centralUser;
+  const serverId = useVoiceStore.getState().currentServerId;
+  if (!serverId) return undefined;
+  return useServerStore.getState().serverMeta.get(serverId)?.user_id ?? undefined;
+}
 
 let speakingCleanup: (() => void) | null = null;
 let voiceEventQueue: Promise<void> = Promise.resolve();
@@ -132,7 +142,7 @@ export function useVoice() {
       await audioProducer.replaceTrack({ track: newTrack });
 
       speakingCleanup?.();
-      const localUserId = useAuthStore.getState().user?.id;
+      const localUserId = getLocalUserId();
       if (localUserId) speakingCleanup = startSpeakingDetection(stream, localUserId);
     } catch (err) {
       console.error('[voice] failed to switch audio device:', err);
@@ -151,7 +161,7 @@ export function useVoice() {
 
   const switchVideoDevice = useCallback(async (deviceId: string) => {
     const { producers } = useVoiceStore.getState();
-    const userId = useAuthStore.getState().user?.id;
+    const userId = getLocalUserId();
     const videoProducer = producers.get('video');
     if (!videoProducer || !userId) return;
 
@@ -170,7 +180,7 @@ export function useVoice() {
   const toggleCamera = useCallback(async () => {
     const { sendTransport, producers, currentServerId: sid } = useVoiceStore.getState();
     const ws = sid ? connectionManager.getMainWs(sid) : null;
-    const userId = useAuthStore.getState().user?.id;
+    const userId = getLocalUserId();
 
     if (producers.has('video')) {
       const producer = producers.get('video')!;
@@ -202,7 +212,7 @@ export function useVoice() {
 
   const toggleScreenShare = useCallback(async () => {
     const { sendTransport, producers, currentServerId: sid } = useVoiceStore.getState();
-    const userId = useAuthStore.getState().user?.id;
+    const userId = getLocalUserId();
 
     if (producers.has('screen')) {
       const ws = sid ? connectionManager.getMainWs(sid) : null;
@@ -282,7 +292,7 @@ export function useVoice() {
 
   /** Mute/unmute screen audio. Owner pauses producer for everyone; viewer mutes local element. */
   const toggleScreenAudioMute = useCallback((streamUserId: string): boolean => {
-    const myUserId = useAuthStore.getState().user?.id;
+    const myUserId = getLocalUserId();
     const isOwner = streamUserId === myUserId;
 
     if (isOwner) {
@@ -394,7 +404,7 @@ async function handleVoiceEvent(ws: ReturnType<typeof connectionManager.getMainW
           const audioTrack = stream.getAudioTracks()[0]!;
           const producer = await sendTransport.produce({ track: audioTrack, appData: { source: 'mic' } });
           useVoiceStore.getState().setProducer('audio', producer);
-          const localUserId = useAuthStore.getState().user?.id;
+          const localUserId = getLocalUserId();
           if (localUserId) speakingCleanup = startSpeakingDetection(stream, localUserId);
         } catch (err) {
           console.error('[voice] audio setup failed:', err);

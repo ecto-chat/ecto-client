@@ -1,11 +1,20 @@
+import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { useServerStore } from '../../stores/server.js';
 import { useUiStore } from '../../stores/ui.js';
 import { useNotifyStore } from '../../stores/notify.js';
 import { useReadStateStore } from '../../stores/read-state.js';
 import { useConnectionStore } from '../../stores/connection.js';
+import { useAuthStore } from '../../stores/auth.js';
 import { connectionManager } from '../../services/connection-manager.js';
 import { Avatar } from '../common/Avatar.js';
+
+interface ContextMenu {
+  x: number;
+  y: number;
+  serverId: string;
+}
 
 export function ServerSidebar() {
   const serverOrder = useServerStore((s) => s.serverOrder);
@@ -15,6 +24,19 @@ export function ServerSidebar() {
   const mentionCounts = useReadStateStore((s) => s.mentionCounts);
   const connections = useConnectionStore((s) => s.connections);
   const navigate = useNavigate();
+  const [contextMenu, setContextMenu] = useState<ContextMenu | null>(null);
+
+  // Close context menu on outside click or another context menu
+  useEffect(() => {
+    if (!contextMenu) return;
+    const close = () => setContextMenu(null);
+    document.addEventListener('click', close);
+    document.addEventListener('contextmenu', close);
+    return () => {
+      document.removeEventListener('click', close);
+      document.removeEventListener('contextmenu', close);
+    };
+  }, [contextMenu]);
 
   const handleHomeClick = () => {
     useUiStore.getState().setActiveServer(null);
@@ -33,6 +55,46 @@ export function ServerSidebar() {
     useUiStore.getState().openModal('add-server');
   };
 
+  const handleContextMenu = (e: React.MouseEvent, serverId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setContextMenu({ x: e.clientX, y: e.clientY, serverId });
+  };
+
+  const handleLeaveServer = () => {
+    if (!contextMenu) return;
+    const server = servers.get(contextMenu.serverId);
+    useUiStore.getState().openModal('leave-server', {
+      serverId: contextMenu.serverId,
+      serverName: server?.server_name ?? contextMenu.serverId,
+    });
+    setContextMenu(null);
+  };
+
+  const handleRemoveServer = () => {
+    if (!contextMenu) return;
+    const { serverId } = contextMenu;
+    const server = servers.get(serverId);
+
+    // Remove from Central server list (Path A) so it doesn't reappear on refresh
+    const centralTrpc = connectionManager.getCentralTrpc();
+    if (centralTrpc && server?.server_address) {
+      centralTrpc.servers.remove.mutate({ server_address: server.server_address }).catch(() => {});
+    }
+
+    connectionManager.disconnectFromServer(serverId);
+    connectionManager.removeStoredServerSession(serverId);
+    connectionManager.stopServerRetry(
+      server?.server_address ?? serverId,
+    );
+    useServerStore.getState().removeServer(serverId);
+    if (useUiStore.getState().activeServerId === serverId) {
+      useUiStore.getState().setActiveServer(null);
+      navigate('/friends');
+    }
+    setContextMenu(null);
+  };
+
   const getServerUnread = (serverId: string): boolean => {
     const serverNotifs = notifications.get(serverId);
     return serverNotifs !== undefined && serverNotifs.size > 0;
@@ -46,6 +108,9 @@ export function ServerSidebar() {
     }
     return total;
   };
+
+  const menuServerStatus = contextMenu ? connections.get(contextMenu.serverId) : undefined;
+  const menuServerOffline = contextMenu && (!menuServerStatus || menuServerStatus === 'disconnected');
 
   return (
     <div className="server-sidebar">
@@ -77,6 +142,7 @@ export function ServerSidebar() {
             <div
               className={`server-icon ${isActive ? 'active' : ''} ${isOffline ? 'offline' : ''}`}
               onClick={() => handleServerClick(serverId)}
+              onContextMenu={(e) => handleContextMenu(e, serverId)}
               title={isOffline ? `${server.server_name ?? serverId} (Offline)` : server.server_name ?? serverId}
             >
               {isOffline ? (
@@ -102,6 +168,50 @@ export function ServerSidebar() {
       <div className="server-icon add-server" onClick={handleAddServer} title="Add a Server">
         <span>+</span>
       </div>
+
+      <div className="server-sidebar-spacer" />
+
+      {/* Sign out button */}
+      <div
+        className="server-icon sign-out-icon"
+        onClick={() => {
+          useAuthStore.getState().logout().then(() => {
+            connectionManager.clearStoredServerSessions();
+            navigate('/landing');
+          });
+        }}
+        title="Sign Out"
+      >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          <polyline points="16,17 21,12 16,7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          <line x1="21" y1="12" x2="9" y2="12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </div>
+
+      {/* Context menu */}
+      {contextMenu && createPortal(
+        <div
+          className="server-context-menu"
+          style={{ top: contextMenu.y, left: contextMenu.x }}
+        >
+          <button
+            className="server-context-menu-item"
+            onClick={handleLeaveServer}
+          >
+            Leave Server
+          </button>
+          {menuServerOffline && (
+            <button
+              className="server-context-menu-item danger"
+              onClick={handleRemoveServer}
+            >
+              Remove Server
+            </button>
+          )}
+        </div>,
+        document.body,
+      )}
     </div>
   );
 }

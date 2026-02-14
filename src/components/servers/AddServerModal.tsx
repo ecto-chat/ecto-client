@@ -20,19 +20,41 @@ export function AddServerModal() {
     setLoading(true);
 
     try {
-      const centralTrpc = connectionManager.getCentralTrpc();
-      if (!centralTrpc) throw new Error('Not connected to central');
-
+      const isCentral = useAuthStore.getState().centralAuthState === 'authenticated';
       const token = useAuthStore.getState().getToken();
-      if (!token) throw new Error('Not authenticated');
 
-      // connectToServer handles server.join internally, returns real UUID
-      const realServerId = await connectionManager.connectToServer(address, address, token);
+      let realServerId: string;
 
-      // Add to central server list (ignore duplicate)
-      await centralTrpc.servers.add.mutate({
-        server_address: address,
-      }).catch(() => {});
+      if (isCentral && token) {
+        // Path A: Central-authenticated flow — use server.join with Central JWT
+        realServerId = await connectionManager.connectToServer(address, address, token);
+
+        // Add to central server list (ignore duplicate)
+        const centralTrpc = connectionManager.getCentralTrpc();
+        if (centralTrpc) {
+          await centralTrpc.servers.add.mutate({
+            server_address: address,
+          }).catch(() => {});
+        }
+      } else {
+        // Path B: Local-only mode — fetch server info and connect with local token
+        const serverUrl = address.startsWith('http') ? address : `http://${address}`;
+
+        // We need to do server.join with local auth — redirect to direct-connect form
+        // For now, just try server.info to verify the server exists
+        const infoRes = await fetch(`${serverUrl}/trpc/server.info`, {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+        });
+        if (!infoRes.ok) throw new Error('Could not reach server');
+
+        // In local-only mode, we need the user to authenticate locally.
+        // Close this modal and redirect to direct connect
+        close();
+        setAddress('');
+        useUiStore.getState().openModal('direct-connect-from-app', { address });
+        return;
+      }
 
       // Update local store with the real server ID
       const conn = connectionManager.getServerTrpc(realServerId);

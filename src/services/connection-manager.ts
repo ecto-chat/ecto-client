@@ -16,7 +16,15 @@ import { useFriendStore } from '../stores/friend.js';
 import { useDmStore } from '../stores/dm.js';
 import { useAuthStore } from '../stores/auth.js';
 import { useUiStore } from '../stores/ui.js';
+import { useServerStore } from '../stores/server.js';
 import { handleCallWsEvent } from '../hooks/useCall.js';
+
+const SERVER_TOKENS_KEY = 'ecto-server-tokens';
+
+interface StoredServerSession {
+  address: string;
+  token: string;
+}
 
 interface ServerConnection {
   address: string;
@@ -34,6 +42,50 @@ export class ConnectionManager {
   private centralTrpc: CentralTrpcClient | null = null;
   private reconnectAttempts = new Map<string, number>();
   private retryTimers = new Map<string, ReturnType<typeof setTimeout>>();
+
+  // localStorage server session persistence
+
+  getStoredServerSessions(): Array<{ id: string; address: string; token: string }> {
+    try {
+      const raw = localStorage.getItem(SERVER_TOKENS_KEY);
+      if (!raw) return [];
+      const parsed = JSON.parse(raw) as Record<string, StoredServerSession>;
+      return Object.entries(parsed).map(([id, session]) => ({
+        id,
+        address: session.address,
+        token: session.token,
+      }));
+    } catch {
+      return [];
+    }
+  }
+
+  storeServerSession(serverId: string, address: string, token: string): void {
+    try {
+      const raw = localStorage.getItem(SERVER_TOKENS_KEY);
+      const sessions: Record<string, StoredServerSession> = raw ? JSON.parse(raw) as Record<string, StoredServerSession> : {};
+      sessions[serverId] = { address, token };
+      localStorage.setItem(SERVER_TOKENS_KEY, JSON.stringify(sessions));
+    } catch {
+      // Storage full or unavailable
+    }
+  }
+
+  removeStoredServerSession(serverId: string): void {
+    try {
+      const raw = localStorage.getItem(SERVER_TOKENS_KEY);
+      if (!raw) return;
+      const sessions: Record<string, StoredServerSession> = JSON.parse(raw) as Record<string, StoredServerSession>;
+      delete sessions[serverId];
+      localStorage.setItem(SERVER_TOKENS_KEY, JSON.stringify(sessions));
+    } catch {
+      // Storage unavailable
+    }
+  }
+
+  clearStoredServerSessions(): void {
+    localStorage.removeItem(SERVER_TOKENS_KEY);
+  }
 
   // Central connection
 
@@ -61,6 +113,97 @@ export class ConnectionManager {
         ready.presences as { user_id: string; status: PresenceStatus; custom_text?: string }[],
       );
       // Load actual DM conversation list (pending_dms from ready are raw messages, not conversations)
+      this.centralTrpc!.dms.list.query().then((convos) => {
+        useDmStore.getState().setConversations(convos as import('ecto-shared').DMConversation[]);
+      }).catch(() => {});
+    }
+  }
+
+  /** Initialize in local-only mode — skip Central, load server sessions from localStorage */
+  async initializeLocalOnly(): Promise<void> {
+    // centralWs and centralTrpc remain null
+    const sessions = this.getStoredServerSessions();
+    const toConnect = sessions.filter((s) => !this.connections.has(s.id));
+    await Promise.allSettled(
+      toConnect.map((session) =>
+        this.connectToServerLocal(session.address, session.token).catch(() => {
+          // Server unreachable — will show as disconnected
+        }),
+      ),
+    );
+  }
+
+  /** Connect to a server using a pre-obtained local server token (no server.join call) */
+  async connectToServerLocal(address: string, serverToken: string): Promise<string> {
+    const serverUrl = address.startsWith('http') ? address : `http://${address}`;
+
+    // Fetch server info to get the real UUID
+    let serverId: string;
+    try {
+      const infoRes = await fetch(`${serverUrl}/trpc/server.info`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      if (!infoRes.ok) throw new Error('Failed to fetch server info');
+      const infoData = (await infoRes.json()) as {
+        result: { data: { server: { id: string; name: string } } };
+      };
+      serverId = infoData.result.data.server.id;
+    } catch {
+      // If server.info fails, try to connect anyway using the address as ID
+      throw new Error(`Server unreachable: ${address}`);
+    }
+
+    useConnectionStore.getState().setStatus(serverId, 'connecting');
+
+    const trpc = createServerTrpcClient(serverUrl, () => serverToken);
+    const conn: ServerConnection = {
+      address: serverUrl,
+      token: serverToken,
+      serverId,
+      mainWs: null,
+      notifyWs: null,
+      trpc,
+    };
+
+    this.connections.set(serverId, conn);
+
+    // Store session for persistence
+    this.storeServerSession(serverId, serverUrl, serverToken);
+
+    if (this.activeServerId === null || this.activeServerId === serverId) {
+      await this.openMainWs(conn);
+      this.activeServerId = serverId;
+    } else {
+      await this.openNotifyWs(conn);
+    }
+
+    return serverId;
+  }
+
+  /** Mid-session Central sign-in — establish Central WS/tRPC without touching server connections */
+  async initializeCentralMidSession(centralUrl: string, getToken: () => string | null): Promise<void> {
+    this.centralTrpc = createCentralTrpcClient(centralUrl, getToken);
+    this.centralWs = new CentralWebSocket();
+
+    this.centralWs.onEvent = (event, data) => this.handleCentralEvent(event, data);
+    this.centralWs.onDisconnect = (code, reason) => {
+      console.warn('Central WS disconnected:', code, reason);
+      this.scheduleReconnect('__central__', async () => {
+        await this.centralWs!.connect(centralUrl, getToken()!).catch(() => {});
+      });
+    };
+
+    const token = getToken();
+    if (token) {
+      const ready = await this.centralWs.connect(centralUrl, token).catch(() => null);
+      if (!ready) return;
+      useFriendStore.getState().setFriends(ready.friends as Friend[]);
+      useFriendStore.getState().setIncomingRequests(ready.incoming_requests as FriendRequest[]);
+      useFriendStore.getState().setOutgoingRequests(ready.outgoing_requests as FriendRequest[]);
+      usePresenceStore.getState().bulkSetPresence(
+        ready.presences as { user_id: string; status: PresenceStatus; custom_text?: string }[],
+      );
       this.centralTrpc!.dms.list.query().then((convos) => {
         useDmStore.getState().setConversations(convos as import('ecto-shared').DMConversation[]);
       }).catch(() => {});
@@ -270,6 +413,8 @@ export class ConnectionManager {
 
       // Populate stores from system.ready
       const readyData = ready as unknown as {
+        user_id?: string;
+        server?: { setup_completed?: boolean; admin_user_id?: string | null };
         channels?: Channel[];
         categories?: Category[];
         members?: Member[];
@@ -278,6 +423,14 @@ export class ConnectionManager {
         presences?: { user_id: string; status: PresenceStatus; custom_text?: string }[];
         voice_states?: VoiceState[];
       };
+
+      if (readyData.server) {
+        useServerStore.getState().setServerMeta(conn.serverId, {
+          setup_completed: readyData.server.setup_completed ?? true,
+          admin_user_id: readyData.server.admin_user_id ?? null,
+          user_id: readyData.user_id ?? null,
+        });
+      }
 
       if (readyData.channels) {
         useChannelStore.getState().setChannels(conn.serverId, readyData.channels);
@@ -553,8 +706,24 @@ export class ConnectionManager {
     const intervalId = setInterval(() => {
       if (connecting) return; // Skip if previous attempt still in progress
 
+      // Use Central token if available, otherwise try stored local token
       const token = useAuthStore.getState().getToken();
       if (!token) {
+        // Look for a stored local server token for this address
+        const sessions = this.getStoredServerSessions();
+        const session = sessions.find((s) => s.address === serverUrl || s.address === address);
+        if (session) {
+          // Use connectToServerLocal for local-auth reconnection
+          connecting = true;
+          this.connectToServerLocal(address, session.token).then((realId) => {
+            clearInterval(intervalId);
+            this.retryTimers.delete(address);
+            onReconnected(realId);
+          }).catch(() => {
+            connecting = false;
+          });
+          return;
+        }
         clearInterval(intervalId);
         this.retryTimers.delete(address);
         return;
@@ -566,7 +735,7 @@ export class ConnectionManager {
         // Server responded — stop polling, do full connect
         clearInterval(intervalId);
         this.retryTimers.delete(address);
-        return this.connectToServer(address, address, token, { silent: true });
+        return this.connectToServer(address, address, token!, { silent: true });
       }).then((realId) => {
         if (realId) onReconnected(realId);
       }).catch(() => {

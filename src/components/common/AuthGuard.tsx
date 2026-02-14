@@ -16,7 +16,7 @@ export function AuthGuard({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (authState === 'unauthenticated') {
-      navigate('/login', { replace: true });
+      navigate('/landing', { replace: true });
     }
   }, [authState, navigate]);
 

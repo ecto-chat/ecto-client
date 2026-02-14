@@ -1,13 +1,25 @@
 import { useEffect, useCallback, useState } from 'react';
 import { useCallStore } from '../../stores/call.js';
+import { useAuthStore } from '../../stores/auth.js';
 import { connectionManager } from '../../services/connection-manager.js';
 import { useCall } from '../../hooks/useCall.js';
 import { Avatar } from '../common/Avatar.js';
+import { CentralSignInPrompt } from '../common/CentralSignInPrompt.js';
 import type { CallRecord } from 'ecto-shared';
 
 type HistoryFilter = 'all' | 'missed' | 'incoming' | 'outgoing';
 
 export function CallHistory() {
+  const centralAuthState = useAuthStore((s) => s.centralAuthState);
+
+  if (centralAuthState !== 'authenticated') {
+    return <CentralSignInPrompt message="Sign in to Ecto Central to view call history and make calls." />;
+  }
+
+  return <CallHistoryInner />;
+}
+
+function CallHistoryInner() {
   const callHistory = useCallStore((s) => s.callHistory);
   const historyHasMore = useCallStore((s) => s.historyHasMore);
   const historyFilter = useCallStore((s) => s.historyFilter);

@@ -52,11 +52,24 @@ export function ChannelSidebar() {
     }
   }
 
+  // Setup banner for admin when setup not completed
+  const meta = useServerStore((s) => (activeServerId ? s.serverMeta.get(activeServerId) : undefined));
+  const showSetupBanner = meta && !meta.setup_completed && meta.admin_user_id && meta.user_id === meta.admin_user_id;
+
   return (
     <div className="channel-sidebar">
       <div className="channel-sidebar-header">
         <h2>{server?.server_name ?? 'Server'}</h2>
       </div>
+
+      {showSetupBanner && (
+        <div
+          className="setup-banner"
+          onClick={() => useUiStore.getState().openModal('setup-wizard')}
+        >
+          Complete Server Setup
+        </div>
+      )}
 
       <div className="channel-list">
         {/* Uncategorized channels */}
