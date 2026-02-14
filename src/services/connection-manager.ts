@@ -17,6 +17,7 @@ import { useDmStore } from '../stores/dm.js';
 import { useAuthStore } from '../stores/auth.js';
 import { useUiStore } from '../stores/ui.js';
 import { useServerStore } from '../stores/server.js';
+import { useRoleStore } from '../stores/role.js';
 import { handleCallWsEvent } from '../hooks/useCall.js';
 
 const SERVER_TOKENS_KEY = 'ecto-server-tokens';
@@ -440,6 +441,9 @@ export class ConnectionManager {
       }
       if (readyData.members) {
         useMemberStore.getState().setMembers(conn.serverId, readyData.members);
+      }
+      if (readyData.roles) {
+        useRoleStore.getState().setRoles(conn.serverId, readyData.roles);
       }
       if (readyData.read_states) {
         useReadStateStore.getState().bulkSetReadState(

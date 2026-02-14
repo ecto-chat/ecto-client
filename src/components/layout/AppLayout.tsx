@@ -24,6 +24,7 @@ import { CallBanner } from '../call/CallBanner.js';
 import { CentralSignInModal } from '../auth/CentralSignInModal.js';
 import { LeaveServerModal } from '../servers/LeaveServerModal.js';
 import { SetupWizard } from '../admin/SetupWizard.js';
+import { ServerSettings } from '../admin/ServerSettings.js';
 import { useCallStore } from '../../stores/call.js';
 
 export function AppLayout() {
@@ -264,6 +265,7 @@ export function AppLayout() {
       <LeaveServerModal />
       <UserProfileModal />
       <CentralSignInModal />
+      <ServerSettings />
       <IncomingCallOverlay />
       <ActiveCallOverlay />
     </div>

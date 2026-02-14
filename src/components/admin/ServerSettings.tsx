@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef, type FormEvent } from 'react';
+import { useState, useEffect, useRef, useMemo, type FormEvent } from 'react';
 import { useUiStore } from '../../stores/ui.js';
+import { usePermissions } from '../../hooks/usePermissions.js';
 import { connectionManager } from '../../services/connection-manager.js';
 import { LoadingSpinner } from '../common/LoadingSpinner.js';
 import { Modal } from '../common/Modal.js';
@@ -10,7 +11,7 @@ import type { Server, Ban, Invite, AuditLogEntry } from 'ecto-shared';
 
 type Tab = 'overview' | 'roles' | 'channels' | 'members' | 'bans' | 'invites' | 'audit-log';
 
-const TABS: { key: Tab; label: string }[] = [
+const ALL_TABS: { key: Tab; label: string }[] = [
   { key: 'overview', label: 'Overview' },
   { key: 'roles', label: 'Roles' },
   { key: 'channels', label: 'Channels' },
@@ -24,15 +25,30 @@ export function ServerSettings() {
   const open = useUiStore((s) => s.activeModal === 'server-settings');
   const close = () => useUiStore.getState().closeModal();
   const serverId = useUiStore((s) => s.activeServerId);
-  const [activeTab, setActiveTab] = useState<Tab>('overview');
+  const { allowedTabs } = usePermissions(serverId);
 
-  if (!open || !serverId) return null;
+  const visibleTabs = useMemo(() => {
+    if (allowedTabs === 'all') return ALL_TABS;
+    return ALL_TABS.filter((tab) => (allowedTabs as string[]).includes(tab.key));
+  }, [allowedTabs]);
+
+  const defaultTab = visibleTabs[0]?.key ?? 'overview';
+  const [activeTab, setActiveTab] = useState<Tab>(defaultTab);
+
+  // Reset active tab when visible tabs change (e.g. modal reopened with different role)
+  useEffect(() => {
+    if (visibleTabs.length > 0 && !visibleTabs.some((t) => t.key === activeTab)) {
+      setActiveTab(visibleTabs[0]!.key);
+    }
+  }, [visibleTabs, activeTab]);
+
+  if (!open || !serverId || visibleTabs.length === 0) return null;
 
   return (
     <Modal open={open} onClose={close} title="Server Settings" width={800}>
       <div className="server-settings" style={{ display: 'flex', minHeight: 480, gap: 16 }}>
         <nav className="settings-tabs" style={{ minWidth: 160, borderRight: '1px solid var(--border, #40444b)', paddingRight: 16 }}>
-          {TABS.map((tab) => (
+          {visibleTabs.map((tab) => (
             <button
               key={tab.key}
               className={`settings-tab-btn ${activeTab === tab.key ? 'active' : ''}`}

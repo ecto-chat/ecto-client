@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useChannels } from '../../hooks/useChannels.js';
+import { usePermissions } from '../../hooks/usePermissions.js';
 import { useUiStore } from '../../stores/ui.js';
 import { useServerStore } from '../../stores/server.js';
 import { useReadStateStore } from '../../stores/read-state.js';
@@ -17,6 +18,7 @@ export function ChannelSidebar() {
   const mentionCounts = useReadStateStore((s) => s.mentionCounts);
   const [collapsedCategories, setCollapsedCategories] = useState(new Set<string>());
   const navigate = useNavigate();
+  const { canAccessSettings } = usePermissions(activeServerId);
 
   const handleChannelClick = useCallback(
     (channel: Channel) => {
@@ -60,6 +62,15 @@ export function ChannelSidebar() {
     <div className="channel-sidebar">
       <div className="channel-sidebar-header">
         <h2>{server?.server_name ?? 'Server'}</h2>
+        {canAccessSettings && (
+          <button
+            className="settings-gear"
+            onClick={() => useUiStore.getState().openModal('server-settings')}
+            title="Server Settings"
+          >
+            &#9881;
+          </button>
+        )}
       </div>
 
       {showSetupBanner && (
