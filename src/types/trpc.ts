@@ -278,6 +278,9 @@ export interface ServerRouter {
         last_read_message_id: string;
       }) => Promise<{ success: boolean }>;
     };
+    markAllRead: {
+      mutate: () => Promise<{ success: boolean }>;
+    };
     list: {
       query: () => Promise<ReadState[]>;
     };

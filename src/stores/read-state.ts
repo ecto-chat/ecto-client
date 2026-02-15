@@ -13,6 +13,7 @@ interface ReadStateStore {
   incrementMention: (channelId: string) => void;
   setReadState: (channelId: string, lastReadId: string, mentionCount: number) => void;
   bulkSetReadState: (states: { channel_id: string; last_read_message_id: string; mention_count: number }[]) => void;
+  markAllRead: (channelIds: string[]) => void;
 }
 
 export const useReadStateStore = create<ReadStateStore>()((set) => ({
@@ -63,5 +64,16 @@ export const useReadStateStore = create<ReadStateStore>()((set) => ({
         mentionCounts.set(s.channel_id, s.mention_count);
       }
       return { lastRead, mentionCounts };
+    }),
+
+  markAllRead: (channelIds) =>
+    set((prev) => {
+      const unreadCounts = new Map(prev.unreadCounts);
+      const mentionCounts = new Map(prev.mentionCounts);
+      for (const id of channelIds) {
+        unreadCounts.set(id, 0);
+        mentionCounts.set(id, 0);
+      }
+      return { unreadCounts, mentionCounts };
     }),
 }));

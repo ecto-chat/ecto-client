@@ -6,6 +6,10 @@ import { useMemberStore } from '../../stores/member.js';
 import { useChannelStore } from '../../stores/channel.js';
 import { useUiStore } from '../../stores/ui.js';
 import { useVoice } from '../../hooks/useVoice.js';
+import { connectionManager } from '../../services/connection-manager.js';
+import { Permissions } from 'ecto-shared';
+import { useRoleStore } from '../../stores/role.js';
+import { useServerStore } from '../../stores/server.js';
 import { Avatar } from '../common/Avatar.js';
 import { DeviceSelector } from '../common/DeviceSelector.js';
 import { QualitySelector } from '../common/QualitySelector.js';
@@ -354,6 +358,31 @@ function VideoRenderer({ stream }: { stream: MediaStream }) {
 
 // DeviceSelector and QualitySelector imported from ../common/
 
+function useModPermissions(serverId: string | null) {
+  const meta = useServerStore((s) => (serverId ? s.serverMeta.get(serverId) : undefined));
+  const myUserId = meta?.user_id ?? null;
+  const myMember = useMemberStore((s) => {
+    if (!serverId || !myUserId) return undefined;
+    return s.members.get(serverId)?.get(myUserId);
+  });
+  const rolesMap = useRoleStore((s) => (serverId ? s.roles.get(serverId) : undefined));
+
+  let perms = 0;
+  if (myMember && rolesMap) {
+    for (const roleId of myMember.roles) {
+      const role = rolesMap.get(roleId);
+      if (role) perms |= role.permissions;
+    }
+  }
+
+  const isOwner = !!(meta && myUserId && meta.admin_user_id === myUserId);
+  const isAdmin = isOwner || (perms & Permissions.ADMINISTRATOR) !== 0;
+  const canMute = isAdmin || (perms & Permissions.MUTE_MEMBERS) !== 0;
+  const canDeafen = isAdmin || (perms & Permissions.DEAFEN_MEMBERS) !== 0;
+
+  return { canMute, canDeafen, myUserId };
+}
+
 export function VoiceView() {
   const activeServerId = useUiStore((s) => s.activeServerId);
   const activeChannelId = useUiStore((s) => s.activeChannelId);
@@ -370,6 +399,7 @@ export function VoiceView() {
   const members = useMemberStore((s) =>
     activeServerId ? s.members.get(activeServerId) : undefined,
   );
+  const { canMute, canDeafen, myUserId } = useModPermissions(activeServerId);
 
   const {
     selfMuted,
@@ -389,6 +419,18 @@ export function VoiceView() {
   } = useVoice();
 
   const [deviceMenu, setDeviceMenu] = useState<'audio' | 'video' | 'output' | 'video-quality' | 'screen-quality' | null>(null);
+
+  const handleServerMute = useCallback((userId: string, currentlyMuted: boolean) => {
+    if (!activeServerId) return;
+    const ws = connectionManager.getMainWs(activeServerId);
+    ws?.voiceServerMute(userId, !currentlyMuted);
+  }, [activeServerId]);
+
+  const handleServerDeafen = useCallback((userId: string, currentlyDeafened: boolean) => {
+    if (!activeServerId) return;
+    const ws = connectionManager.getMainWs(activeServerId);
+    ws?.voiceServerDeafen(userId, !currentlyDeafened);
+  }, [activeServerId]);
 
   const isConnectedHere = currentChannelId === activeChannelId && voiceStatus !== 'disconnected';
 
@@ -461,7 +503,31 @@ export function VoiceView() {
                     <div className="voice-card-icons">
                       {p.self_mute && <span title="Muted">&#128263;</span>}
                       {p.self_deaf && <span title="Deafened">&#128264;</span>}
+                      {p.server_mute && <span title="Server Muted" className="voice-mod-indicator">&#128263;</span>}
+                      {p.server_deaf && <span title="Server Deafened" className="voice-mod-indicator">&#128264;</span>}
                     </div>
+                    {p.user_id !== myUserId && (canMute || canDeafen) && (
+                      <div className="voice-mod-controls">
+                        {canMute && (
+                          <button
+                            className={`voice-mod-btn ${p.server_mute ? 'active' : ''}`}
+                            onClick={(e) => { e.stopPropagation(); handleServerMute(p.user_id, !!p.server_mute); }}
+                            title={p.server_mute ? 'Server Unmute' : 'Server Mute'}
+                          >
+                            {p.server_mute ? '\u{1F50A}' : '\u{1F507}'}
+                          </button>
+                        )}
+                        {canDeafen && (
+                          <button
+                            className={`voice-mod-btn ${p.server_deaf ? 'active' : ''}`}
+                            onClick={(e) => { e.stopPropagation(); handleServerDeafen(p.user_id, !!p.server_deaf); }}
+                            title={p.server_deaf ? 'Server Undeafen' : 'Server Deafen'}
+                          >
+                            {p.server_deaf ? '\u{1F509}' : '\u{1F508}'}
+                          </button>
+                        )}
+                      </div>
+                    )}
                     <UserVolumeControl userId={p.user_id} />
                   </div>
                   {screenStream && (

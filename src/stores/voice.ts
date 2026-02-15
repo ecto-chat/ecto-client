@@ -10,6 +10,9 @@ interface VoiceStore {
   voiceStatus: VoiceStatus;
   selfMuted: boolean;
   selfDeafened: boolean;
+  pttEnabled: boolean;
+  pttKey: string;
+  pttActive: boolean;
   speaking: Set<string>;
   participants: Map<string, VoiceState>;
   videoStreams: Map<string, MediaStream>;
@@ -28,6 +31,9 @@ interface VoiceStore {
     sameSession: boolean;
   } | null;
 
+  setPttEnabled: (enabled: boolean) => void;
+  setPttKey: (key: string) => void;
+  setPttActive: (active: boolean) => void;
   setPendingTransfer: (transfer: VoiceStore['pendingTransfer']) => void;
   setChannel: (serverId: string, channelId: string) => void;
   setVoiceStatus: (status: VoiceStatus) => void;
@@ -56,6 +62,9 @@ export const useVoiceStore = create<VoiceStore>()((set, get) => ({
   voiceStatus: 'disconnected',
   selfMuted: false,
   selfDeafened: false,
+  pttEnabled: localStorage.getItem('ecto-ptt-enabled') === 'true',
+  pttKey: localStorage.getItem('ecto-ptt-key') ?? ' ',
+  pttActive: false,
   speaking: new Set(),
   participants: new Map(),
   videoStreams: new Map(),
@@ -68,6 +77,15 @@ export const useVoiceStore = create<VoiceStore>()((set, get) => ({
   device: null,
   pendingTransfer: null,
 
+  setPttEnabled: (enabled) => {
+    localStorage.setItem('ecto-ptt-enabled', String(enabled));
+    set({ pttEnabled: enabled });
+  },
+  setPttKey: (key) => {
+    localStorage.setItem('ecto-ptt-key', key);
+    set({ pttKey: key });
+  },
+  setPttActive: (active) => set({ pttActive: active }),
   setPendingTransfer: (transfer) => set({ pendingTransfer: transfer }),
   setChannel: (serverId, channelId) =>
     set({ currentServerId: serverId, currentChannelId: channelId, voiceStatus: 'connecting' }),

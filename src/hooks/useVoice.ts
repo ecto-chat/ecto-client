@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import { Device } from 'mediasoup-client';
 import { useVoiceStore } from '../stores/voice.js';
 import { useAuthStore } from '../stores/auth.js';
@@ -70,6 +70,54 @@ export function useVoice() {
   const participants = useVoiceStore((s) => s.participants);
   const speaking = useVoiceStore((s) => s.speaking);
   const pendingTransfer = useVoiceStore((s) => s.pendingTransfer);
+
+  // Push-to-talk key listeners
+  const pttEnabled = useVoiceStore((s) => s.pttEnabled);
+  const pttKey = useVoiceStore((s) => s.pttKey);
+
+  useEffect(() => {
+    if (!pttEnabled || !currentChannelId) return;
+
+    // When PTT is enabled, start with mic paused
+    const audioProducer = useVoiceStore.getState().producers.get('audio');
+    if (audioProducer && !audioProducer.paused) {
+      audioProducer.pause();
+    }
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.repeat) return;
+      if (e.key === pttKey) {
+        const producer = useVoiceStore.getState().producers.get('audio');
+        if (producer && producer.paused) {
+          producer.resume();
+          useVoiceStore.getState().setPttActive(true);
+        }
+      }
+    };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.key === pttKey) {
+        const producer = useVoiceStore.getState().producers.get('audio');
+        if (producer && !producer.paused) {
+          producer.pause();
+          useVoiceStore.getState().setPttActive(false);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+      // Resume mic when PTT is disabled
+      const producer = useVoiceStore.getState().producers.get('audio');
+      if (producer && producer.paused && !useVoiceStore.getState().selfMuted) {
+        producer.resume();
+      }
+      useVoiceStore.getState().setPttActive(false);
+    };
+  }, [pttEnabled, pttKey, currentChannelId]);
 
   const joinVoice = useCallback(async (serverId: string, channelId: string, force?: boolean) => {
     const ws = connectionManager.getMainWs(serverId);
@@ -391,6 +439,20 @@ export function useVoice() {
     useVoiceStore.getState().setPendingTransfer(null);
   }, []);
 
+  const serverMuteUser = useCallback((userId: string, muted: boolean) => {
+    const sid = useVoiceStore.getState().currentServerId;
+    if (!sid) return;
+    const ws = connectionManager.getMainWs(sid);
+    ws?.voiceServerMute(userId, muted);
+  }, []);
+
+  const serverDeafenUser = useCallback((userId: string, deafened: boolean) => {
+    const sid = useVoiceStore.getState().currentServerId;
+    if (!sid) return;
+    const ws = connectionManager.getMainWs(sid);
+    ws?.voiceServerDeafen(userId, deafened);
+  }, []);
+
   return {
     currentChannelId,
     currentServerId,
@@ -415,6 +477,8 @@ export function useVoice() {
     toggleScreenAudioMute,
     confirmTransfer,
     cancelTransfer,
+    serverMuteUser,
+    serverDeafenUser,
   };
 }
 

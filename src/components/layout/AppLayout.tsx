@@ -25,7 +25,9 @@ import { CentralSignInModal } from '../auth/CentralSignInModal.js';
 import { LeaveServerModal } from '../servers/LeaveServerModal.js';
 import { SetupWizard } from '../admin/SetupWizard.js';
 import { ServerSettings } from '../admin/ServerSettings.js';
+import { UserSettingsModal } from '../settings/UserSettingsModal.js';
 import { useCallStore } from '../../stores/call.js';
+import { startIdleDetection, stopIdleDetection } from '../../services/idle-detector.js';
 
 export function AppLayout() {
   const activeServerId = useUiStore((s) => s.activeServerId);
@@ -39,6 +41,12 @@ export function AppLayout() {
   const showSetupWizard = useUiStore((s) => s.activeModal === 'setup-wizard');
 
   useNotifications();
+
+  // Start idle detection
+  useEffect(() => {
+    startIdleDetection();
+    return () => stopIdleDetection();
+  }, []);
 
   // Initialize connections on mount — dual-mode
   useEffect(() => {
@@ -267,6 +275,7 @@ export function AppLayout() {
       <UserProfileModal />
       <CentralSignInModal />
       <ServerSettings />
+      <UserSettingsModal />
       <IncomingCallOverlay />
       <ActiveCallOverlay />
     </div>

@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { useDmStore } from '../../stores/dm.js';
 import { usePresenceStore } from '../../stores/presence.js';
 import { useAuthStore } from '../../stores/auth.js';
+import { useUiStore } from '../../stores/ui.js';
 import { Avatar } from '../common/Avatar.js';
 import type { PresenceStatus } from 'ecto-shared';
 
@@ -10,6 +11,7 @@ export function DMSidebar() {
   const presences = usePresenceStore((s) => s.presences);
   const openConversationId = useDmStore((s) => s.openConversationId);
   const centralAuthState = useAuthStore((s) => s.centralAuthState);
+  const user = useAuthStore((s) => s.user);
   const navigate = useNavigate();
 
   const isCentral = centralAuthState === 'authenticated';
@@ -79,6 +81,22 @@ export function DMSidebar() {
           </p>
         </div>
       )}
+
+      {/* User bar at bottom */}
+      <div className="user-bar">
+        <Avatar src={user?.avatar_url ?? null} username={user?.username ?? '?'} size={32} />
+        <div className="user-bar-info">
+          <div className="user-bar-name">{user?.display_name ?? user?.username ?? 'User'}</div>
+          <div className="user-bar-status">#{user?.discriminator ?? '0000'}</div>
+        </div>
+        <button
+          className="user-bar-gear"
+          onClick={() => useUiStore.getState().openModal('user-settings')}
+          title="User Settings"
+        >
+          &#9881;
+        </button>
+      </div>
     </div>
   );
 }

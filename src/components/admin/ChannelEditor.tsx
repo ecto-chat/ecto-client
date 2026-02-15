@@ -1,4 +1,19 @@
 import { useState, type FormEvent } from 'react';
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+  arrayMove,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { useChannelStore } from '../../stores/channel.js';
 import { connectionManager } from '../../services/connection-manager.js';
 import { LoadingSpinner } from '../common/LoadingSpinner.js';
@@ -21,6 +36,8 @@ export function ChannelEditor({ serverId }: Props) {
   const [showCreateChannel, setShowCreateChannel] = useState(false);
   const [showCreateCategory, setShowCreateCategory] = useState(false);
   const [error, setError] = useState('');
+
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
   // Group channels by category
   const uncategorized = channels.filter((ch) => !ch.category_id).sort((a, b) => a.position - b.position);
@@ -84,6 +101,51 @@ export function ChannelEditor({ serverId }: Props) {
     }
   };
 
+  const handleChannelDragEnd = (event: DragEndEvent, channelList: Channel[], categoryId?: string) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = channelList.findIndex((ch) => ch.id === active.id);
+    const newIndex = channelList.findIndex((ch) => ch.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    const reordered = arrayMove(channelList, oldIndex, newIndex);
+    const payload = reordered.map((ch, i) => ({
+      channel_id: ch.id,
+      position: i,
+      ...(categoryId !== undefined ? { category_id: categoryId } : {}),
+    }));
+
+    // Optimistic update
+    for (const item of payload) {
+      useChannelStore.getState().updateChannel(serverId, { id: item.channel_id, position: item.position });
+    }
+
+    // Send to server
+    const trpc = connectionManager.getServerTrpc(serverId);
+    trpc?.channels.reorder.mutate({ channels: payload }).catch(() => {});
+  };
+
+  const handleCategoryDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = categories.findIndex((cat) => cat.id === active.id);
+    const newIndex = categories.findIndex((cat) => cat.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    const reordered = arrayMove(categories, oldIndex, newIndex);
+    const payload = reordered.map((cat, i) => ({ category_id: cat.id, position: i }));
+
+    // Optimistic update
+    for (const item of payload) {
+      useChannelStore.getState().updateCategory(serverId, { id: item.category_id, position: item.position });
+    }
+
+    const trpc = connectionManager.getServerTrpc(serverId);
+    trpc?.categories.reorder.mutate({ categories: payload }).catch(() => {});
+  };
+
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
@@ -136,69 +198,55 @@ export function ChannelEditor({ serverId }: Props) {
           <h4 style={{ fontSize: 11, textTransform: 'uppercase', color: 'var(--text-muted, #72767d)', marginBottom: 6 }}>
             Uncategorized
           </h4>
-          {uncategorized.map((ch) => (
-            <ChannelRow
-              key={ch.id}
-              channel={ch}
-              isEditing={editing?.id === ch.id}
-              editName={editName}
-              editTopic={editTopic}
-              onEditNameChange={setEditName}
-              onEditTopicChange={setEditTopic}
-              onStartEdit={() => startEdit(ch)}
-              onSave={handleSaveEdit}
-              onCancel={() => setEditing(null)}
-              onDelete={() => handleDeleteChannel(ch.id)}
-            />
-          ))}
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={(e) => handleChannelDragEnd(e, uncategorized)}>
+            <SortableContext items={uncategorized.map((ch) => ch.id)} strategy={verticalListSortingStrategy}>
+              {uncategorized.map((ch) => (
+                <SortableChannelRow
+                  key={ch.id}
+                  channel={ch}
+                  isEditing={editing?.id === ch.id}
+                  editName={editName}
+                  editTopic={editTopic}
+                  onEditNameChange={setEditName}
+                  onEditTopicChange={setEditTopic}
+                  onStartEdit={() => startEdit(ch)}
+                  onSave={handleSaveEdit}
+                  onCancel={() => setEditing(null)}
+                  onDelete={() => handleDeleteChannel(ch.id)}
+                />
+              ))}
+            </SortableContext>
+          </DndContext>
         </div>
       )}
 
       {/* Categorized channels */}
-      {categories.map((cat) => {
-        const catChannels = byCategory.get(cat.id) ?? [];
-        return (
-          <div key={cat.id} style={{ marginBottom: 16 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-              <h4 style={{ fontSize: 11, textTransform: 'uppercase', color: 'var(--text-muted, #72767d)', margin: 0 }}>
-                {cat.name}
-              </h4>
-              <button
-                onClick={() => handleDeleteCategory(cat.id)}
-                style={{
-                  padding: '0 4px',
-                  fontSize: 12,
-                  border: 'none',
-                  background: 'none',
-                  color: 'var(--text-muted, #72767d)',
-                  cursor: 'pointer',
-                }}
-                title="Delete category"
-              >
-                &times;
-              </button>
-            </div>
-            {catChannels.length === 0 && (
-              <p style={{ color: 'var(--text-muted, #72767d)', fontSize: 13, paddingLeft: 12 }}>No channels</p>
-            )}
-            {catChannels.map((ch) => (
-              <ChannelRow
-                key={ch.id}
-                channel={ch}
-                isEditing={editing?.id === ch.id}
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleCategoryDragEnd}>
+        <SortableContext items={categories.map((cat) => cat.id)} strategy={verticalListSortingStrategy}>
+          {categories.map((cat) => {
+            const catChannels = byCategory.get(cat.id) ?? [];
+            return (
+              <SortableCategorySection
+                key={cat.id}
+                category={cat}
+                catChannels={catChannels}
+                editing={editing}
                 editName={editName}
                 editTopic={editTopic}
+                sensors={sensors}
                 onEditNameChange={setEditName}
                 onEditTopicChange={setEditTopic}
-                onStartEdit={() => startEdit(ch)}
-                onSave={handleSaveEdit}
-                onCancel={() => setEditing(null)}
-                onDelete={() => handleDeleteChannel(ch.id)}
+                onStartEdit={startEdit}
+                onSaveEdit={handleSaveEdit}
+                onCancelEdit={() => setEditing(null)}
+                onDeleteChannel={handleDeleteChannel}
+                onDeleteCategory={handleDeleteCategory}
+                onChannelDragEnd={(e) => handleChannelDragEnd(e, catChannels, cat.id)}
               />
-            ))}
-          </div>
-        );
-      })}
+            );
+          })}
+        </SortableContext>
+      </DndContext>
     </div>
   );
 }
@@ -218,6 +266,20 @@ interface ChannelRowProps {
   onDelete: () => void;
 }
 
+function SortableChannelRow(props: ChannelRowProps) {
+  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: props.channel.id });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style}>
+      <ChannelRow {...props} dragAttributes={attributes} dragListeners={listeners} />
+    </div>
+  );
+}
+
 function ChannelRow({
   channel,
   isEditing,
@@ -229,7 +291,9 @@ function ChannelRow({
   onSave,
   onCancel,
   onDelete,
-}: ChannelRowProps) {
+  dragAttributes,
+  dragListeners,
+}: ChannelRowProps & { dragAttributes?: React.HTMLAttributes<HTMLElement>; dragListeners?: Record<string, Function> }) {
   if (isEditing) {
     return (
       <div style={{
@@ -296,6 +360,14 @@ function ChannelRow({
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <span
+          {...dragAttributes}
+          {...dragListeners}
+          style={{ cursor: 'grab', color: 'var(--text-muted, #72767d)', fontSize: 14, userSelect: 'none' }}
+          title="Drag to reorder"
+        >
+          &#8942;&#8942;
+        </span>
         <span style={{ color: 'var(--text-muted, #72767d)', fontSize: 16 }}>
           {channel.type === 'voice' ? '\u{1F50A}' : '#'}
         </span>
@@ -338,6 +410,101 @@ function ChannelRow({
           Delete
         </button>
       </div>
+    </div>
+  );
+}
+
+// ---------- Sortable Category Section ----------
+
+function SortableCategorySection({
+  category,
+  catChannels,
+  editing,
+  editName,
+  editTopic,
+  sensors,
+  onEditNameChange,
+  onEditTopicChange,
+  onStartEdit,
+  onSaveEdit,
+  onCancelEdit,
+  onDeleteChannel,
+  onDeleteCategory,
+  onChannelDragEnd,
+}: {
+  category: Category;
+  catChannels: Channel[];
+  editing: Channel | null;
+  editName: string;
+  editTopic: string;
+  sensors: ReturnType<typeof useSensors>;
+  onEditNameChange: (v: string) => void;
+  onEditTopicChange: (v: string) => void;
+  onStartEdit: (ch: Channel) => void;
+  onSaveEdit: () => void;
+  onCancelEdit: () => void;
+  onDeleteChannel: (id: string) => void;
+  onDeleteCategory: (id: string) => void;
+  onChannelDragEnd: (e: DragEndEvent) => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: category.id });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    marginBottom: 16,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+        <span
+          {...attributes}
+          {...listeners}
+          style={{ cursor: 'grab', color: 'var(--text-muted, #72767d)', fontSize: 14, userSelect: 'none' }}
+          title="Drag to reorder category"
+        >
+          &#8942;&#8942;
+        </span>
+        <h4 style={{ fontSize: 11, textTransform: 'uppercase', color: 'var(--text-muted, #72767d)', margin: 0 }}>
+          {category.name}
+        </h4>
+        <button
+          onClick={() => onDeleteCategory(category.id)}
+          style={{
+            padding: '0 4px',
+            fontSize: 12,
+            border: 'none',
+            background: 'none',
+            color: 'var(--text-muted, #72767d)',
+            cursor: 'pointer',
+          }}
+          title="Delete category"
+        >
+          &times;
+        </button>
+      </div>
+      {catChannels.length === 0 && (
+        <p style={{ color: 'var(--text-muted, #72767d)', fontSize: 13, paddingLeft: 12 }}>No channels</p>
+      )}
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onChannelDragEnd}>
+        <SortableContext items={catChannels.map((ch) => ch.id)} strategy={verticalListSortingStrategy}>
+          {catChannels.map((ch) => (
+            <SortableChannelRow
+              key={ch.id}
+              channel={ch}
+              isEditing={editing?.id === ch.id}
+              editName={editName}
+              editTopic={editTopic}
+              onEditNameChange={onEditNameChange}
+              onEditTopicChange={onEditTopicChange}
+              onStartEdit={() => onStartEdit(ch)}
+              onSave={onSaveEdit}
+              onCancel={onCancelEdit}
+              onDelete={() => onDeleteChannel(ch.id)}
+            />
+          ))}
+        </SortableContext>
+      </DndContext>
     </div>
   );
 }

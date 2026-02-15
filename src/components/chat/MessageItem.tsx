@@ -3,7 +3,14 @@ import { Avatar } from '../common/Avatar.js';
 import { useAuthStore } from '../../stores/auth.js';
 import { useUiStore } from '../../stores/ui.js';
 import { connectionManager } from '../../services/connection-manager.js';
+import { renderMarkdown } from '../../lib/markdown.js';
+import { LinkPreviews } from './LinkPreview.js';
 import type { Message } from 'ecto-shared';
+
+const DANGEROUS_EXTENSIONS = new Set([
+  '.exe', '.msi', '.bat', '.cmd', '.scr', '.ps1', '.sh', '.jar', '.app', '.dmg',
+  '.vbs', '.com', '.pif', '.reg',
+]);
 
 interface MessageItemProps {
   message: Message;
@@ -28,6 +35,7 @@ export function MessageItem({ message, onEdit, onDelete, onReact, onPin, readOnl
   const [editing, setEditing] = useState(false);
   const [editContent, setEditContent] = useState(message.content ?? '');
   const [hovering, setHovering] = useState(false);
+  const [fileWarning, setFileWarning] = useState<{ url: string; filename: string } | null>(null);
   const currentUserId = useAuthStore((s) => s.user?.id);
   const activeServerId = useUiStore((s) => s.activeServerId);
   const isOwn = message.author?.id === currentUserId;
@@ -117,23 +125,70 @@ export function MessageItem({ message, onEdit, onDelete, onReact, onPin, readOnl
             </div>
           </div>
         ) : (
-          <div className="message-content">{message.content}</div>
+          <>
+            <div
+              className="message-content message-markdown"
+              dangerouslySetInnerHTML={{ __html: renderMarkdown(message.content ?? '') }}
+              onClick={(e) => {
+                const el = e.target as HTMLElement;
+                if (el.classList.contains('spoiler')) el.classList.toggle('revealed');
+              }}
+            />
+            {message.content && <LinkPreviews content={message.content} />}
+          </>
         )}
 
         {/* Attachments */}
         {message.attachments && message.attachments.length > 0 && (
           <div className="message-attachments">
-            {message.attachments.map((att) => (
-              <div key={att.id} className="message-attachment">
-                {att.content_type?.startsWith('image/') ? (
-                  <img src={resolveFileUrl(att.url)} alt={att.filename} className="attachment-image" />
-                ) : (
-                  <a href={resolveFileUrl(att.url)} download={att.filename} className="attachment-file">
-                    {att.filename} ({formatBytes(att.size_bytes)})
-                  </a>
-                )}
+            {message.attachments.map((att) => {
+              const ext = att.filename.slice(att.filename.lastIndexOf('.')).toLowerCase();
+              const isDangerous = DANGEROUS_EXTENSIONS.has(ext);
+              const fileUrl = resolveFileUrl(att.url);
+
+              return (
+                <div key={att.id} className="message-attachment">
+                  {att.content_type?.startsWith('image/') ? (
+                    <img src={fileUrl} alt={att.filename} className="attachment-image" />
+                  ) : isDangerous ? (
+                    <button
+                      type="button"
+                      className="attachment-file"
+                      onClick={() => setFileWarning({ url: fileUrl, filename: att.filename })}
+                    >
+                      &#9888; {att.filename} ({formatBytes(att.size_bytes)})
+                    </button>
+                  ) : (
+                    <a href={fileUrl} download={att.filename} className="attachment-file">
+                      {att.filename} ({formatBytes(att.size_bytes)})
+                    </a>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* File download warning */}
+        {fileWarning && (
+          <div className="file-warning-overlay" onClick={() => setFileWarning(null)}>
+            <div className="file-warning-card" onClick={(e) => e.stopPropagation()}>
+              <div className="file-warning-icon">&#9888;</div>
+              <h3>Potentially Dangerous File</h3>
+              <div className="file-warning-filename">{fileWarning.filename}</div>
+              <p>This file type could be harmful to your computer. Only download files from sources you trust.</p>
+              <div className="file-warning-actions">
+                <button className="btn-secondary" onClick={() => setFileWarning(null)}>Cancel</button>
+                <a
+                  href={fileWarning.url}
+                  download={fileWarning.filename}
+                  className="btn-danger"
+                  onClick={() => setFileWarning(null)}
+                >
+                  Download Anyway
+                </a>
               </div>
-            ))}
+            </div>
           </div>
         )}
 

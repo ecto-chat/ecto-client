@@ -1,6 +1,7 @@
 import { useVoice } from '../../hooks/useVoice.js';
 import { useChannelStore } from '../../stores/channel.js';
 import { useServerStore } from '../../stores/server.js';
+import { useVoiceStore } from '../../stores/voice.js';
 
 export function VoiceControls() {
   const {
@@ -16,10 +17,15 @@ export function VoiceControls() {
     toggleCamera,
   } = useVoice();
 
+  const pttEnabled = useVoiceStore((s) => s.pttEnabled);
+  const pttActive = useVoiceStore((s) => s.pttActive);
+  const pttKey = useVoiceStore((s) => s.pttKey);
+
   if (!isInVoice || !currentServerId || !currentChannelId) return null;
 
   const channelName = useChannelStore.getState().channels.get(currentServerId)?.get(currentChannelId)?.name ?? 'Voice';
   const serverName = useServerStore.getState().servers.get(currentServerId)?.server_name ?? 'Server';
+  const pttKeyLabel = pttKey === ' ' ? 'Space' : pttKey;
 
   return (
     <div className="voice-controls">
@@ -31,6 +37,12 @@ export function VoiceControls() {
           {channelName} / {serverName}
         </div>
       </div>
+
+      {pttEnabled && (
+        <div className={`ptt-indicator ${pttActive ? 'active' : ''}`}>
+          {pttActive ? `Transmitting...` : `Push [${pttKeyLabel}] to talk`}
+        </div>
+      )}
 
       <div className="voice-controls-buttons">
         <button

@@ -239,6 +239,14 @@ export class MainWebSocket {
     this.send('voice.produce_stop', { producer_id: producerId });
   }
 
+  voiceServerMute(userId: string, muted: boolean) {
+    this.send('voice.server_mute', { user_id: userId, muted });
+  }
+
+  voiceServerDeafen(userId: string, deafened: boolean) {
+    this.send('voice.server_deafen', { user_id: userId, deafened });
+  }
+
   disconnect() {
     this.cleanup();
   }

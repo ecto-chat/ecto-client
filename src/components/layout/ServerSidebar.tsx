@@ -1,11 +1,27 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+  arrayMove,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { useServerStore } from '../../stores/server.js';
 import { useUiStore } from '../../stores/ui.js';
 import { useNotifyStore } from '../../stores/notify.js';
 import { useReadStateStore } from '../../stores/read-state.js';
 import { useConnectionStore } from '../../stores/connection.js';
+import { useChannelStore } from '../../stores/channel.js';
 import { connectionManager } from '../../services/connection-manager.js';
 import { fullLogout } from '../../stores/reset.js';
 import { Avatar } from '../common/Avatar.js';
@@ -14,6 +30,19 @@ interface ContextMenu {
   x: number;
   y: number;
   serverId: string;
+}
+
+function SortableServerIcon({ children, id }: { children: React.ReactNode; id: string }) {
+  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+  return (
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+      {children}
+    </div>
+  );
 }
 
 export function ServerSidebar() {
@@ -25,6 +54,17 @@ export function ServerSidebar() {
   const connections = useConnectionStore((s) => s.connections);
   const navigate = useNavigate();
   const [contextMenu, setContextMenu] = useState<ContextMenu | null>(null);
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
+
+  const handleServerDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = serverOrder.indexOf(active.id as string);
+    const newIndex = serverOrder.indexOf(over.id as string);
+    if (oldIndex === -1 || newIndex === -1) return;
+    const newOrder = arrayMove([...serverOrder], oldIndex, newIndex);
+    useServerStore.getState().reorderServers(newOrder);
+  };
 
   // Close context menu on outside click or another context menu
   useEffect(() => {
@@ -71,6 +111,25 @@ export function ServerSidebar() {
     setContextMenu(null);
   };
 
+  const handleMarkAllRead = () => {
+    if (!contextMenu) return;
+    const serverChannels = useChannelStore.getState().channels.get(contextMenu.serverId);
+    if (serverChannels) {
+      useReadStateStore.getState().markAllRead([...serverChannels.keys()]);
+    }
+    useNotifyStore.getState().clearNotifications(contextMenu.serverId);
+    // Persist to server
+    const trpc = connectionManager.getServerTrpc(contextMenu.serverId);
+    trpc?.read_state.markAllRead.mutate().catch(() => {});
+    setContextMenu(null);
+  };
+
+  const handleToggleMuteServer = () => {
+    if (!contextMenu) return;
+    useNotifyStore.getState().toggleMuteServer(contextMenu.serverId);
+    setContextMenu(null);
+  };
+
   const handleRemoveServer = () => {
     if (!contextMenu) return;
     const { serverId } = contextMenu;
@@ -109,8 +168,10 @@ export function ServerSidebar() {
     return total;
   };
 
+  const mutedServers = useNotifyStore((s) => s.mutedServers);
   const menuServerStatus = contextMenu ? connections.get(contextMenu.serverId) : undefined;
   const menuServerOffline = contextMenu && (!menuServerStatus || menuServerStatus === 'disconnected');
+  const menuServerMuted = contextMenu ? mutedServers.has(contextMenu.serverId) : false;
 
   return (
     <div className="server-sidebar">
@@ -128,41 +189,49 @@ export function ServerSidebar() {
       <div className="server-sidebar-separator" />
 
       {/* Server list */}
-      {serverOrder.map((serverId) => {
-        const server = servers.get(serverId);
-        if (!server) return null;
-        const isActive = activeServerId === serverId;
-        const hasUnread = getServerUnread(serverId);
-        const status = connections.get(serverId);
-        const isOffline = !status || status === 'disconnected';
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleServerDragEnd}>
+        <SortableContext items={serverOrder} strategy={verticalListSortingStrategy}>
+          {serverOrder.map((serverId) => {
+            const server = servers.get(serverId);
+            if (!server) return null;
+            const isActive = activeServerId === serverId;
+            const hasUnread = getServerUnread(serverId);
+            const isMuted = mutedServers.has(serverId);
+            const status = connections.get(serverId);
+            const isOffline = !status || status === 'disconnected';
 
-        return (
-          <div key={serverId} className="server-icon-wrapper">
-            {hasUnread && !isActive && <div className="server-unread-dot" />}
-            <div
-              className={`server-icon ${isActive ? 'active' : ''} ${isOffline ? 'offline' : ''}`}
-              onClick={() => handleServerClick(serverId)}
-              onContextMenu={(e) => handleContextMenu(e, serverId)}
-              title={isOffline ? `${server.server_name ?? serverId} (Offline)` : server.server_name ?? serverId}
-            >
-              {isOffline ? (
-                <div className="server-offline-icon" title="Server Offline">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                    <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4C9.11 4 6.6 5.64 5.35 8.04C2.34 8.36 0 10.91 0 14C0 17.31 2.69 20 6 20H19C21.76 20 24 17.76 24 15C24 12.36 21.95 10.22 19.35 10.04Z" fill="currentColor" opacity="0.3"/>
-                    <line x1="4" y1="4" x2="20" y2="20" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                  </svg>
+            return (
+              <SortableServerIcon key={serverId} id={serverId}>
+                <div className="server-icon-wrapper">
+                  {hasUnread && !isActive && <div className={`server-unread-dot ${isMuted ? 'muted' : ''}`} />}
+                  {isMuted && <div className="server-muted-icon" title="Muted">&#128263;</div>}
+                  <div
+                    className={`server-icon ${isActive ? 'active' : ''} ${isOffline ? 'offline' : ''}`}
+                    onClick={() => handleServerClick(serverId)}
+                    onContextMenu={(e) => handleContextMenu(e, serverId)}
+                    title={isOffline ? `${server.server_name ?? serverId} (Offline)` : server.server_name ?? serverId}
+                  >
+                    {isOffline ? (
+                      <div className="server-offline-icon" title="Server Offline">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                          <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4C9.11 4 6.6 5.64 5.35 8.04C2.34 8.36 0 10.91 0 14C0 17.31 2.69 20 6 20H19C21.76 20 24 17.76 24 15C24 12.36 21.95 10.22 19.35 10.04Z" fill="currentColor" opacity="0.3"/>
+                          <line x1="4" y1="4" x2="20" y2="20" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                        </svg>
+                      </div>
+                    ) : (
+                      <Avatar
+                        src={server.server_icon ?? undefined}
+                        username={server.server_name ?? serverId}
+                        size={48}
+                      />
+                    )}
+                  </div>
                 </div>
-              ) : (
-                <Avatar
-                  src={server.server_icon ?? undefined}
-                  username={server.server_name ?? serverId}
-                  size={48}
-                />
-              )}
-            </div>
-          </div>
-        );
-      })}
+              </SortableServerIcon>
+            );
+          })}
+        </SortableContext>
+      </DndContext>
 
       {/* Add server button */}
       <div className="server-icon add-server" onClick={handleAddServer} title="Add a Server">
@@ -194,6 +263,19 @@ export function ServerSidebar() {
           className="server-context-menu"
           style={{ top: contextMenu.y, left: contextMenu.x }}
         >
+          <button
+            className="server-context-menu-item"
+            onClick={handleMarkAllRead}
+          >
+            Mark All as Read
+          </button>
+          <button
+            className="server-context-menu-item"
+            onClick={handleToggleMuteServer}
+          >
+            {menuServerMuted ? 'Unmute Server' : 'Mute Server'}
+          </button>
+          <div className="server-context-menu-separator" />
           <button
             className="server-context-menu-item"
             onClick={handleLeaveServer}
