@@ -13,6 +13,7 @@ import {
   setVideoQuality,
   setScreenQuality,
 } from '../lib/media-presets.js';
+import { startSpeakingDetection, switchAudioOutputDevice, getAudioStream, getVideoStream } from '../lib/media-utils.js';
 export type { VideoQuality, ScreenQuality } from '../lib/media-presets.js';
 
 /** Get local user ID — Central account user ID, or server-specific user ID for local accounts */
@@ -29,36 +30,11 @@ let voiceEventQueue: Promise<void> = Promise.resolve();
 let pendingProduceResolve: ((id: string) => void) | null = null;
 const consumerSpeakingCleanups = new Map<string, () => void>();
 
-function startSpeakingDetection(stream: MediaStream, userId: string): () => void {
-  const audioCtx = new AudioContext();
-  const source = audioCtx.createMediaStreamSource(stream);
-  const analyser = audioCtx.createAnalyser();
-  analyser.fftSize = 512;
-  analyser.smoothingTimeConstant = 0.4;
-  source.connect(analyser);
-
-  const data = new Uint8Array(analyser.frequencyBinCount);
-  let wasSpeaking = false;
-  const THRESHOLD = 15;
-
-  const interval = setInterval(() => {
-    analyser.getByteFrequencyData(data);
-    let sum = 0;
-    for (let i = 0; i < data.length; i++) sum += data[i]!;
-    const avg = sum / data.length;
-    const isSpeaking = avg > THRESHOLD;
-
-    if (isSpeaking !== wasSpeaking) {
-      wasSpeaking = isSpeaking;
-      useVoiceStore.getState().setSpeaking(userId, isSpeaking);
-    }
-  }, 100);
-
-  return () => {
-    clearInterval(interval);
-    source.disconnect();
-    audioCtx.close().catch(() => {});
-  };
+/** Start speaking detection that updates the voice store for a given user. */
+function startVoiceSpeakingDetection(stream: MediaStream, userId: string): () => void {
+  return startSpeakingDetection(stream, (speaking) => {
+    useVoiceStore.getState().setSpeaking(userId, speaking);
+  });
 }
 
 export function useVoice() {
@@ -234,7 +210,7 @@ export function useVoice() {
 
       speakingCleanup?.();
       const localUserId = getLocalUserId();
-      if (localUserId) speakingCleanup = startSpeakingDetection(stream, localUserId);
+      if (localUserId) speakingCleanup = startVoiceSpeakingDetection(stream, localUserId);
     } catch (err) {
       console.error('[voice] failed to switch audio device:', err);
     }
@@ -243,11 +219,7 @@ export function useVoice() {
   const switchAudioOutput = useCallback(async (deviceId: string) => {
     localStorage.setItem('ecto-audio-output', deviceId);
     const audioEls = document.querySelectorAll<HTMLAudioElement>('audio[data-consumer-id]');
-    for (const el of audioEls) {
-      if ('setSinkId' in el) {
-        await (el as HTMLAudioElement & { setSinkId: (id: string) => Promise<void> }).setSinkId(deviceId).catch(() => {});
-      }
-    }
+    await switchAudioOutputDevice(audioEls, deviceId);
   }, []);
 
   const switchVideoDevice = useCallback(async (deviceId: string) => {
@@ -537,7 +509,7 @@ async function handleVoiceEvent(ws: ReturnType<typeof connectionManager.getMainW
           const producer = await sendTransport.produce({ track: audioTrack, appData: { source: 'mic' } });
           useVoiceStore.getState().setProducer('audio', producer);
           const localUserId = getLocalUserId();
-          if (localUserId) speakingCleanup = startSpeakingDetection(stream, localUserId);
+          if (localUserId) speakingCleanup = startVoiceSpeakingDetection(stream, localUserId);
         } catch (err) {
           console.error('[voice] audio setup failed:', err);
         }
@@ -599,7 +571,7 @@ async function handleVoiceEvent(ws: ReturnType<typeof connectionManager.getMainW
         // Start speaking detection for remote user (skip screen audio)
         const remoteUserId = d.user_id as string;
         if (remoteUserId && consumerSource !== 'screen-audio') {
-          const cleanup = startSpeakingDetection(audioStream, remoteUserId);
+          const cleanup = startVoiceSpeakingDetection(audioStream, remoteUserId);
           consumerSpeakingCleanups.set(consumer.id, cleanup);
         }
       } else if (consumer.kind === 'video') {

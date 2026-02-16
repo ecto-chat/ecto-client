@@ -70,6 +70,7 @@ export function useMessages(channelId: string) {
           created_at: new Date().toISOString(),
           attachments: [],
           reactions: [],
+          webhook_id: null,
         };
         useMessageStore.getState().addMessage(channelId, optimistic);
       }

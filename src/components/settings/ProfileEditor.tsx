@@ -1,13 +1,34 @@
-import { useState, useRef, type FormEvent, type ChangeEvent } from 'react';
+import { useState, useEffect, useRef, type FormEvent, type ChangeEvent } from 'react';
 import { useAuthStore } from '../../stores/auth.js';
 import { connectionManager } from '../../services/connection-manager.js';
 import { Avatar } from '../common/Avatar.js';
 import { LoadingSpinner } from '../common/LoadingSpinner.js';
 
+async function uploadAvatarFile(file: File): Promise<string> {
+  const { centralUrl, token } = useAuthStore.getState();
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const res = await fetch(`${centralUrl}/upload/avatar`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: formData,
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: 'Upload failed' }));
+    throw new Error((err as { error?: string }).error ?? 'Upload failed');
+  }
+
+  const data = (await res.json()) as { avatar_url: string };
+  return data.avatar_url;
+}
+
 export function ProfileEditor() {
   const user = useAuthStore((s) => s.user);
   const setUser = useAuthStore((s) => s.setUser);
 
+  const [username, setUsername] = useState(user?.username ?? '');
   const [displayName, setDisplayName] = useState(user?.display_name ?? '');
   const [bio, setBio] = useState(user?.bio ?? '');
   const [customStatus, setCustomStatus] = useState(user?.custom_status ?? '');
@@ -16,7 +37,34 @@ export function ProfileEditor() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [usernameStatus, setUsernameStatus] = useState<'idle' | 'checking' | 'available' | 'taken'>('idle');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const checkTimerRef = useRef<ReturnType<typeof setTimeout>>(null);
+
+  // Debounced username availability check
+  useEffect(() => {
+    if (checkTimerRef.current) clearTimeout(checkTimerRef.current);
+
+    if (!user || username.length < 2 || username.toLowerCase() === user.username) {
+      setUsernameStatus('idle');
+      return;
+    }
+
+    setUsernameStatus('checking');
+    checkTimerRef.current = setTimeout(() => {
+      const trpc = connectionManager.getCentralTrpc();
+      if (!trpc) return;
+      trpc.profile.checkUsername.query({ username }).then((res) => {
+        setUsernameStatus(res.available ? 'available' : 'taken');
+      }).catch(() => {
+        setUsernameStatus('idle');
+      });
+    }, 400);
+
+    return () => {
+      if (checkTimerRef.current) clearTimeout(checkTimerRef.current);
+    };
+  }, [username, user?.username]);
 
   if (!user) return null;
 
@@ -53,16 +101,15 @@ export function ProfileEditor() {
 
       // Upload avatar if a new file was selected
       if (avatarFile) {
-        const result = await trpc.profile.uploadAvatar.mutate({
-          file: avatarFile,
-        });
-        setUser({ ...user, avatar_url: result.avatar_url });
+        const avatarUrl = await uploadAvatarFile(avatarFile);
+        setUser({ ...user, avatar_url: avatarUrl });
         setAvatarFile(null);
         setAvatarPreview(null);
       }
 
       // Update profile fields
-      const updates: { display_name?: string; bio?: string; custom_status?: string } = {};
+      const updates: { username?: string; display_name?: string; bio?: string; custom_status?: string } = {};
+      if (username !== (user.username ?? '')) updates.username = username;
       if (displayName !== (user.display_name ?? '')) updates.display_name = displayName;
       if (bio !== (user.bio ?? '')) updates.bio = bio;
       if (customStatus !== (user.custom_status ?? '')) updates.custom_status = customStatus;
@@ -112,6 +159,28 @@ export function ProfileEditor() {
             )}
           </div>
         </div>
+
+        <label className="settings-label">
+          Username
+          <div className="settings-input-row">
+            <input
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value.replace(/[^a-zA-Z0-9_]/g, ''))}
+              maxLength={32}
+              className={`settings-input ${usernameStatus === 'taken' ? 'input-error' : usernameStatus === 'available' ? 'input-success' : ''}`}
+            />
+            <input
+              type="text"
+              value={`#${user.discriminator ?? '0000'}`}
+              disabled
+              className="settings-input settings-discriminator"
+            />
+          </div>
+          {usernameStatus === 'checking' && <span className="settings-hint">Checking availability...</span>}
+          {usernameStatus === 'available' && <span className="settings-hint settings-hint-success">Username available! You'll keep #{user.discriminator}.</span>}
+          {usernameStatus === 'taken' && <span className="settings-hint settings-hint-warn">#{user.discriminator} is taken for this name. A new tag will be assigned.</span>}
+        </label>
 
         <label className="settings-label">
           Display Name

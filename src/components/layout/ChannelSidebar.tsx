@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, memo } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { useChannels } from '../../hooks/useChannels.js';
@@ -25,10 +25,7 @@ export function ChannelSidebar() {
   const server = useServerStore((s) => (activeServerId ? s.servers.get(activeServerId) : undefined));
   const user = useAuthStore((s) => s.user);
   const { channels, categories, openChannel } = useChannels(activeServerId ?? '');
-  const unreadCounts = useReadStateStore((s) => s.unreadCounts);
-  const mentionCounts = useReadStateStore((s) => s.mentionCounts);
   const [collapsedCategories, setCollapsedCategories] = useState(new Set<string>());
-  const mutedChannels = useNotifyStore((s) => s.mutedChannels);
   const [channelMenu, setChannelMenu] = useState<ChannelContextMenu | null>(null);
   const navigate = useNavigate();
   const { canAccessSettings } = usePermissions(activeServerId);
@@ -126,9 +123,6 @@ export function ChannelSidebar() {
             key={ch.id}
             channel={ch}
             isActive={ch.id === activeChannelId}
-            unread={unreadCounts.get(ch.id) ?? 0}
-            mentions={mentionCounts.get(ch.id) ?? 0}
-            isMuted={mutedChannels.has(ch.id)}
             onClick={handleChannelClick}
             onContextMenu={handleChannelContextMenu}
           />
@@ -151,9 +145,6 @@ export function ChannelSidebar() {
                     key={ch.id}
                     channel={ch}
                     isActive={ch.id === activeChannelId}
-                    unread={unreadCounts.get(ch.id) ?? 0}
-                    mentions={mentionCounts.get(ch.id) ?? 0}
-                    isMuted={mutedChannels.has(ch.id)}
                     onClick={handleChannelClick}
                     onContextMenu={handleChannelContextMenu}
                   />
@@ -164,20 +155,7 @@ export function ChannelSidebar() {
       </div>
 
       {/* Channel context menu */}
-      {channelMenu && createPortal(
-        <div
-          className="server-context-menu"
-          style={{ top: channelMenu.y, left: channelMenu.x }}
-        >
-          <button
-            className="server-context-menu-item"
-            onClick={handleToggleMuteChannel}
-          >
-            {mutedChannels.has(channelMenu.channelId) ? 'Unmute Channel' : 'Mute Channel'}
-          </button>
-        </div>,
-        document.body,
-      )}
+      {channelMenu && <ChannelContextMenuPortal channelMenu={channelMenu} onToggleMute={handleToggleMuteChannel} />}
 
       {/* User bar at bottom */}
       <div className="user-bar">
@@ -198,28 +176,27 @@ export function ChannelSidebar() {
   );
 }
 
-function ChannelItem({
+const ChannelItem = memo(function ChannelItem({
   channel,
   isActive,
-  unread,
-  mentions,
-  isMuted,
   onClick,
   onContextMenu,
 }: {
   channel: Channel;
   isActive: boolean;
-  unread: number;
-  mentions: number;
-  isMuted: boolean;
   onClick: (channel: Channel) => void;
   onContextMenu: (e: React.MouseEvent, channelId: string) => void;
 }) {
+  // Per-item selectors — only re-render when THIS channel's state changes
+  const unread = useReadStateStore((s) => s.unreadCounts.get(channel.id) ?? 0);
+  const mentions = useReadStateStore((s) => s.mentionCounts.get(channel.id) ?? 0);
+  const isMuted = useNotifyStore((s) => s.mutedChannels.has(channel.id));
+
   if (channel.type === 'voice') {
     return <VoiceChannel channel={channel} isActive={isActive} />;
   }
 
-  const prefix = channel.type === 'text' ? '#' : '#';
+  const prefix = '#';
 
   return (
     <div
@@ -232,5 +209,26 @@ function ChannelItem({
       {isMuted && <span className="channel-muted-icon" title="Muted">&#128263;</span>}
       {mentions > 0 && <span className="channel-mention-badge">{mentions}</span>}
     </div>
+  );
+});
+
+function ChannelContextMenuPortal({
+  channelMenu,
+  onToggleMute,
+}: {
+  channelMenu: ChannelContextMenu;
+  onToggleMute: () => void;
+}) {
+  const isMuted = useNotifyStore((s) => s.mutedChannels.has(channelMenu.channelId));
+  return createPortal(
+    <div
+      className="server-context-menu"
+      style={{ top: channelMenu.y, left: channelMenu.x }}
+    >
+      <button className="server-context-menu-item" onClick={onToggleMute}>
+        {isMuted ? 'Unmute Channel' : 'Mute Channel'}
+      </button>
+    </div>,
+    document.body,
   );
 }

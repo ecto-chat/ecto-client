@@ -297,6 +297,62 @@ export interface ServerRouter {
     };
   };
 
+  webhooks: {
+    create: {
+      mutate: (input: {
+        channel_id: string;
+        name: string;
+        avatar_url?: string;
+      }) => Promise<{
+        id: string;
+        channel_id: string;
+        name: string;
+        avatar_url: string | null;
+        token: string;
+        created_by: string;
+        created_at: string;
+      }>;
+    };
+    list: {
+      query: (input: { channel_id: string }) => Promise<{
+        id: string;
+        channel_id: string;
+        name: string;
+        avatar_url: string | null;
+        token: string;
+        created_by: string;
+        created_at: string;
+      }[]>;
+    };
+    delete: {
+      mutate: (input: { webhook_id: string }) => Promise<{ success: boolean }>;
+    };
+    regenerateToken: {
+      mutate: (input: { webhook_id: string }) => Promise<{
+        id: string;
+        channel_id: string;
+        name: string;
+        avatar_url: string | null;
+        token: string;
+        created_by: string;
+        created_at: string;
+      }>;
+    };
+  };
+
+  search: {
+    search: {
+      query: (input: {
+        query: string;
+        channel_id?: string;
+        author_id?: string;
+        before?: string;
+        after?: string;
+        limit?: number;
+      }) => Promise<{ messages: Message[]; has_more: boolean }>;
+    };
+  };
+
   serverConfig: {
     get: {
       query: () => Promise<{
@@ -377,6 +433,7 @@ export interface CentralRouter {
     };
     update: {
       mutate: (input: {
+        username?: string;
         display_name?: string | null;
         avatar_url?: string | null;
         bio?: string | null;
@@ -384,10 +441,13 @@ export interface CentralRouter {
         allow_dms_from_strangers?: boolean;
       }) => Promise<GlobalUser>;
     };
+    checkUsername: {
+      query: (input: { username: string }) => Promise<{ available: boolean }>;
+    };
     uploadAvatar: {
-      mutate: (input: { file: File }) => Promise<{
+      mutate: (input: { avatar_url: string }) => Promise<{
         avatar_url: string;
-        sizes: { 64: string; 128: string; 256: string; 512: string };
+        sizes: Record<string, never>;
       }>;
     };
     getByTag: {
@@ -464,6 +524,9 @@ export interface CentralRouter {
         message_id: string;
         emoji: string;
       }) => Promise<{ reactions: ReactionGroup[] }>;
+    };
+    delete: {
+      mutate: (input: { message_id: string }) => Promise<{ success: boolean }>;
     };
   };
 

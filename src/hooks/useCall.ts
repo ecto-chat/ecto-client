@@ -14,6 +14,7 @@ import {
   setVideoQuality,
   setScreenQuality,
 } from '../lib/media-presets.js';
+import { startSpeakingDetection, switchAudioOutputDevice } from '../lib/media-utils.js';
 
 let callEventQueue: Promise<void> = Promise.resolve();
 let consumeQueue: Promise<void> = Promise.resolve();
@@ -23,38 +24,6 @@ let remoteSpeakingCleanup: (() => void) | null = null;
 let callAudioElement: HTMLAudioElement | null = null;
 let cleanupTimeoutId: ReturnType<typeof setTimeout> | null = null;
 const consumedProducerIds = new Set<string>();
-
-function startSpeakingDetection(stream: MediaStream, onSpeaking: (speaking: boolean) => void): () => void {
-  const audioCtx = new AudioContext();
-  const source = audioCtx.createMediaStreamSource(stream);
-  const analyser = audioCtx.createAnalyser();
-  analyser.fftSize = 512;
-  analyser.smoothingTimeConstant = 0.4;
-  source.connect(analyser);
-
-  const data = new Uint8Array(analyser.frequencyBinCount);
-  let wasSpeaking = false;
-  const THRESHOLD = 15;
-
-  const interval = setInterval(() => {
-    analyser.getByteFrequencyData(data);
-    let sum = 0;
-    for (let i = 0; i < data.length; i++) sum += data[i]!;
-    const avg = sum / data.length;
-    const isSpeaking = avg > THRESHOLD;
-
-    if (isSpeaking !== wasSpeaking) {
-      wasSpeaking = isSpeaking;
-      onSpeaking(isSpeaking);
-    }
-  }, 100);
-
-  return () => {
-    clearInterval(interval);
-    source.disconnect();
-    audioCtx.close().catch(() => {});
-  };
-}
 
 export function handleCallWsEvent(event: string, data: unknown): void {
   // Handle call.produced immediately to avoid deadlock
@@ -838,17 +807,11 @@ export function useCall() {
 
   const switchAudioOutput = useCallback(async (deviceId: string) => {
     localStorage.setItem('ecto-audio-output', deviceId);
-    // Update the call audio element
-    if (callAudioElement && 'setSinkId' in callAudioElement) {
-      await (callAudioElement as HTMLAudioElement & { setSinkId: (id: string) => Promise<void> }).setSinkId(deviceId).catch(() => {});
-    }
-    // Also update any extra call audio elements (screen-audio)
+    const elements: (HTMLAudioElement | HTMLVideoElement)[] = [];
+    if (callAudioElement) elements.push(callAudioElement);
     const extras = document.querySelectorAll<HTMLAudioElement>('audio[data-call-audio]');
-    for (const el of extras) {
-      if ('setSinkId' in el) {
-        await (el as HTMLAudioElement & { setSinkId: (id: string) => Promise<void> }).setSinkId(deviceId).catch(() => {});
-      }
-    }
+    for (const el of extras) elements.push(el);
+    await switchAudioOutputDevice(elements, deviceId);
   }, []);
 
   const switchVideoDevice = useCallback(async (deviceId: string) => {

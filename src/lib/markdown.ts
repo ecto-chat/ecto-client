@@ -25,12 +25,19 @@ function escapeHtml(text: string): string {
     .replace(/"/g, '&quot;');
 }
 
+interface MentionResolver {
+  /** Map of userId → display name for user mentions */
+  members?: Map<string, string>;
+  /** Map of channelId → channel name for channel mentions */
+  channels?: Map<string, string>;
+}
+
 /**
  * Render a message string to sanitized HTML.
  * Supports: bold, italic, strikethrough, inline code, code blocks,
  * blockquotes, lists, links, spoilers, and mentions.
  */
-export function renderMarkdown(content: string): string {
+export function renderMarkdown(content: string, resolver?: MentionResolver): string {
   if (!content) return '';
 
   const html = marked.parse(content, { renderer, async: false }) as string;
@@ -40,7 +47,7 @@ export function renderMarkdown(content: string): string {
     ALLOWED_TAGS: [
       'a', 'strong', 'em', 'del', 'code', 'pre', 'blockquote',
       'ul', 'ol', 'li', 'br', 'p', 'span', 'h1', 'h2', 'h3',
-      'h4', 'h5', 'h6', 'hr',
+      'h4', 'h5', 'h6', 'hr', 'table', 'thead', 'tbody', 'tr', 'th', 'td',
     ],
     ALLOWED_ATTR: ['href', 'target', 'rel', 'class', 'data-type', 'data-id'],
   });
@@ -54,7 +61,10 @@ export function renderMarkdown(content: string): string {
   // User mentions: <@userId> → styled span (IDs are hex+hyphens only)
   result = result.replace(
     /&lt;@([a-f0-9-]+)&gt;/g,
-    '<span class="mention" data-type="user" data-id="$1">@user</span>',
+    (_match, id: string) => {
+      const name = resolver?.members?.get(id) ?? 'Unknown';
+      return `<span class="mention" data-type="user" data-id="${id}">@${escapeHtml(name)}</span>`;
+    },
   );
 
   // Role mentions: <@&roleId>
@@ -66,7 +76,10 @@ export function renderMarkdown(content: string): string {
   // Channel mentions: <#channelId>
   result = result.replace(
     /&lt;#([a-f0-9-]+)&gt;/g,
-    '<span class="mention" data-type="channel" data-id="$1">#channel</span>',
+    (_match, id: string) => {
+      const name = resolver?.channels?.get(id) ?? 'channel';
+      return `<span class="mention" data-type="channel" data-id="${id}">#${escapeHtml(name)}</span>`;
+    },
   );
 
   return result;

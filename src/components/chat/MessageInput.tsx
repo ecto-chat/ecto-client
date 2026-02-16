@@ -1,5 +1,8 @@
-import { useState, useRef, useCallback, type KeyboardEvent } from 'react';
+import { useState, useRef, useCallback, useMemo, useEffect, type KeyboardEvent } from 'react';
 import { connectionManager } from '../../services/connection-manager.js';
+import { useMemberStore } from '../../stores/member.js';
+import { useChannelStore } from '../../stores/channel.js';
+import type { Member, Channel } from 'ecto-shared';
 
 interface MessageInputProps {
   channelId: string;
@@ -9,11 +12,109 @@ interface MessageInputProps {
   onCancelReply?: () => void;
 }
 
+interface AutocompleteState {
+  type: '@' | '#';
+  query: string;
+  startIndex: number;
+}
+
+function detectAutocomplete(text: string, cursorPos: number): AutocompleteState | null {
+  // Scan backwards from cursor to find a trigger character (@ or #)
+  for (let i = cursorPos - 1; i >= 0; i--) {
+    const ch = text[i];
+    // Space means no active trigger in this word
+    if (ch === ' ' || ch === '\n') return null;
+    if (ch === '@' || ch === '#') {
+      // Trigger must be at start of text or preceded by whitespace
+      if (i === 0 || text[i - 1] === ' ' || text[i - 1] === '\n') {
+        return {
+          type: ch as '@' | '#',
+          query: text.slice(i + 1, cursorPos),
+          startIndex: i,
+        };
+      }
+      return null;
+    }
+  }
+  return null;
+}
+
 export function MessageInput({ channelId, serverId, onSend, replyTo, onCancelReply }: MessageInputProps) {
   const [content, setContent] = useState('');
   const [uploading, setUploading] = useState(false);
+  const [autocomplete, setAutocomplete] = useState<AutocompleteState | null>(null);
+  const [selectedIndex, setSelectedIndex] = useState(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const serverMembers = useMemberStore((s) => s.members.get(serverId));
+  const serverChannels = useChannelStore((s) => s.channels.get(serverId));
+
+  const filteredItems = useMemo(() => {
+    if (!autocomplete) return [];
+    const q = autocomplete.query.toLowerCase();
+
+    if (autocomplete.type === '@') {
+      if (!serverMembers) return [];
+      const results: Member[] = [];
+      for (const member of serverMembers.values()) {
+        const match =
+          member.display_name?.toLowerCase().includes(q) ||
+          member.nickname?.toLowerCase().includes(q) ||
+          member.username.toLowerCase().includes(q);
+        if (match) {
+          results.push(member);
+          if (results.length >= 8) break;
+        }
+      }
+      return results;
+    }
+
+    // # trigger — text channels
+    if (!serverChannels) return [];
+    const results: Channel[] = [];
+    for (const ch of serverChannels.values()) {
+      if (ch.type === 'text' && ch.name.toLowerCase().includes(q)) {
+        results.push(ch);
+        if (results.length >= 8) break;
+      }
+    }
+    return results;
+  }, [autocomplete, serverMembers, serverChannels]);
+
+  // Reset selectedIndex when the list changes
+  useEffect(() => {
+    setSelectedIndex(0);
+  }, [filteredItems]);
+
+  const selectItem = useCallback(
+    (item: Member | Channel) => {
+      if (!autocomplete || !textareaRef.current) return;
+
+      const replacement =
+        autocomplete.type === '@'
+          ? `<@${(item as Member).user_id}> `
+          : `<#${item.id}> `;
+
+      const before = content.slice(0, autocomplete.startIndex);
+      const after = content.slice(textareaRef.current.selectionStart);
+      const newContent = before + replacement + after;
+
+      setContent(newContent);
+      setAutocomplete(null);
+
+      // Restore cursor position after React re-render
+      const cursorPos = before.length + replacement.length;
+      requestAnimationFrame(() => {
+        const el = textareaRef.current;
+        if (el) {
+          el.focus();
+          el.setSelectionRange(cursorPos, cursorPos);
+        }
+      });
+    },
+    [autocomplete, content],
+  );
 
   const handleSend = useCallback(async () => {
     const text = content.trim();
@@ -26,6 +127,7 @@ export function MessageInput({ channelId, serverId, onSend, replyTo, onCancelRep
     try {
       await onSend(text, replyTo?.id);
       setContent('');
+      setAutocomplete(null);
       onCancelReply?.();
       if (textareaRef.current) {
         textareaRef.current.style.height = 'auto';
@@ -35,7 +137,40 @@ export function MessageInput({ channelId, serverId, onSend, replyTo, onCancelRep
     }
   }, [content, replyTo, onSend, onCancelReply, channelId, serverId]);
 
+  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const newValue = e.target.value;
+    setContent(newValue);
+
+    const cursorPos = e.target.selectionStart;
+    setAutocomplete(detectAutocomplete(newValue, cursorPos));
+  };
+
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    // Autocomplete keyboard handling
+    if (autocomplete && filteredItems.length > 0) {
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setSelectedIndex((prev) => (prev <= 0 ? filteredItems.length - 1 : prev - 1));
+        return;
+      }
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setSelectedIndex((prev) => (prev >= filteredItems.length - 1 ? 0 : prev + 1));
+        return;
+      }
+      if (e.key === 'Enter' || e.key === 'Tab') {
+        e.preventDefault();
+        const item = filteredItems[selectedIndex];
+        if (item) selectItem(item);
+        return;
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        setAutocomplete(null);
+        return;
+      }
+    }
+
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSend();
@@ -106,6 +241,48 @@ export function MessageInput({ channelId, serverId, onSend, replyTo, onCancelRep
         </div>
       )}
 
+      {autocomplete && filteredItems.length > 0 && (
+        <div className="mention-autocomplete">
+          {filteredItems.map((item, i) =>
+            autocomplete.type === '@' ? (
+              <div
+                key={(item as Member).user_id}
+                className={`mention-autocomplete-item${i === selectedIndex ? ' active' : ''}`}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  selectItem(item);
+                }}
+              >
+                {(item as Member).avatar_url ? (
+                  <img
+                    src={(item as Member).avatar_url!}
+                    alt=""
+                    style={{ width: 20, height: 20, borderRadius: '50%' }}
+                  />
+                ) : (
+                  <span style={{ width: 20, height: 20, borderRadius: '50%', background: 'var(--bg-tertiary)', display: 'inline-block' }} />
+                )}
+                <span>
+                  {(item as Member).nickname ?? (item as Member).display_name ?? (item as Member).username}
+                </span>
+              </div>
+            ) : (
+              <div
+                key={item.id}
+                className={`mention-autocomplete-item${i === selectedIndex ? ' active' : ''}`}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  selectItem(item);
+                }}
+              >
+                <span style={{ opacity: 0.5 }}>#</span>
+                <span>{(item as Channel).name}</span>
+              </div>
+            ),
+          )}
+        </div>
+      )}
+
       <div className="message-input-row">
         <button
           className="message-attach-btn"
@@ -127,7 +304,7 @@ export function MessageInput({ channelId, serverId, onSend, replyTo, onCancelRep
           ref={textareaRef}
           className="message-input"
           value={content}
-          onChange={(e) => setContent(e.target.value)}
+          onChange={handleChange}
           onKeyDown={handleKeyDown}
           onInput={handleInput}
           placeholder={`Message #channel`}

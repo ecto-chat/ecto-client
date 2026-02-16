@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { playNotificationSound } from '../../lib/notification-sounds.js';
 
 const STORAGE_KEY = 'ecto-notification-settings';
 
@@ -92,6 +93,20 @@ export function NotificationSettings() {
           disabled={allDisabled}
           onChange={(v) => update('soundEnabled', v)}
         />
+
+        {prefs.soundEnabled && !allDisabled && (
+          <div className="notification-sound-preview" style={{ padding: '8px 0 4px 16px', display: 'flex', gap: 8 }}>
+            <button className="btn-secondary" style={{ fontSize: 12, padding: '4px 10px' }} onClick={() => playNotificationSound('message')}>
+              Preview Message
+            </button>
+            <button className="btn-secondary" style={{ fontSize: 12, padding: '4px 10px' }} onClick={() => playNotificationSound('mention')}>
+              Preview Mention
+            </button>
+            <button className="btn-secondary" style={{ fontSize: 12, padding: '4px 10px' }} onClick={() => playNotificationSound('dm')}>
+              Preview DM
+            </button>
+          </div>
+        )}
 
         <ToggleRow
           label="Direct Messages"

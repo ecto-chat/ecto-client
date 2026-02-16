@@ -31,7 +31,7 @@ export function LeaveServerModal() {
       }
 
       connectionManager.disconnectFromServer(modalData.serverId);
-      connectionManager.removeStoredServerSession(modalData.serverId);
+      await connectionManager.removeStoredServerSession(modalData.serverId);
       useServerStore.getState().removeServer(modalData.serverId);
       useUiStore.getState().setActiveServer(null);
       close();

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, memo, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -25,6 +25,7 @@ import { useChannelStore } from '../../stores/channel.js';
 import { connectionManager } from '../../services/connection-manager.js';
 import { fullLogout } from '../../stores/reset.js';
 import { Avatar } from '../common/Avatar.js';
+import type { ServerListEntry } from 'ecto-shared';
 
 interface ContextMenu {
   x: number;
@@ -49,9 +50,6 @@ export function ServerSidebar() {
   const serverOrder = useServerStore((s) => s.serverOrder);
   const servers = useServerStore((s) => s.servers);
   const activeServerId = useUiStore((s) => s.activeServerId);
-  const notifications = useNotifyStore((s) => s.notifications);
-  const mentionCounts = useReadStateStore((s) => s.mentionCounts);
-  const connections = useConnectionStore((s) => s.connections);
   const navigate = useNavigate();
   const [contextMenu, setContextMenu] = useState<ContextMenu | null>(null);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
@@ -154,27 +152,8 @@ export function ServerSidebar() {
     setContextMenu(null);
   };
 
-  const getServerUnread = (serverId: string): boolean => {
-    const serverNotifs = notifications.get(serverId);
-    return serverNotifs !== undefined && serverNotifs.size > 0;
-  };
-
-  const channels = useChannelStore((s) => s.channels);
-
-  const getServerMentions = (serverId: string): number => {
-    const serverChannels = channels.get(serverId);
-    if (!serverChannels) return 0;
-    let total = 0;
-    for (const channelId of serverChannels.keys()) {
-      total += mentionCounts.get(channelId) ?? 0;
-    }
-    return total;
-  };
-
-  const mutedServers = useNotifyStore((s) => s.mutedServers);
-  const menuServerStatus = contextMenu ? connections.get(contextMenu.serverId) : undefined;
-  const menuServerOffline = contextMenu && (!menuServerStatus || menuServerStatus === 'disconnected');
-  const menuServerMuted = contextMenu ? mutedServers.has(contextMenu.serverId) : false;
+  const handleServerClickCb = useCallback((serverId: string) => handleServerClick(serverId), []);
+  const handleContextMenuCb = useCallback((e: React.MouseEvent, serverId: string) => handleContextMenu(e, serverId), []);
 
   return (
     <div className="server-sidebar">
@@ -197,41 +176,15 @@ export function ServerSidebar() {
           {serverOrder.map((serverId) => {
             const server = servers.get(serverId);
             if (!server) return null;
-            const isActive = activeServerId === serverId;
-            const hasUnread = getServerUnread(serverId);
-            const mentions = getServerMentions(serverId);
-            const isMuted = mutedServers.has(serverId);
-            const status = connections.get(serverId);
-            const isOffline = !status || status === 'disconnected';
-
             return (
               <SortableServerIcon key={serverId} id={serverId}>
-                <div className="server-icon-wrapper">
-                  {hasUnread && !isActive && <div className={`server-unread-dot ${isMuted ? 'muted' : ''}`} />}
-                  {mentions > 0 && <span className="server-mention-badge">{mentions}</span>}
-                  {isMuted && <div className="server-muted-icon" title="Muted">&#128263;</div>}
-                  <div
-                    className={`server-icon ${isActive ? 'active' : ''} ${isOffline ? 'offline' : ''}`}
-                    onClick={() => handleServerClick(serverId)}
-                    onContextMenu={(e) => handleContextMenu(e, serverId)}
-                    title={isOffline ? `${server.server_name ?? serverId} (Offline)` : server.server_name ?? serverId}
-                  >
-                    {isOffline ? (
-                      <div className="server-offline-icon" title="Server Offline">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                          <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4C9.11 4 6.6 5.64 5.35 8.04C2.34 8.36 0 10.91 0 14C0 17.31 2.69 20 6 20H19C21.76 20 24 17.76 24 15C24 12.36 21.95 10.22 19.35 10.04Z" fill="currentColor" opacity="0.3"/>
-                          <line x1="4" y1="4" x2="20" y2="20" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                        </svg>
-                      </div>
-                    ) : (
-                      <Avatar
-                        src={server.server_icon ?? undefined}
-                        username={server.server_name ?? serverId}
-                        size={48}
-                      />
-                    )}
-                  </div>
-                </div>
+                <ServerIconItem
+                  serverId={serverId}
+                  server={server}
+                  isActive={activeServerId === serverId}
+                  onClick={handleServerClickCb}
+                  onContextMenu={handleContextMenuCb}
+                />
               </SortableServerIcon>
             );
           })}
@@ -263,41 +216,120 @@ export function ServerSidebar() {
       </div>
 
       {/* Context menu */}
-      {contextMenu && createPortal(
-        <div
-          className="server-context-menu"
-          style={{ top: contextMenu.y, left: contextMenu.x }}
-        >
-          <button
-            className="server-context-menu-item"
-            onClick={handleMarkAllRead}
-          >
-            Mark All as Read
-          </button>
-          <button
-            className="server-context-menu-item"
-            onClick={handleToggleMuteServer}
-          >
-            {menuServerMuted ? 'Unmute Server' : 'Mute Server'}
-          </button>
-          <div className="server-context-menu-separator" />
-          <button
-            className="server-context-menu-item"
-            onClick={handleLeaveServer}
-          >
-            Leave Server
-          </button>
-          {menuServerOffline && (
-            <button
-              className="server-context-menu-item danger"
-              onClick={handleRemoveServer}
-            >
-              Remove Server
-            </button>
-          )}
-        </div>,
-        document.body,
+      {contextMenu && (
+        <ServerContextMenuPortal
+          contextMenu={contextMenu}
+          onMarkAllRead={handleMarkAllRead}
+          onToggleMute={handleToggleMuteServer}
+          onLeaveServer={handleLeaveServer}
+          onRemoveServer={handleRemoveServer}
+        />
       )}
     </div>
+  );
+}
+
+/** Memoized server icon — per-item store selectors prevent re-renders from other servers. */
+const ServerIconItem = memo(function ServerIconItem({
+  serverId,
+  server,
+  isActive,
+  onClick,
+  onContextMenu,
+}: {
+  serverId: string;
+  server: ServerListEntry;
+  isActive: boolean;
+  onClick: (serverId: string) => void;
+  onContextMenu: (e: React.MouseEvent, serverId: string) => void;
+}) {
+  const hasUnread = useNotifyStore((s) => {
+    const serverNotifs = s.notifications.get(serverId);
+    return serverNotifs !== undefined && serverNotifs.size > 0;
+  });
+  const isMuted = useNotifyStore((s) => s.mutedServers.has(serverId));
+  const status = useConnectionStore((s) => s.connections.get(serverId));
+  const isOffline = !status || status === 'disconnected';
+
+  // Sum mention counts for this server's channels
+  const mentions = useReadStateStore((s) => {
+    const serverChannels = useChannelStore.getState().channels.get(serverId);
+    if (!serverChannels) return 0;
+    let total = 0;
+    for (const channelId of serverChannels.keys()) {
+      total += s.mentionCounts.get(channelId) ?? 0;
+    }
+    return total;
+  });
+
+  return (
+    <div className="server-icon-wrapper">
+      {hasUnread && !isActive && <div className={`server-unread-dot ${isMuted ? 'muted' : ''}`} />}
+      {mentions > 0 && <span className="server-mention-badge">{mentions}</span>}
+      {isMuted && <div className="server-muted-icon" title="Muted">&#128263;</div>}
+      <div
+        className={`server-icon ${isActive ? 'active' : ''} ${isOffline ? 'offline' : ''}`}
+        onClick={() => onClick(serverId)}
+        onContextMenu={(e) => onContextMenu(e, serverId)}
+        title={isOffline ? `${server.server_name ?? serverId} (Offline)` : server.server_name ?? serverId}
+      >
+        {isOffline ? (
+          <div className="server-offline-icon" title="Server Offline">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4C9.11 4 6.6 5.64 5.35 8.04C2.34 8.36 0 10.91 0 14C0 17.31 2.69 20 6 20H19C21.76 20 24 17.76 24 15C24 12.36 21.95 10.22 19.35 10.04Z" fill="currentColor" opacity="0.3"/>
+              <line x1="4" y1="4" x2="20" y2="20" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+            </svg>
+          </div>
+        ) : (
+          <Avatar
+            src={server.server_icon ?? undefined}
+            username={server.server_name ?? serverId}
+            size={48}
+          />
+        )}
+      </div>
+    </div>
+  );
+});
+
+function ServerContextMenuPortal({
+  contextMenu,
+  onMarkAllRead,
+  onToggleMute,
+  onLeaveServer,
+  onRemoveServer,
+}: {
+  contextMenu: ContextMenu;
+  onMarkAllRead: () => void;
+  onToggleMute: () => void;
+  onLeaveServer: () => void;
+  onRemoveServer: () => void;
+}) {
+  const status = useConnectionStore((s) => s.connections.get(contextMenu.serverId));
+  const isOffline = !status || status === 'disconnected';
+  const isMuted = useNotifyStore((s) => s.mutedServers.has(contextMenu.serverId));
+
+  return createPortal(
+    <div
+      className="server-context-menu"
+      style={{ top: contextMenu.y, left: contextMenu.x }}
+    >
+      <button className="server-context-menu-item" onClick={onMarkAllRead}>
+        Mark All as Read
+      </button>
+      <button className="server-context-menu-item" onClick={onToggleMute}>
+        {isMuted ? 'Unmute Server' : 'Mute Server'}
+      </button>
+      <div className="server-context-menu-separator" />
+      <button className="server-context-menu-item" onClick={onLeaveServer}>
+        Leave Server
+      </button>
+      {isOffline && (
+        <button className="server-context-menu-item danger" onClick={onRemoveServer}>
+          Remove Server
+        </button>
+      )}
+    </div>,
+    document.body,
   );
 }

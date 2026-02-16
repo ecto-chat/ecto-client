@@ -29,6 +29,7 @@ function dmToMessage(dm: DirectMessage): Message {
     created_at: dm.created_at,
     attachments: dm.attachments ?? [],
     reactions: dm.reactions ?? [],
+    webhook_id: null,
   };
 }
 
@@ -254,6 +255,18 @@ export function DMView() {
     await centralTrpc.dms.edit.mutate({ message_id: messageId, content });
   }, []);
 
+  const handleDelete = useCallback(async (messageId: string) => {
+    const centralTrpc = connectionManager.getCentralTrpc();
+    if (!centralTrpc || !userId) return;
+    // Optimistic removal
+    useDmStore.getState().deleteMessage(userId, messageId);
+    try {
+      await centralTrpc.dms.delete.mutate({ message_id: messageId });
+    } catch {
+      // Message already removed from UI, no easy revert — silent fail
+    }
+  }, [userId]);
+
   // No-op handlers for features DMs don't support
   const noop = async () => {};
 
@@ -287,7 +300,7 @@ export function DMView() {
         hasMore={hasMore}
         onLoadMore={handleLoadMore}
         onEdit={handleEdit}
-        onDelete={noop}
+        onDelete={handleDelete}
         onReact={handleReact}
         onPin={noop}
         onUnpin={noop}

@@ -3,11 +3,10 @@ import type { GlobalUser } from 'ecto-shared';
 import { createCentralTrpcClient } from '../services/trpc.js';
 import type { CentralTrpcClient } from '../types/trpc.js';
 import { useUiStore } from './ui.js';
+import { secureStorage } from '../services/secure-storage.js';
 
 type AuthState = 'idle' | 'loading' | 'authenticated' | 'unauthenticated';
 type CentralAuthState = 'idle' | 'loading' | 'authenticated' | 'unauthenticated';
-
-const SERVER_TOKENS_KEY = 'ecto-server-tokens';
 
 interface AuthStore {
   user: GlobalUser | null;
@@ -81,9 +80,9 @@ export const useAuthStore = create<AuthStore>()((set, get) => {
     return localStorage.getItem('refresh_token');
   }
 
-  function hasStoredServerSessions(): boolean {
+  async function hasStoredServerSessions(): Promise<boolean> {
     try {
-      const raw = localStorage.getItem(SERVER_TOKENS_KEY);
+      const raw = await secureStorage.get('ecto-server-tokens');
       if (!raw) return false;
       const parsed = JSON.parse(raw) as Record<string, unknown>;
       return Object.keys(parsed).length > 0;
@@ -170,8 +169,8 @@ export const useAuthStore = create<AuthStore>()((set, get) => {
         await trpc.auth.logout.mutate({ refresh_token: rt }).catch(() => {});
       }
       await clearTokens();
-      localStorage.removeItem(SERVER_TOKENS_KEY);
-      localStorage.removeItem('ecto-local-credentials');
+      await secureStorage.delete('ecto-server-tokens');
+      await secureStorage.delete('ecto-local-credentials');
       set({
         user: null,
         token: null,
@@ -202,7 +201,7 @@ export const useAuthStore = create<AuthStore>()((set, get) => {
         const rt = await getStoredRefreshToken();
         if (!rt) {
           // No Central refresh token — check for stored server sessions (Branch B)
-          if (hasStoredServerSessions()) {
+          if (await hasStoredServerSessions()) {
             set({
               authState: 'authenticated',
               centralAuthState: 'unauthenticated',
@@ -227,7 +226,7 @@ export const useAuthStore = create<AuthStore>()((set, get) => {
         set({ user, authState: 'authenticated', centralAuthState: 'authenticated' });
       } catch {
         // Central refresh failed — check for stored server sessions (Branch B)
-        if (hasStoredServerSessions()) {
+        if (await hasStoredServerSessions()) {
           set({
             authState: 'authenticated',
             centralAuthState: 'unauthenticated',

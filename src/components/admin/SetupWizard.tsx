@@ -3,15 +3,18 @@ import { connectionManager } from '../../services/connection-manager.js';
 import { useUiStore } from '../../stores/ui.js';
 import { useServerStore } from '../../stores/server.js';
 import { LoadingSpinner } from '../common/LoadingSpinner.js';
+import { SERVER_TEMPLATES } from '../../lib/server-templates.js';
+import type { ServerTemplate } from '../../lib/server-templates.js';
 import type { Invite } from 'ecto-shared';
 
-type WizardStep = 1 | 2 | 3 | 4 | 5 | 6;
+type WizardStep = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 
 const STEP_LABELS = [
   'Welcome',
   'Admin Account',
   'Server Identity',
   'Server Settings',
+  'Template',
   'Channels',
   'First Invite',
 ] as const;
@@ -34,11 +37,12 @@ interface WizardState {
   allowLocalAccounts: boolean;
   allowMemberDms: boolean;
   maxUploadSizeBytes: number;
-  // Step 5: Channels
-  textChannelName: string;
-  voiceChannelName: string;
+  // Step 5: Template
+  selectedTemplate: ServerTemplate | null;
+  // Step 6: Channels
+  channels: { name: string; type: 'text' | 'voice' }[];
   channelsCreated: boolean;
-  // Step 6: Invite
+  // Step 7: Invite
   invite: Invite | null;
   inviteUrl: string | null;
 }
@@ -83,8 +87,11 @@ export function SetupWizard({ onClose }: { onClose: () => void }) {
     allowLocalAccounts: true,
     allowMemberDms: false,
     maxUploadSizeBytes: 5 * 1024 * 1024,
-    textChannelName: 'general',
-    voiceChannelName: 'General',
+    selectedTemplate: null,
+    channels: [
+      { name: 'general', type: 'text' },
+      { name: 'General', type: 'voice' },
+    ],
     channelsCreated: false,
     invite: null,
     inviteUrl: null,
@@ -95,7 +102,7 @@ export function SetupWizard({ onClose }: { onClose: () => void }) {
   };
 
   const goNext = () => {
-    if (step < 6) {
+    if (step < 7) {
       setError('');
       setStep((step + 1) as WizardStep);
     }
@@ -191,17 +198,32 @@ export function SetupWizard({ onClose }: { onClose: () => void }) {
     }
   };
 
+  const handleSelectTemplate = (template: ServerTemplate | null) => {
+    if (template) {
+      updateState({
+        selectedTemplate: template,
+        channels: template.channels.map((c) => ({ ...c })),
+      });
+    } else {
+      updateState({
+        selectedTemplate: null,
+        channels: [
+          { name: 'general', type: 'text' },
+          { name: 'General', type: 'voice' },
+        ],
+      });
+    }
+    goNext();
+  };
+
   const handleCreateChannels = async () => {
     if (!serverId) return;
     const trpc = connectionManager.getServerTrpc(serverId);
     if (!trpc) return;
 
-    if (!state.textChannelName.trim()) {
-      setError('Text channel name is required');
-      return;
-    }
-    if (!state.voiceChannelName.trim()) {
-      setError('Voice channel name is required');
+    const validChannels = state.channels.filter((c) => c.name.trim());
+    if (validChannels.length === 0) {
+      setError('At least one channel is required');
       return;
     }
 
@@ -209,14 +231,12 @@ export function SetupWizard({ onClose }: { onClose: () => void }) {
     setError('');
 
     try {
-      await trpc.channels.create.mutate({
-        name: state.textChannelName.trim(),
-        type: 'text',
-      });
-      await trpc.channels.create.mutate({
-        name: state.voiceChannelName.trim(),
-        type: 'voice',
-      });
+      for (const channel of validChannels) {
+        await trpc.channels.create.mutate({
+          name: channel.name.trim(),
+          type: channel.type,
+        });
+      }
       updateState({ channelsCreated: true });
       goNext();
     } catch (err: unknown) {
@@ -438,36 +458,118 @@ export function SetupWizard({ onClose }: { onClose: () => void }) {
           </div>
         )}
 
-        {/* Step 5: Create First Channels */}
+        {/* Step 5: Template Selection */}
         {step === 5 && (
           <div className="wizard-step">
-            <h2>Create First Channels</h2>
+            <h2>Choose a Template</h2>
+            <p>Pick a template to pre-fill channels, or start from scratch.</p>
+
+            <div className="wizard-templates" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 12, margin: '16px 0' }}>
+              {SERVER_TEMPLATES.map((tpl) => (
+                <button
+                  key={tpl.id}
+                  type="button"
+                  className="wizard-template-card"
+                  style={{
+                    background: 'var(--bg-secondary)',
+                    border: '1px solid var(--border)',
+                    borderRadius: 'var(--radius-md)',
+                    padding: '16px 12px',
+                    cursor: 'pointer',
+                    textAlign: 'center',
+                    color: 'var(--text-primary)',
+                  }}
+                  onClick={() => handleSelectTemplate(tpl)}
+                >
+                  <div style={{ fontSize: 28, marginBottom: 8 }}>{tpl.icon}</div>
+                  <div style={{ fontWeight: 600, marginBottom: 4 }}>{tpl.name}</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{tpl.description}</div>
+                </button>
+              ))}
+              <button
+                type="button"
+                className="wizard-template-card"
+                style={{
+                  background: 'var(--bg-secondary)',
+                  border: '1px dashed var(--border)',
+                  borderRadius: 'var(--radius-md)',
+                  padding: '16px 12px',
+                  cursor: 'pointer',
+                  textAlign: 'center',
+                  color: 'var(--text-primary)',
+                }}
+                onClick={() => handleSelectTemplate(null)}
+              >
+                <div style={{ fontSize: 28, marginBottom: 8 }}>&#10010;</div>
+                <div style={{ fontWeight: 600, marginBottom: 4 }}>Start from Scratch</div>
+                <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Create your own channels</div>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Step 6: Create First Channels */}
+        {step === 6 && (
+          <div className="wizard-step">
+            <h2>Create Channels</h2>
             <p>
-              Every server needs at least one channel. We will create a text channel
-              and a voice channel for you.
+              {state.selectedTemplate
+                ? `Pre-filled from "${state.selectedTemplate.name}" template. Modify as needed.`
+                : 'Add the channels for your server.'}
             </p>
 
-            <label className="auth-label">
-              Text Channel Name
-              <input
-                type="text"
-                value={state.textChannelName}
-                onChange={(e) => updateState({ textChannelName: e.target.value })}
-                placeholder="general"
-                className="auth-input"
-              />
-            </label>
+            {state.channels.map((ch, i) => (
+              <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 8, alignItems: 'center' }}>
+                <select
+                  className="auth-input"
+                  style={{ width: 100, flexShrink: 0 }}
+                  value={ch.type}
+                  onChange={(e) => {
+                    const channels = [...state.channels];
+                    channels[i] = { ...ch, type: e.target.value as 'text' | 'voice' };
+                    updateState({ channels });
+                  }}
+                >
+                  <option value="text">Text</option>
+                  <option value="voice">Voice</option>
+                </select>
+                <input
+                  type="text"
+                  className="auth-input"
+                  value={ch.name}
+                  placeholder="channel-name"
+                  onChange={(e) => {
+                    const channels = [...state.channels];
+                    channels[i] = { ...ch, name: e.target.value };
+                    updateState({ channels });
+                  }}
+                />
+                {state.channels.length > 1 && (
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    style={{ padding: '4px 8px', flexShrink: 0 }}
+                    onClick={() => {
+                      const channels = state.channels.filter((_, idx) => idx !== i);
+                      updateState({ channels });
+                    }}
+                  >
+                    &#10005;
+                  </button>
+                )}
+              </div>
+            ))}
 
-            <label className="auth-label">
-              Voice Channel Name
-              <input
-                type="text"
-                value={state.voiceChannelName}
-                onChange={(e) => updateState({ voiceChannelName: e.target.value })}
-                placeholder="General"
-                className="auth-input"
-              />
-            </label>
+            <button
+              type="button"
+              className="btn-secondary"
+              style={{ marginTop: 4 }}
+              onClick={() => {
+                updateState({ channels: [...state.channels, { name: '', type: 'text' }] });
+              }}
+            >
+              + Add Channel
+            </button>
 
             {state.channelsCreated && (
               <div className="wizard-success">Channels created successfully.</div>
@@ -475,8 +577,8 @@ export function SetupWizard({ onClose }: { onClose: () => void }) {
           </div>
         )}
 
-        {/* Step 6: Create First Invite */}
-        {step === 6 && (
+        {/* Step 7: Create First Invite */}
+        {step === 7 && (
           <div className="wizard-step">
             {state.invite ? (
               <>
@@ -549,7 +651,7 @@ export function SetupWizard({ onClose }: { onClose: () => void }) {
 
       {/* Navigation buttons */}
       <div className="wizard-navigation">
-        {step > 1 && !(step === 6 && state.invite) && (
+        {step > 1 && step !== 5 && !(step === 7 && state.invite) && (
           <button className="btn-secondary" onClick={goBack} disabled={loading}>
             Back
           </button>
@@ -583,7 +685,8 @@ export function SetupWizard({ onClose }: { onClose: () => void }) {
             {loading ? <LoadingSpinner size={18} /> : 'Save & Continue'}
           </button>
         )}
-        {step === 5 && !state.channelsCreated && (
+        {/* Step 5 (Template) has its own navigation via card clicks */}
+        {step === 6 && !state.channelsCreated && (
           <button
             className="auth-button"
             onClick={handleCreateChannels}
@@ -592,7 +695,7 @@ export function SetupWizard({ onClose }: { onClose: () => void }) {
             {loading ? <LoadingSpinner size={18} /> : 'Create Channels'}
           </button>
         )}
-        {step === 5 && state.channelsCreated && (
+        {step === 6 && state.channelsCreated && (
           <button className="auth-button" onClick={goNext}>
             Next
           </button>

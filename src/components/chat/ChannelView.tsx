@@ -1,8 +1,9 @@
-import { useEffect, useRef } from 'react';
-import { useParams } from 'react-router-dom';
+import { useEffect, useRef, useState, useCallback } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { MessageList } from './MessageList.js';
 import { MessageInput } from './MessageInput.js';
 import { TypingIndicator } from './TypingIndicator.js';
+import { SearchPanel } from './SearchPanel.js';
 import { VoiceView } from '../voice/VoiceView.js';
 import { useMessages } from '../../hooks/useMessages.js';
 import { useChannels } from '../../hooks/useChannels.js';
@@ -16,6 +17,15 @@ export function ChannelView() {
   const sid = serverId ?? activeServerId ?? '';
   const channel = useChannelStore((s) => s.channels.get(sid)?.get(channelId ?? ''));
   const { openChannel, closeChannel } = useChannels(sid);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const navigate = useNavigate();
+
+  const handleSearchNavigate = useCallback((targetChannelId: string, _messageId: string) => {
+    setSearchOpen(false);
+    if (targetChannelId && targetChannelId !== channelId) {
+      navigate(`/servers/${sid}/channels/${targetChannelId}`);
+    }
+  }, [sid, channelId, navigate]);
   const {
     messages,
     hasMore,
@@ -81,6 +91,13 @@ export function ChannelView() {
         <div className="channel-header-actions">
           <button
             className="icon-btn"
+            onClick={() => setSearchOpen((v) => !v)}
+            title="Search Messages"
+          >
+            &#128269;
+          </button>
+          <button
+            className="icon-btn"
             onClick={() => useUiStore.getState().toggleMemberList()}
             title="Toggle Member List"
           >
@@ -88,6 +105,14 @@ export function ChannelView() {
           </button>
         </div>
       </div>
+
+      {searchOpen && (
+        <SearchPanel
+          serverId={sid}
+          onNavigate={handleSearchNavigate}
+          onClose={() => setSearchOpen(false)}
+        />
+      )}
 
       <MessageList
         messages={messages}

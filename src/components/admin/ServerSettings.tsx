@@ -8,9 +8,10 @@ import { Modal } from '../common/Modal.js';
 import { RoleEditor } from './RoleEditor.js';
 import { ChannelEditor } from './ChannelEditor.js';
 import { MemberManager } from './MemberManager.js';
+import { WebhookManager } from './WebhookManager.js';
 import type { Server, Ban, Invite, AuditLogEntry } from 'ecto-shared';
 
-type Tab = 'overview' | 'roles' | 'channels' | 'members' | 'bans' | 'invites' | 'audit-log';
+type Tab = 'overview' | 'roles' | 'channels' | 'members' | 'bans' | 'invites' | 'webhooks' | 'audit-log';
 
 const ALL_TABS: { key: Tab; label: string }[] = [
   { key: 'overview', label: 'Overview' },
@@ -19,6 +20,7 @@ const ALL_TABS: { key: Tab; label: string }[] = [
   { key: 'members', label: 'Members' },
   { key: 'bans', label: 'Bans' },
   { key: 'invites', label: 'Invites' },
+  { key: 'webhooks', label: 'Webhooks' },
   { key: 'audit-log', label: 'Audit Log' },
 ];
 
@@ -80,6 +82,7 @@ export function ServerSettings() {
           {activeTab === 'members' && <MemberManager serverId={serverId} />}
           {activeTab === 'bans' && <BansTab serverId={serverId} />}
           {activeTab === 'invites' && <InvitesTab serverId={serverId} />}
+          {activeTab === 'webhooks' && <WebhookManager serverId={serverId} />}
           {activeTab === 'audit-log' && <AuditLogTab serverId={serverId} />}
         </div>
       </div>

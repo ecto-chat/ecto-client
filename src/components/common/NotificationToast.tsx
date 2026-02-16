@@ -1,6 +1,8 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToastStore, type Toast } from '../../stores/toast.js';
+import { useUiStore } from '../../stores/ui.js';
+import { connectionManager } from '../../services/connection-manager.js';
 import { Avatar } from './Avatar.js';
 
 const AUTO_DISMISS_MS = 5000;
@@ -16,6 +18,9 @@ function ToastItem({ toast }: { toast: Toast }) {
 
   const handleClick = () => {
     removeToast(toast.id);
+    useUiStore.getState().setActiveServer(toast.serverId);
+    useUiStore.getState().setActiveChannel(toast.channelId);
+    connectionManager.switchServer(toast.serverId).catch(() => {});
     navigate(`/servers/${toast.serverId}/channels/${toast.channelId}`);
   };
 

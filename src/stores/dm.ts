@@ -16,6 +16,7 @@ interface DmStore {
   closeConversation: () => void;
   setTyping: (userId: string) => void;
   clearExpiredTyping: () => void;
+  deleteMessage: (peerId: string, messageId: string) => void;
   updateMessage: (peerId: string, messageId: string, updates: Partial<DirectMessage>) => void;
   updateReactions: (peerId: string, messageId: string, reactions: ReactionGroup[]) => void;
   ensureConversation: (userId: string, message: DirectMessage) => void;
@@ -99,6 +100,22 @@ export const useDmStore = create<DmStore>()((set) => ({
         }
       }
       return changed ? { typingUsers } : state;
+    }),
+
+  deleteMessage: (peerId, messageId) =>
+    set((state) => {
+      const userMessages = state.messages.get(peerId);
+      if (!userMessages?.has(messageId)) return state;
+      const messages = new Map(state.messages);
+      const messageOrder = new Map(state.messageOrder);
+      const updated = new Map(userMessages);
+      updated.delete(messageId);
+      messages.set(peerId, updated);
+      messageOrder.set(
+        peerId,
+        (messageOrder.get(peerId) ?? []).filter((id) => id !== messageId),
+      );
+      return { messages, messageOrder };
     }),
 
   updateMessage: (peerId, messageId, updates) =>

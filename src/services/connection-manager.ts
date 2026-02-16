@@ -1,13 +1,12 @@
-import type { Channel, Category, Member, Role, VoiceState, ReadState, PresenceStatus, Message, Friend, FriendRequest, DirectMessage } from 'ecto-shared';
+import type { Channel, Category, Member, Role, VoiceState, ReadState, PresenceStatus, Friend, FriendRequest } from 'ecto-shared';
 import { MainWebSocket } from './main-ws.js';
 import { NotifyWebSocket } from './notify-ws.js';
-import { CentralWebSocket } from './central-ws.js';
+import { CentralWebSocket, type CentralReadyData } from './central-ws.js';
 import { createServerTrpcClient, createCentralTrpcClient } from './trpc.js';
 import type { ServerTrpcClient, CentralTrpcClient } from '../types/trpc.js';
 import { useChannelStore } from '../stores/channel.js';
 import { useMemberStore } from '../stores/member.js';
 import { usePresenceStore } from '../stores/presence.js';
-import { useMessageStore } from '../stores/message.js';
 import { useReadStateStore } from '../stores/read-state.js';
 import { useVoiceStore } from '../stores/voice.js';
 import { useConnectionStore } from '../stores/connection.js';
@@ -19,18 +18,18 @@ import { useUiStore } from '../stores/ui.js';
 import { useServerStore } from '../stores/server.js';
 import { useRoleStore } from '../stores/role.js';
 import { useCallStore } from '../stores/call.js';
-import { handleCallWsEvent } from '../hooks/useCall.js';
-import { playNotificationSound } from '../lib/notification-sounds.js';
-import { useToastStore } from '../stores/toast.js';
-import { secureStorage } from './secure-storage.js';
-
-const SERVER_TOKENS_KEY = 'ecto-server-tokens';
-const LOCAL_CREDENTIALS_KEY = 'ecto-local-credentials';
-
-interface StoredServerSession {
-  address: string;
-  token: string;
-}
+import {
+  getStoredServerSessions,
+  storeServerSession,
+  removeStoredServerSession,
+  clearStoredServerSessions,
+  storeLocalCredentials,
+  getStoredLocalCredentials,
+  clearLocalCredentials,
+} from './storage-manager.js';
+import { handleMainEvent } from './server-event-handler.js';
+import { handleCentralEvent } from './central-event-handler.js';
+import { ReconnectionManager } from './reconnection-manager.js';
 
 interface ServerConnection {
   address: string;
@@ -46,76 +45,16 @@ export class ConnectionManager {
   private connections = new Map<string, ServerConnection>();
   private centralWs: CentralWebSocket | null = null;
   private centralTrpc: CentralTrpcClient | null = null;
-  private reconnectAttempts = new Map<string, number>();
-  private retryTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  private reconnection = new ReconnectionManager();
 
-  // Secure server session persistence
-
-  async getStoredServerSessions(): Promise<Array<{ id: string; address: string; token: string }>> {
-    try {
-      const raw = await secureStorage.get(SERVER_TOKENS_KEY);
-      if (!raw) return [];
-      const parsed = JSON.parse(raw) as Record<string, StoredServerSession>;
-      return Object.entries(parsed).map(([id, session]) => ({
-        id,
-        address: session.address,
-        token: session.token,
-      }));
-    } catch {
-      return [];
-    }
-  }
-
-  async storeServerSession(serverId: string, address: string, token: string): Promise<void> {
-    try {
-      const raw = await secureStorage.get(SERVER_TOKENS_KEY);
-      const sessions: Record<string, StoredServerSession> = raw ? JSON.parse(raw) as Record<string, StoredServerSession> : {};
-      sessions[serverId] = { address, token };
-      await secureStorage.set(SERVER_TOKENS_KEY, JSON.stringify(sessions));
-    } catch {
-      // Storage full or unavailable
-    }
-  }
-
-  async removeStoredServerSession(serverId: string): Promise<void> {
-    try {
-      const raw = await secureStorage.get(SERVER_TOKENS_KEY);
-      if (!raw) return;
-      const sessions: Record<string, StoredServerSession> = JSON.parse(raw) as Record<string, StoredServerSession>;
-      delete sessions[serverId];
-      await secureStorage.set(SERVER_TOKENS_KEY, JSON.stringify(sessions));
-    } catch {
-      // Storage unavailable
-    }
-  }
-
-  async clearStoredServerSessions(): Promise<void> {
-    await secureStorage.delete(SERVER_TOKENS_KEY);
-  }
-
-  // Secure local credential storage for multi-server auto-join
-
-  async storeLocalCredentials(username: string, password: string): Promise<void> {
-    try {
-      await secureStorage.set(LOCAL_CREDENTIALS_KEY, JSON.stringify({ username, password }));
-    } catch {
-      // Storage full or unavailable
-    }
-  }
-
-  async getStoredLocalCredentials(): Promise<{ username: string; password: string } | null> {
-    try {
-      const raw = await secureStorage.get(LOCAL_CREDENTIALS_KEY);
-      if (!raw) return null;
-      return JSON.parse(raw) as { username: string; password: string };
-    } catch {
-      return null;
-    }
-  }
-
-  async clearLocalCredentials(): Promise<void> {
-    await secureStorage.delete(LOCAL_CREDENTIALS_KEY);
-  }
+  // Re-export storage methods for backwards compatibility
+  getStoredServerSessions = getStoredServerSessions;
+  storeServerSession = storeServerSession;
+  removeStoredServerSession = removeStoredServerSession;
+  clearStoredServerSessions = clearStoredServerSessions;
+  storeLocalCredentials = storeLocalCredentials;
+  getStoredLocalCredentials = getStoredLocalCredentials;
+  clearLocalCredentials = clearLocalCredentials;
 
   /** Attempt to join a server with local credentials (register flow) */
   async attemptLocalJoin(
@@ -159,7 +98,7 @@ export class ConnectionManager {
       };
 
       const { server_token, server } = data.result.data;
-      await this.storeServerSession(server.id, serverUrl, server_token);
+      await storeServerSession(server.id, serverUrl, server_token);
       const serverId = await this.connectToServerLocal(serverUrl, server_token);
       return { serverId };
     } catch {
@@ -173,10 +112,10 @@ export class ConnectionManager {
     this.centralTrpc = createCentralTrpcClient(centralUrl, getToken);
     this.centralWs = new CentralWebSocket();
 
-    this.centralWs.onEvent = (event, data) => this.handleCentralEvent(event, data);
+    this.centralWs.onEvent = (event, data) => handleCentralEvent(event, data);
     this.centralWs.onDisconnect = (code, reason) => {
       console.warn('Central WS disconnected:', code, reason);
-      this.scheduleReconnect('__central__', async () => {
+      this.reconnection.scheduleReconnect('__central__', async () => {
         await this.centralWs!.connect(centralUrl, getToken()!).catch(() => {});
       });
     };
@@ -185,37 +124,17 @@ export class ConnectionManager {
     if (token) {
       const ready = await this.centralWs.connect(centralUrl, token).catch(() => null);
       if (!ready) return;
-      // Populate friend/DM stores from ready data
-      useFriendStore.getState().setFriends(ready.friends as Friend[]);
-      useFriendStore.getState().setIncomingRequests(ready.incoming_requests as FriendRequest[]);
-      useFriendStore.getState().setOutgoingRequests(ready.outgoing_requests as FriendRequest[]);
-      usePresenceStore.getState().bulkSetPresence(
-        ready.presences as { user_id: string; status: PresenceStatus; custom_text?: string }[],
-      );
-      // Load actual DM conversation list (pending_dms from ready are raw messages, not conversations)
-      this.centralTrpc!.dms.list.query().then((convos) => {
-        useDmStore.getState().setConversations(convos as import('ecto-shared').DMConversation[]);
-      }).catch(() => {});
-
-      // If user has an active call on another session, show "on another device" banner
-      if (ready.active_call && useCallStore.getState().callState === 'idle') {
-        const ac = ready.active_call as { call_id: string; peer: import('ecto-shared').CallPeerInfo; media_types: ('audio' | 'video')[] };
-        useCallStore.getState().setOutgoingCall(ac.call_id, ac.peer, ac.media_types);
-        useCallStore.getState().setAnsweredElsewhere();
-      }
+      this.populateCentralStores(ready);
     }
   }
 
   /** Initialize in local-only mode — skip Central, load server sessions from localStorage */
   async initializeLocalOnly(): Promise<void> {
-    // centralWs and centralTrpc remain null
-    const sessions = await this.getStoredServerSessions();
+    const sessions = await getStoredServerSessions();
     const toConnect = sessions.filter((s) => !this.connections.has(s.id));
     await Promise.allSettled(
       toConnect.map((session) =>
-        this.connectToServerLocal(session.address, session.token).catch(() => {
-          // Server unreachable — will show as disconnected
-        }),
+        this.connectToServerLocal(session.address, session.token).catch(() => {}),
       ),
     );
   }
@@ -224,7 +143,6 @@ export class ConnectionManager {
   async connectToServerLocal(address: string, serverToken: string): Promise<string> {
     const serverUrl = address.startsWith('http') ? address : `http://${address}`;
 
-    // Fetch server info to get the real UUID
     let serverId: string;
     try {
       const infoRes = await fetch(`${serverUrl}/trpc/server.info`, {
@@ -237,7 +155,6 @@ export class ConnectionManager {
       };
       serverId = infoData.result.data.server.id;
     } catch {
-      // If server.info fails, try to connect anyway using the address as ID
       throw new Error(`Server unreachable: ${address}`);
     }
 
@@ -254,9 +171,7 @@ export class ConnectionManager {
     };
 
     this.connections.set(serverId, conn);
-
-    // Store session for persistence
-    await this.storeServerSession(serverId, serverUrl, serverToken);
+    await storeServerSession(serverId, serverUrl, serverToken);
 
     if (this.activeServerId === null || this.activeServerId === serverId) {
       await this.openMainWs(conn);
@@ -273,10 +188,10 @@ export class ConnectionManager {
     this.centralTrpc = createCentralTrpcClient(centralUrl, getToken);
     this.centralWs = new CentralWebSocket();
 
-    this.centralWs.onEvent = (event, data) => this.handleCentralEvent(event, data);
+    this.centralWs.onEvent = (event, data) => handleCentralEvent(event, data);
     this.centralWs.onDisconnect = (code, reason) => {
       console.warn('Central WS disconnected:', code, reason);
-      this.scheduleReconnect('__central__', async () => {
+      this.reconnection.scheduleReconnect('__central__', async () => {
         await this.centralWs!.connect(centralUrl, getToken()!).catch(() => {});
       });
     };
@@ -285,22 +200,25 @@ export class ConnectionManager {
     if (token) {
       const ready = await this.centralWs.connect(centralUrl, token).catch(() => null);
       if (!ready) return;
-      useFriendStore.getState().setFriends(ready.friends as Friend[]);
-      useFriendStore.getState().setIncomingRequests(ready.incoming_requests as FriendRequest[]);
-      useFriendStore.getState().setOutgoingRequests(ready.outgoing_requests as FriendRequest[]);
-      usePresenceStore.getState().bulkSetPresence(
-        ready.presences as { user_id: string; status: PresenceStatus; custom_text?: string }[],
-      );
-      this.centralTrpc!.dms.list.query().then((convos) => {
-        useDmStore.getState().setConversations(convos as import('ecto-shared').DMConversation[]);
-      }).catch(() => {});
+      this.populateCentralStores(ready);
+    }
+  }
 
-      // If user has an active call on another session, show "on another device" banner
-      if (ready.active_call && useCallStore.getState().callState === 'idle') {
-        const ac = ready.active_call as { call_id: string; peer: import('ecto-shared').CallPeerInfo; media_types: ('audio' | 'video')[] };
-        useCallStore.getState().setOutgoingCall(ac.call_id, ac.peer, ac.media_types);
-        useCallStore.getState().setAnsweredElsewhere();
-      }
+  private populateCentralStores(ready: CentralReadyData) {
+    useFriendStore.getState().setFriends(ready.friends as Friend[]);
+    useFriendStore.getState().setIncomingRequests(ready.incoming_requests as FriendRequest[]);
+    useFriendStore.getState().setOutgoingRequests(ready.outgoing_requests as FriendRequest[]);
+    usePresenceStore.getState().bulkSetPresence(
+      ready.presences as { user_id: string; status: PresenceStatus; custom_text?: string }[],
+    );
+    this.centralTrpc!.dms.list.query().then((convos) => {
+      useDmStore.getState().setConversations(convos as import('ecto-shared').DMConversation[]);
+    }).catch(() => {});
+
+    if (ready.active_call && useCallStore.getState().callState === 'idle') {
+      const ac = ready.active_call as { call_id: string; peer: import('ecto-shared').CallPeerInfo; media_types: ('audio' | 'video')[] };
+      useCallStore.getState().setOutgoingCall(ac.call_id, ac.peer, ac.media_types);
+      useCallStore.getState().setAnsweredElsewhere();
     }
   }
 
@@ -319,8 +237,6 @@ export class ConnectionManager {
       useConnectionStore.getState().setStatus(serverId, 'connecting');
     }
 
-    // Always call server.join to get the real server UUID and a server token.
-    // This is idempotent — existing members get a fresh token.
     const serverUrl = address.startsWith('http') ? address : `http://${address}`;
     let realServerId = serverId;
     let serverToken = token;
@@ -344,13 +260,11 @@ export class ConnectionManager {
       joinFailed = true;
     }
 
-    // If the server is unreachable, mark as disconnected and bail out
     if (joinFailed) {
       useConnectionStore.getState().setStatus(serverId, 'disconnected');
       throw new Error(`Server unreachable: ${address}`);
     }
 
-    // If serverId changed (was an address, now a UUID), clean up the old key
     if (realServerId !== serverId) {
       useConnectionStore.getState().removeConnection(serverId);
       useConnectionStore.getState().setStatus(realServerId, 'connecting');
@@ -369,11 +283,9 @@ export class ConnectionManager {
     this.connections.set(realServerId, conn);
 
     if (this.activeServerId === serverId || this.activeServerId === realServerId || this.activeServerId === null) {
-      // Open Main WS for active server
       await this.openMainWs(conn);
       this.activeServerId = realServerId;
     } else {
-      // Open Notify WS for background server
       await this.openNotifyWs(conn);
     }
 
@@ -385,7 +297,6 @@ export class ConnectionManager {
 
     if (oldId === newServerId) return;
 
-    // Downgrade old active → notify
     if (oldId) {
       const oldConn = this.connections.get(oldId);
       if (oldConn?.mainWs) {
@@ -395,7 +306,6 @@ export class ConnectionManager {
       }
     }
 
-    // Upgrade new → main (skip if server has no connection, i.e. offline)
     const newConn = this.connections.get(newServerId);
     if (newConn) {
       if (newConn.notifyWs) {
@@ -444,7 +354,54 @@ export class ConnectionManager {
     this.centralWs = null;
     this.centralTrpc = null;
     this.activeServerId = null;
-    this.stopAllRetries();
+    this.reconnection.stopAllRetries();
+  }
+
+  // Server auto-retry for disconnected servers
+
+  startServerRetry(
+    address: string,
+    onReconnected: (realServerId: string) => void,
+  ): void {
+    const serverUrl = address.startsWith('http') ? address : `http://${address}`;
+    let connecting = false;
+
+    this.reconnection.startServerRetry(address, async () => {
+      if (connecting) return;
+
+      const token = useAuthStore.getState().getToken();
+      if (!token) {
+        connecting = true;
+        try {
+          const sessions = await getStoredServerSessions();
+          const session = sessions.find((s) => s.address === serverUrl || s.address === address);
+          if (session) {
+            const realId = await this.connectToServerLocal(address, session.token);
+            this.reconnection.stopServerRetry(address);
+            onReconnected(realId);
+          } else {
+            this.reconnection.stopServerRetry(address);
+          }
+        } catch {
+          connecting = false;
+        }
+        return;
+      }
+
+      connecting = true;
+      try {
+        await fetch(serverUrl, { method: 'HEAD' });
+        this.reconnection.stopServerRetry(address);
+        const realId = await this.connectToServer(address, address, token!, { silent: true });
+        if (realId) onReconnected(realId);
+      } catch {
+        connecting = false;
+      }
+    });
+  }
+
+  stopServerRetry(address: string): void {
+    this.reconnection.stopServerRetry(address);
   }
 
   // Private: open Main WS
@@ -452,7 +409,7 @@ export class ConnectionManager {
   private async openMainWs(conn: ServerConnection) {
     const ws = new MainWebSocket();
 
-    ws.onEvent = (event, data, seq) => this.handleMainEvent(conn.serverId, event, data, seq);
+    ws.onEvent = (event, data, seq) => handleMainEvent(conn.serverId, event, data, seq);
     ws.onDisconnect = (code, reason) => {
       useConnectionStore.getState().setStatus(conn.serverId, 'reconnecting');
       if (ws.isAuthFailure(code)) {
@@ -460,17 +417,14 @@ export class ConnectionManager {
         return;
       }
       const reconnect = async () => {
-        // Probe with HTTP first to avoid noisy browser WebSocket error logs
         try {
           await fetch(conn.address, { method: 'HEAD' });
         } catch {
-          // Server still down — skip WS attempt entirely
-          const attempts = this.reconnectAttempts.get(conn.serverId) ?? 0;
+          const attempts = this.reconnection.getAttempts(conn.serverId);
           if (attempts >= 3) {
-            // Transition to disconnected + 5s HTTP retry
             useConnectionStore.getState().setStatus(conn.serverId, 'disconnected');
             conn.mainWs = null;
-            this.reconnectAttempts.delete(conn.serverId);
+            this.reconnection.resetAttempts(conn.serverId);
             this.startServerRetry(conn.address, (realId) => {
               if (this.activeServerId === conn.serverId || this.activeServerId === realId) {
                 useUiStore.getState().setActiveServer(realId);
@@ -478,12 +432,11 @@ export class ConnectionManager {
               }
             });
           } else {
-            this.scheduleReconnect(conn.serverId, reconnect);
+            this.reconnection.scheduleReconnect(conn.serverId, reconnect);
           }
           return;
         }
 
-        // Server responded to HTTP — try WS reconnect
         try {
           if (!ws.isInvalidSequence(code) && ws.lastSeq > 0) {
             await ws.resume(conn.address, conn.token, ws.lastSeq);
@@ -491,21 +444,20 @@ export class ConnectionManager {
             await ws.connect(conn.address, conn.token);
           }
           useConnectionStore.getState().setStatus(conn.serverId, 'connected');
-          this.reconnectAttempts.delete(conn.serverId);
+          this.reconnection.resetAttempts(conn.serverId);
         } catch {
-          this.scheduleReconnect(conn.serverId, reconnect);
+          this.reconnection.scheduleReconnect(conn.serverId, reconnect);
         }
       };
-      this.scheduleReconnect(conn.serverId, reconnect);
+      this.reconnection.scheduleReconnect(conn.serverId, reconnect);
     };
 
     try {
       const ready = await ws.connect(conn.address, conn.token);
       conn.mainWs = ws;
       useConnectionStore.getState().setStatus(conn.serverId, 'connected');
-      this.reconnectAttempts.delete(conn.serverId);
+      this.reconnection.resetAttempts(conn.serverId);
 
-      // Populate stores from system.ready
       const readyData = ready as unknown as {
         user_id?: string;
         server?: { setup_completed?: boolean; admin_user_id?: string | null };
@@ -558,7 +510,6 @@ export class ConnectionManager {
         }
       }
 
-      // Auto-subscribe to the active channel if this is the active server
       const { activeServerId, activeChannelId } = useUiStore.getState();
       if (activeChannelId && (activeServerId === conn.serverId || activeServerId === null)) {
         ws.subscribe(activeChannelId);
@@ -582,7 +533,7 @@ export class ConnectionManager {
     };
 
     ws.onDisconnect = (code, reason) => {
-      this.scheduleReconnect(`notify:${conn.serverId}`, () =>
+      this.reconnection.scheduleReconnect(`notify:${conn.serverId}`, () =>
         ws.connect(conn.address, conn.token).catch(() => {}),
       );
     };
@@ -593,362 +544,6 @@ export class ConnectionManager {
     } catch {
       // Will retry via reconnect
     }
-  }
-
-  // Event routing
-
-  private handleMainEvent(serverId: string, event: string, data: unknown, _seq: number) {
-    const d = data as Record<string, unknown>;
-
-    switch (event) {
-      case 'message.create':
-        useMessageStore.getState().addMessage(d.channel_id as string, d as unknown as Message);
-        useReadStateStore.getState().incrementUnread(d.channel_id as string);
-        this.maybeNotify(serverId, d);
-        break;
-
-      case 'mention.create': {
-        useReadStateStore.getState().incrementMention(d.channel_id as string);
-        useNotifyStore.getState().addNotification(serverId, d.channel_id as string, Date.now(), 'mention');
-        playNotificationSound('mention');
-        const mentionAuthor = useMemberStore.getState().members.get(serverId)?.get(d.author_id as string);
-        useToastStore.getState().addToast({
-          serverId,
-          channelId: d.channel_id as string,
-          authorName: mentionAuthor?.display_name ?? mentionAuthor?.username ?? 'Someone',
-          avatarUrl: mentionAuthor?.avatar_url ?? undefined,
-          content: ((d.content as string) ?? '').slice(0, 200),
-        });
-        break;
-      }
-
-      case 'message.update':
-        useMessageStore.getState().updateMessage(d.channel_id as string, {
-          id: d.id as string,
-          content: d.content as string,
-          edited_at: d.edited_at as string,
-        });
-        break;
-
-      case 'message.delete':
-        useMessageStore.getState().deleteMessage(d.channel_id as string, d.id as string);
-        break;
-
-      case 'message.reaction_update':
-        useMessageStore.getState().updateReaction(
-          d.channel_id as string,
-          d.message_id as string,
-          d.emoji as string,
-          d.user_id as string,
-          d.action as 'add' | 'remove',
-          d.count as number,
-        );
-        break;
-
-      case 'typing.start':
-        useMessageStore.getState().setTyping(d.channel_id as string, d.user_id as string);
-        break;
-
-      case 'typing.stop':
-        useMessageStore.getState().clearTyping(d.channel_id as string, d.user_id as string);
-        break;
-
-      case 'channel.create':
-        useChannelStore.getState().addChannel(serverId, d as unknown as Channel);
-        break;
-
-      case 'channel.update':
-        useChannelStore.getState().updateChannel(serverId, d as unknown as Channel & { id: string });
-        break;
-
-      case 'channel.delete':
-        useChannelStore.getState().removeChannel(serverId, d.id as string);
-        break;
-
-      case 'channel.reorder':
-        useChannelStore.getState().setChannels(serverId, d as unknown as Channel[]);
-        break;
-
-      case 'category.create':
-        useChannelStore.getState().addCategory(serverId, d as unknown as Category);
-        break;
-
-      case 'category.update':
-        useChannelStore.getState().updateCategory(serverId, d as unknown as Category & { id: string });
-        break;
-
-      case 'category.delete':
-        useChannelStore.getState().removeCategory(serverId, d.id as string);
-        break;
-
-      case 'category.reorder':
-        useChannelStore.getState().setCategories(serverId, d as unknown as Category[]);
-        break;
-
-      case 'role.create':
-        useRoleStore.getState().addRole(serverId, d as unknown as Role);
-        break;
-
-      case 'role.update':
-        useRoleStore.getState().updateRole(serverId, d.id as string, d as Partial<Role>);
-        break;
-
-      case 'role.delete':
-        useRoleStore.getState().removeRole(serverId, d.id as string);
-        break;
-
-      case 'role.reorder':
-        useRoleStore.getState().setRoles(serverId, d as unknown as Role[]);
-        break;
-
-      case 'server.update':
-        useServerStore.getState().updateServer(serverId, d as Partial<import('ecto-shared').ServerListEntry>);
-        break;
-
-      case 'invite.create':
-        useServerStore.getState().incrementEventSeq(serverId);
-        break;
-
-      case 'invite.delete':
-        useServerStore.getState().incrementEventSeq(serverId);
-        break;
-
-      case 'member.join':
-        useMemberStore.getState().addMember(serverId, d as unknown as Member);
-        break;
-
-      case 'member.leave':
-        useMemberStore.getState().removeMember(serverId, d.user_id as string);
-        break;
-
-      case 'member.update':
-        useMemberStore.getState().updateMember(serverId, d.user_id as string, d as Partial<Member>);
-        break;
-
-      case 'presence.update':
-        usePresenceStore.getState().setPresence(
-          d.user_id as string,
-          d.status as PresenceStatus,
-          d.custom_text as string | undefined,
-        );
-        break;
-
-      case 'voice.state_update':
-        if (d._removed) {
-          useVoiceStore.getState().removeParticipant(d.user_id as string);
-        } else {
-          useVoiceStore.getState().addParticipant(d as unknown as VoiceState);
-        }
-        break;
-
-      // Voice signaling events are handled by the voice service
-      case 'voice.router_capabilities':
-      case 'voice.transport_created':
-      case 'voice.produced':
-      case 'voice.new_consumer':
-      case 'voice.producer_closed':
-      case 'voice.server_muted':
-      case 'voice.quality_update':
-      case 'voice.already_connected':
-      case 'voice.transferred':
-      case 'voice.error':
-        // These are dispatched to voice event listeners
-        break;
-    }
-  }
-
-  private handleCentralEvent(event: string, data: unknown) {
-    const d = data as Record<string, unknown>;
-
-    switch (event) {
-      case 'friend.request_incoming':
-        useFriendStore.getState().addIncomingRequest(d as unknown as FriendRequest);
-        break;
-
-      case 'friend.request_outgoing':
-        useFriendStore.getState().addOutgoingRequest(d as unknown as FriendRequest);
-        break;
-
-      case 'friend.accept':
-        useFriendStore.getState().acceptedRequest(d as unknown as Friend);
-        break;
-
-      case 'friend.remove':
-        useFriendStore.getState().removeFriend(d.user_id as string);
-        break;
-
-      case 'friend.presence':
-      case 'friend.online':
-        usePresenceStore.getState().setPresence(
-          d.user_id as string,
-          (d.status as PresenceStatus) ?? 'online',
-          d.custom_text as string | undefined,
-        );
-        break;
-
-      case 'friend.offline':
-        usePresenceStore.getState().setPresence(d.user_id as string, 'offline');
-        break;
-
-      case 'dm.message': {
-        const msg = d as unknown as DirectMessage;
-        const myId = useAuthStore.getState().user?.id;
-        // Key by the OTHER user (peer), not ourselves
-        const peerId = msg.sender_id === myId ? msg.recipient_id : msg.sender_id;
-        useDmStore.getState().addMessage(peerId, msg);
-        // Ensure sidebar conversation exists/is updated
-        useDmStore.getState().ensureConversation(peerId, msg);
-        // Play DM notification sound for incoming messages
-        if (msg.sender_id !== myId) {
-          playNotificationSound('dm');
-        }
-        break;
-      }
-
-      case 'dm.typing':
-        useDmStore.getState().setTyping(d.user_id as string);
-        break;
-
-      case 'dm.message_update': {
-        const updatedMsg = d as unknown as DirectMessage;
-        const myId = useAuthStore.getState().user?.id;
-        const peerId = updatedMsg.sender_id === myId ? updatedMsg.recipient_id : updatedMsg.sender_id;
-        useDmStore.getState().updateMessage(peerId, updatedMsg.id, updatedMsg);
-        break;
-      }
-
-      case 'dm.message_deleted': {
-        const peerId = d.peer_id as string;
-        const messageId = d.message_id as string;
-        useDmStore.getState().deleteMessage(peerId, messageId);
-        break;
-      }
-
-      case 'dm.reaction_update': {
-        const messageId = d.message_id as string;
-        const reactions = d.reactions as import('ecto-shared').ReactionGroup[];
-        // Find which peer conversation this message belongs to
-        for (const [peerId, msgs] of useDmStore.getState().messages) {
-          if (msgs.has(messageId)) {
-            useDmStore.getState().updateReactions(peerId, messageId, reactions);
-            break;
-          }
-        }
-        break;
-      }
-
-      default:
-        // Route call.* events to call handler
-        if (event.startsWith('call.')) {
-          handleCallWsEvent(event, data);
-        }
-        break;
-    }
-  }
-
-  private maybeNotify(serverId: string, d: Record<string, unknown>) {
-    const myId = useAuthStore.getState().user?.id;
-    const authorId = (d.author as { id?: string } | undefined)?.id;
-    if (authorId === myId) return;
-
-    // Sound for non-mention messages (mention sound is played by mention.create handler)
-    const mentions = d.mentions as string[] | undefined;
-    const mentionEveryone = d.mention_everyone as boolean | undefined;
-    const isMention = (mentions?.includes(myId ?? '') ?? false) || mentionEveryone;
-    if (!isMention) {
-      playNotificationSound('message');
-    }
-
-    if (!document.hasFocus() && window.electronAPI) {
-      const author = d.author as { username?: string } | undefined;
-      const content = d.content as string | undefined;
-      window.electronAPI.notifications.showNotification(
-        author?.username ?? 'New Message',
-        content?.slice(0, 100) ?? '',
-        { serverId, channelId: d.channel_id as string },
-      );
-    }
-  }
-
-  // Server auto-retry for disconnected servers
-
-  startServerRetry(
-    address: string,
-    onReconnected: (realServerId: string) => void,
-  ): void {
-    if (this.retryTimers.has(address)) return;
-
-    const serverUrl = address.startsWith('http') ? address : `http://${address}`;
-    let connecting = false;
-
-    // Use setInterval for flat stack traces (chained setTimeout produces growing async traces)
-    const intervalId = setInterval(() => {
-      if (connecting) return; // Skip if previous attempt still in progress
-
-      // Use Central token if available, otherwise try stored local token
-      const token = useAuthStore.getState().getToken();
-      if (!token) {
-        // Look for a stored local server token for this address
-        connecting = true;
-        this.getStoredServerSessions().then((sessions) => {
-          const session = sessions.find((s) => s.address === serverUrl || s.address === address);
-          if (session) {
-            // Use connectToServerLocal for local-auth reconnection
-            return this.connectToServerLocal(address, session.token).then((realId) => {
-              clearInterval(intervalId);
-              this.retryTimers.delete(address);
-              onReconnected(realId);
-            });
-          } else {
-            clearInterval(intervalId);
-            this.retryTimers.delete(address);
-          }
-        }).catch(() => {
-          connecting = false;
-        });
-        return;
-      }
-
-      connecting = true;
-      // Lightweight probe — connection refused fails instantly, any HTTP response means server is up
-      fetch(serverUrl, { method: 'HEAD' }).then(() => {
-        // Server responded — stop polling, do full connect
-        clearInterval(intervalId);
-        this.retryTimers.delete(address);
-        return this.connectToServer(address, address, token!, { silent: true });
-      }).then((realId) => {
-        if (realId) onReconnected(realId);
-      }).catch(() => {
-        // Still down or connect failed — interval will fire again
-        connecting = false;
-      });
-    }, 5000);
-
-    this.retryTimers.set(address, intervalId);
-  }
-
-  stopServerRetry(address: string): void {
-    const timer = this.retryTimers.get(address);
-    if (timer) {
-      clearInterval(timer);
-      this.retryTimers.delete(address);
-    }
-  }
-
-  private stopAllRetries(): void {
-    for (const timer of this.retryTimers.values()) {
-      clearInterval(timer);
-    }
-    this.retryTimers.clear();
-  }
-
-  // Reconnection
-
-  private scheduleReconnect(key: string, reconnectFn: () => Promise<void>) {
-    const attempts = this.reconnectAttempts.get(key) ?? 0;
-    const delay = Math.min(1000 * Math.pow(2, attempts), 30000);
-    this.reconnectAttempts.set(key, attempts + 1);
-    setTimeout(() => reconnectFn(), delay);
   }
 }
 

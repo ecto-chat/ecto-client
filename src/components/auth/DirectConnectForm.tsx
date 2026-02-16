@@ -132,9 +132,9 @@ export function DirectConnectForm() {
       const { server_token, server } = data.result.data;
 
       // Store session and enter local-only mode
-      connectionManager.storeServerSession(server.id, serverUrl, server_token);
+      await connectionManager.storeServerSession(server.id, serverUrl, server_token);
       // Store credentials for future auto-joins on other servers
-      connectionManager.storeLocalCredentials(username.trim(), password);
+      await connectionManager.storeLocalCredentials(username.trim(), password);
       console.log('[DirectConnect] stored session, calling enterLocalOnly');
       useAuthStore.getState().enterLocalOnly();
 

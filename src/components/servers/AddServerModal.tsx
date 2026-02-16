@@ -28,9 +28,9 @@ interface ServerPreview {
  * First checks stored credentials, then falls back to detecting username
  * from the member store and prompting for password.
  */
-function getLocalCredentials(): { username: string; password: string } | null {
+async function getLocalCredentials(): Promise<{ username: string; password: string } | null> {
   // Check stored credentials first
-  const stored = connectionManager.getStoredLocalCredentials();
+  const stored = await connectionManager.getStoredLocalCredentials();
   if (stored) return stored;
 
   // Fall back: detect username from current session's member data
@@ -96,7 +96,7 @@ export function AddServerModal() {
 
     if ('serverId' in result) {
       // Success — store credentials for future auto-joins
-      connectionManager.storeLocalCredentials(username, password);
+      await connectionManager.storeLocalCredentials(username, password);
 
       const conn = connectionManager.getServerTrpc(result.serverId);
       let serverName = serverPreview?.name ?? serverAddress;
@@ -225,7 +225,7 @@ export function AddServerModal() {
           return;
         }
 
-        const creds = getLocalCredentials();
+        const creds = await getLocalCredentials();
 
         if (!creds) {
           // No stored credentials — detect username and ask for password once
@@ -258,14 +258,14 @@ export function AddServerModal() {
     }
   };
 
-  const handleInviteSubmit = (e: FormEvent) => {
+  const handleInviteSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (needsPassword) {
       if (!passwordInput) return;
       attemptAutoJoin(address, detectedUsername, passwordInput, inviteCode);
       return;
     }
-    const creds = connectionManager.getStoredLocalCredentials();
+    const creds = await connectionManager.getStoredLocalCredentials();
     if (!creds) return;
     attemptAutoJoin(address, creds.username, creds.password, inviteCode);
   };

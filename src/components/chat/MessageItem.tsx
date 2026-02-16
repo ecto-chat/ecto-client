@@ -1,7 +1,9 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo, memo } from 'react';
 import { Avatar } from '../common/Avatar.js';
 import { useAuthStore } from '../../stores/auth.js';
 import { useUiStore } from '../../stores/ui.js';
+import { useMemberStore } from '../../stores/member.js';
+import { useChannelStore } from '../../stores/channel.js';
 import { connectionManager } from '../../services/connection-manager.js';
 import { renderMarkdown } from '../../lib/markdown.js';
 import { LinkPreviews } from './LinkPreview.js';
@@ -31,7 +33,7 @@ function resolveFileUrl(relativeUrl: string): string {
   return `${conn.address}${relativeUrl}`;
 }
 
-export function MessageItem({ message, onEdit, onDelete, onReact, onPin, readOnly, reactOnly }: MessageItemProps) {
+export const MessageItem = memo(function MessageItem({ message, onEdit, onDelete, onReact, onPin, readOnly, reactOnly }: MessageItemProps) {
   const [editing, setEditing] = useState(false);
   const [editContent, setEditContent] = useState(message.content ?? '');
   const [hovering, setHovering] = useState(false);
@@ -39,6 +41,24 @@ export function MessageItem({ message, onEdit, onDelete, onReact, onPin, readOnl
   const currentUserId = useAuthStore((s) => s.user?.id);
   const activeServerId = useUiStore((s) => s.activeServerId);
   const isOwn = message.author?.id === currentUserId;
+  const serverMembers = useMemberStore((s) => activeServerId ? s.members.get(activeServerId) : undefined);
+  const serverChannels = useChannelStore((s) => activeServerId ? s.channels.get(activeServerId) : undefined);
+
+  const mentionResolver = useMemo(() => {
+    const members = new Map<string, string>();
+    if (serverMembers) {
+      for (const [userId, m] of serverMembers) {
+        members.set(userId, m.nickname ?? m.display_name ?? m.username);
+      }
+    }
+    const channels = new Map<string, string>();
+    if (serverChannels) {
+      for (const [channelId, ch] of serverChannels) {
+        channels.set(channelId, ch.name);
+      }
+    }
+    return { members, channels };
+  }, [serverMembers, serverChannels]);
 
   const handleAuthorClick = () => {
     if (!message.author?.id || !activeServerId) return;
@@ -96,6 +116,7 @@ export function MessageItem({ message, onEdit, onDelete, onReact, onPin, readOnl
       <div className="message-body">
         <div className="message-header">
           <span className="message-author" onClick={handleAuthorClick} style={{ cursor: 'pointer' }}>{message.author?.display_name ?? message.author?.username ?? 'Unknown'}</span>
+          {message.webhook_id && <span className="message-bot-badge">BOT</span>}
           <span className="message-timestamp">{timestamp}</span>
           {message.edited_at && <span className="message-edited">(edited)</span>}
           {message.pinned && <span className="message-pin-badge">pinned</span>}
@@ -128,10 +149,13 @@ export function MessageItem({ message, onEdit, onDelete, onReact, onPin, readOnl
           <>
             <div
               className="message-content message-markdown"
-              dangerouslySetInnerHTML={{ __html: renderMarkdown(message.content ?? '') }}
+              dangerouslySetInnerHTML={{ __html: renderMarkdown(message.content ?? '', mentionResolver) }}
               onClick={(e) => {
                 const el = e.target as HTMLElement;
                 if (el.classList.contains('spoiler')) el.classList.toggle('revealed');
+                if (el.classList.contains('mention') && el.dataset.type === 'user' && el.dataset.id && activeServerId) {
+                  useUiStore.getState().openModal('user-profile', { userId: el.dataset.id, serverId: activeServerId });
+                }
               }}
             />
             {message.content && <LinkPreviews content={message.content} />}
@@ -227,7 +251,7 @@ export function MessageItem({ message, onEdit, onDelete, onReact, onPin, readOnl
               &#9998;
             </button>
           )}
-          {!reactOnly && isOwn && (
+          {isOwn && (
             <button className="toolbar-btn danger" onClick={() => onDelete(message.id)} title="Delete">
               &#128465;
             </button>
@@ -236,7 +260,7 @@ export function MessageItem({ message, onEdit, onDelete, onReact, onPin, readOnl
       )}
     </div>
   );
-}
+});
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return bytes + ' B';

@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, memo } from 'react';
 import { Permissions } from 'ecto-shared';
 import { useMembers } from '../../hooks/useMembers.js';
 import { usePresenceStore } from '../../stores/presence.js';
@@ -108,7 +108,7 @@ export function MemberList() {
   );
 }
 
-function MemberItem({ member, rolesMap }: { member: Member; rolesMap?: Map<string, Role> }) {
+const MemberItem = memo(function MemberItem({ member, rolesMap }: { member: Member; rolesMap?: Map<string, Role> }) {
   const { status } = usePresence(member.user_id);
   const activeServerId = useUiStore((s) => s.activeServerId);
 
@@ -145,4 +145,4 @@ function MemberItem({ member, rolesMap }: { member: Member; rolesMap?: Map<strin
       </div>
     </div>
   );
-}
+});
