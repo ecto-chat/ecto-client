@@ -266,6 +266,21 @@ a:hover {
   border-radius: 50%;
 }
 
+.server-mention-badge {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  background: var(--danger);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 8px;
+  min-width: 18px;
+  text-align: center;
+  z-index: 1;
+}
+
 .server-icon {
   width: 48px;
   height: 48px;
@@ -848,6 +863,65 @@ a:hover {
   text-align: center;
 }
 
+/* ── Notification toasts ── */
+
+.notification-toast-container {
+  position: fixed;
+  bottom: 16px;
+  right: 16px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.notification-toast {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--danger);
+  border-radius: 8px;
+  padding: 10px 14px;
+  max-width: 360px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  animation: toast-slide-in 0.25s ease-out;
+}
+
+.notification-toast:hover {
+  background: var(--bg-tertiary);
+}
+
+.notification-toast-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.notification-toast-author {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.notification-toast-content {
+  font-size: 12px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@keyframes toast-slide-in {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
 /* ══════════════════════════════
    DM SIDEBAR
    ══════════════════════════════ */
@@ -1018,11 +1092,48 @@ a:hover {
   border-radius: var(--radius-sm);
 }
 
+.message-bot-badge {
+  font-size: 10px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--accent, #5865f2);
+  padding: 1px 5px;
+  border-radius: var(--radius-sm);
+  margin-left: 4px;
+  vertical-align: middle;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
 .message-content {
   font-size: 15px;
   line-height: 1.4;
   word-break: break-word;
   white-space: pre-wrap;
+}
+
+.message-content table {
+  border-collapse: collapse;
+  margin: 8px 0;
+  max-width: 100%;
+  overflow-x: auto;
+  display: block;
+}
+
+.message-content th,
+.message-content td {
+  border: 1px solid var(--border);
+  padding: 6px 12px;
+  text-align: left;
+}
+
+.message-content th {
+  background: var(--bg-tertiary);
+  font-weight: 600;
+}
+
+.message-content tr:nth-child(even) {
+  background: rgba(255, 255, 255, 0.02);
 }
 
 .message-reply-ref {
@@ -1161,7 +1272,38 @@ a:hover {
 
 /* Message input */
 .message-input-container {
+  position: relative;
   padding: 0 16px 16px;
+}
+
+.mention-autocomplete {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  right: 0;
+  max-height: 240px;
+  overflow-y: auto;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  z-index: 10;
+  padding: 4px 0;
+}
+
+.mention-autocomplete-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.mention-autocomplete-item:hover,
+.mention-autocomplete-item.active {
+  background: var(--bg-modifier-hover);
+  color: var(--text-primary);
 }
 
 .message-reply-bar {
@@ -2005,6 +2147,40 @@ a:hover {
   margin-left: auto;
   display: flex;
   gap: 4px;
+}
+
+/* Search panel */
+.search-panel {
+  border-bottom: 1px solid var(--border, #40444b);
+  background: var(--bg-secondary, #2f3136);
+  max-height: 400px;
+  display: flex;
+  flex-direction: column;
+}
+
+.search-panel-header {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  gap: 8px;
+  border-bottom: 1px solid var(--border, #40444b);
+}
+
+.search-panel-results {
+  overflow-y: auto;
+  flex: 1;
+  padding: 4px 0;
+}
+
+.search-result {
+  padding: 8px 16px;
+  cursor: pointer;
+  border-left: 3px solid transparent;
+}
+
+.search-result:hover {
+  background: var(--bg-modifier-hover, rgba(79, 84, 92, 0.16));
+  border-left-color: var(--accent, #5865f2);
 }
 
 /* Typing indicator */

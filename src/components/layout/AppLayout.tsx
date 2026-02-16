@@ -26,6 +26,7 @@ import { LeaveServerModal } from '../servers/LeaveServerModal.js';
 import { SetupWizard } from '../admin/SetupWizard.js';
 import { ServerSettings } from '../admin/ServerSettings.js';
 import { UserSettingsModal } from '../settings/UserSettingsModal.js';
+import { NotificationToast } from '../common/NotificationToast.js';
 import { useCallStore } from '../../stores/call.js';
 import { startIdleDetection, stopIdleDetection } from '../../services/idle-detector.js';
 
@@ -145,10 +146,9 @@ export function AppLayout() {
     } else if (centralAuthState === 'unauthenticated') {
       // Path B: Local-only mode — parallel connections from localStorage
       console.log('[AppLayout] Path B: parallel initializeLocalOnly');
-      const sessions = connectionManager.getStoredServerSessions();
 
       // Fire all connections in parallel — servers appear once confirmed
-      connectionManager.initializeLocalOnly().then(() => {
+      connectionManager.getStoredServerSessions().then((sessions) => connectionManager.initializeLocalOnly().then(() => {
         for (const session of sessions) {
           const trpc = connectionManager.getServerTrpc(session.id);
           if (trpc) {
@@ -212,7 +212,7 @@ export function AppLayout() {
           useUiStore.getState().setActiveServer(connectedIds[0]!);
           connectionManager.switchServer(connectedIds[0]!).catch(() => {});
         }
-      }).catch(() => {});
+      })).catch(() => {});
     }
   }, [centralAuthState]);
 
@@ -278,6 +278,7 @@ export function AppLayout() {
       <UserSettingsModal />
       <IncomingCallOverlay />
       <ActiveCallOverlay />
+      <NotificationToast />
     </div>
   );
 }

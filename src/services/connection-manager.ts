@@ -20,6 +20,9 @@ import { useServerStore } from '../stores/server.js';
 import { useRoleStore } from '../stores/role.js';
 import { useCallStore } from '../stores/call.js';
 import { handleCallWsEvent } from '../hooks/useCall.js';
+import { playNotificationSound } from '../lib/notification-sounds.js';
+import { useToastStore } from '../stores/toast.js';
+import { secureStorage } from './secure-storage.js';
 
 const SERVER_TOKENS_KEY = 'ecto-server-tokens';
 const LOCAL_CREDENTIALS_KEY = 'ecto-local-credentials';
@@ -46,11 +49,11 @@ export class ConnectionManager {
   private reconnectAttempts = new Map<string, number>();
   private retryTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
-  // localStorage server session persistence
+  // Secure server session persistence
 
-  getStoredServerSessions(): Array<{ id: string; address: string; token: string }> {
+  async getStoredServerSessions(): Promise<Array<{ id: string; address: string; token: string }>> {
     try {
-      const raw = localStorage.getItem(SERVER_TOKENS_KEY);
+      const raw = await secureStorage.get(SERVER_TOKENS_KEY);
       if (!raw) return [];
       const parsed = JSON.parse(raw) as Record<string, StoredServerSession>;
       return Object.entries(parsed).map(([id, session]) => ({
@@ -63,46 +66,46 @@ export class ConnectionManager {
     }
   }
 
-  storeServerSession(serverId: string, address: string, token: string): void {
+  async storeServerSession(serverId: string, address: string, token: string): Promise<void> {
     try {
-      const raw = localStorage.getItem(SERVER_TOKENS_KEY);
+      const raw = await secureStorage.get(SERVER_TOKENS_KEY);
       const sessions: Record<string, StoredServerSession> = raw ? JSON.parse(raw) as Record<string, StoredServerSession> : {};
       sessions[serverId] = { address, token };
-      localStorage.setItem(SERVER_TOKENS_KEY, JSON.stringify(sessions));
+      await secureStorage.set(SERVER_TOKENS_KEY, JSON.stringify(sessions));
     } catch {
       // Storage full or unavailable
     }
   }
 
-  removeStoredServerSession(serverId: string): void {
+  async removeStoredServerSession(serverId: string): Promise<void> {
     try {
-      const raw = localStorage.getItem(SERVER_TOKENS_KEY);
+      const raw = await secureStorage.get(SERVER_TOKENS_KEY);
       if (!raw) return;
       const sessions: Record<string, StoredServerSession> = JSON.parse(raw) as Record<string, StoredServerSession>;
       delete sessions[serverId];
-      localStorage.setItem(SERVER_TOKENS_KEY, JSON.stringify(sessions));
+      await secureStorage.set(SERVER_TOKENS_KEY, JSON.stringify(sessions));
     } catch {
       // Storage unavailable
     }
   }
 
-  clearStoredServerSessions(): void {
-    localStorage.removeItem(SERVER_TOKENS_KEY);
+  async clearStoredServerSessions(): Promise<void> {
+    await secureStorage.delete(SERVER_TOKENS_KEY);
   }
 
-  // Local credential storage for multi-server auto-join
+  // Secure local credential storage for multi-server auto-join
 
-  storeLocalCredentials(username: string, password: string): void {
+  async storeLocalCredentials(username: string, password: string): Promise<void> {
     try {
-      localStorage.setItem(LOCAL_CREDENTIALS_KEY, JSON.stringify({ username, password }));
+      await secureStorage.set(LOCAL_CREDENTIALS_KEY, JSON.stringify({ username, password }));
     } catch {
       // Storage full or unavailable
     }
   }
 
-  getStoredLocalCredentials(): { username: string; password: string } | null {
+  async getStoredLocalCredentials(): Promise<{ username: string; password: string } | null> {
     try {
-      const raw = localStorage.getItem(LOCAL_CREDENTIALS_KEY);
+      const raw = await secureStorage.get(LOCAL_CREDENTIALS_KEY);
       if (!raw) return null;
       return JSON.parse(raw) as { username: string; password: string };
     } catch {
@@ -110,8 +113,8 @@ export class ConnectionManager {
     }
   }
 
-  clearLocalCredentials(): void {
-    localStorage.removeItem(LOCAL_CREDENTIALS_KEY);
+  async clearLocalCredentials(): Promise<void> {
+    await secureStorage.delete(LOCAL_CREDENTIALS_KEY);
   }
 
   /** Attempt to join a server with local credentials (register flow) */
@@ -156,7 +159,7 @@ export class ConnectionManager {
       };
 
       const { server_token, server } = data.result.data;
-      this.storeServerSession(server.id, serverUrl, server_token);
+      await this.storeServerSession(server.id, serverUrl, server_token);
       const serverId = await this.connectToServerLocal(serverUrl, server_token);
       return { serverId };
     } catch {
@@ -206,7 +209,7 @@ export class ConnectionManager {
   /** Initialize in local-only mode — skip Central, load server sessions from localStorage */
   async initializeLocalOnly(): Promise<void> {
     // centralWs and centralTrpc remain null
-    const sessions = this.getStoredServerSessions();
+    const sessions = await this.getStoredServerSessions();
     const toConnect = sessions.filter((s) => !this.connections.has(s.id));
     await Promise.allSettled(
       toConnect.map((session) =>
@@ -253,7 +256,7 @@ export class ConnectionManager {
     this.connections.set(serverId, conn);
 
     // Store session for persistence
-    this.storeServerSession(serverId, serverUrl, serverToken);
+    await this.storeServerSession(serverId, serverUrl, serverToken);
 
     if (this.activeServerId === null || this.activeServerId === serverId) {
       await this.openMainWs(conn);
@@ -604,6 +607,21 @@ export class ConnectionManager {
         this.maybeNotify(serverId, d);
         break;
 
+      case 'mention.create': {
+        useReadStateStore.getState().incrementMention(d.channel_id as string);
+        useNotifyStore.getState().addNotification(serverId, d.channel_id as string, Date.now(), 'mention');
+        playNotificationSound('mention');
+        const mentionAuthor = useMemberStore.getState().members.get(serverId)?.get(d.author_id as string);
+        useToastStore.getState().addToast({
+          serverId,
+          channelId: d.channel_id as string,
+          authorName: mentionAuthor?.display_name ?? mentionAuthor?.username ?? 'Someone',
+          avatarUrl: mentionAuthor?.avatar_url ?? undefined,
+          content: ((d.content as string) ?? '').slice(0, 200),
+        });
+        break;
+      }
+
       case 'message.update':
         useMessageStore.getState().updateMessage(d.channel_id as string, {
           id: d.id as string,
@@ -780,6 +798,10 @@ export class ConnectionManager {
         useDmStore.getState().addMessage(peerId, msg);
         // Ensure sidebar conversation exists/is updated
         useDmStore.getState().ensureConversation(peerId, msg);
+        // Play DM notification sound for incoming messages
+        if (msg.sender_id !== myId) {
+          playNotificationSound('dm');
+        }
         break;
       }
 
@@ -792,6 +814,13 @@ export class ConnectionManager {
         const myId = useAuthStore.getState().user?.id;
         const peerId = updatedMsg.sender_id === myId ? updatedMsg.recipient_id : updatedMsg.sender_id;
         useDmStore.getState().updateMessage(peerId, updatedMsg.id, updatedMsg);
+        break;
+      }
+
+      case 'dm.message_deleted': {
+        const peerId = d.peer_id as string;
+        const messageId = d.message_id as string;
+        useDmStore.getState().deleteMessage(peerId, messageId);
         break;
       }
 
@@ -818,6 +847,18 @@ export class ConnectionManager {
   }
 
   private maybeNotify(serverId: string, d: Record<string, unknown>) {
+    const myId = useAuthStore.getState().user?.id;
+    const authorId = (d.author as { id?: string } | undefined)?.id;
+    if (authorId === myId) return;
+
+    // Sound for non-mention messages (mention sound is played by mention.create handler)
+    const mentions = d.mentions as string[] | undefined;
+    const mentionEveryone = d.mention_everyone as boolean | undefined;
+    const isMention = (mentions?.includes(myId ?? '') ?? false) || mentionEveryone;
+    if (!isMention) {
+      playNotificationSound('message');
+    }
+
     if (!document.hasFocus() && window.electronAPI) {
       const author = d.author as { username?: string } | undefined;
       const content = d.content as string | undefined;
@@ -848,22 +889,23 @@ export class ConnectionManager {
       const token = useAuthStore.getState().getToken();
       if (!token) {
         // Look for a stored local server token for this address
-        const sessions = this.getStoredServerSessions();
-        const session = sessions.find((s) => s.address === serverUrl || s.address === address);
-        if (session) {
-          // Use connectToServerLocal for local-auth reconnection
-          connecting = true;
-          this.connectToServerLocal(address, session.token).then((realId) => {
+        connecting = true;
+        this.getStoredServerSessions().then((sessions) => {
+          const session = sessions.find((s) => s.address === serverUrl || s.address === address);
+          if (session) {
+            // Use connectToServerLocal for local-auth reconnection
+            return this.connectToServerLocal(address, session.token).then((realId) => {
+              clearInterval(intervalId);
+              this.retryTimers.delete(address);
+              onReconnected(realId);
+            });
+          } else {
             clearInterval(intervalId);
             this.retryTimers.delete(address);
-            onReconnected(realId);
-          }).catch(() => {
-            connecting = false;
-          });
-          return;
-        }
-        clearInterval(intervalId);
-        this.retryTimers.delete(address);
+          }
+        }).catch(() => {
+          connecting = false;
+        });
         return;
       }
 

@@ -142,7 +142,7 @@ export function ServerSidebar() {
     }
 
     connectionManager.disconnectFromServer(serverId);
-    connectionManager.removeStoredServerSession(serverId);
+    connectionManager.removeStoredServerSession(serverId).catch(() => {});
     connectionManager.stopServerRetry(
       server?.server_address ?? serverId,
     );
@@ -159,11 +159,14 @@ export function ServerSidebar() {
     return serverNotifs !== undefined && serverNotifs.size > 0;
   };
 
+  const channels = useChannelStore((s) => s.channels);
+
   const getServerMentions = (serverId: string): number => {
+    const serverChannels = channels.get(serverId);
+    if (!serverChannels) return 0;
     let total = 0;
-    for (const [, count] of mentionCounts) {
-      // This is an approximation - ideally we'd track which channels belong to which server
-      total += count;
+    for (const channelId of serverChannels.keys()) {
+      total += mentionCounts.get(channelId) ?? 0;
     }
     return total;
   };
@@ -196,6 +199,7 @@ export function ServerSidebar() {
             if (!server) return null;
             const isActive = activeServerId === serverId;
             const hasUnread = getServerUnread(serverId);
+            const mentions = getServerMentions(serverId);
             const isMuted = mutedServers.has(serverId);
             const status = connections.get(serverId);
             const isOffline = !status || status === 'disconnected';
@@ -204,6 +208,7 @@ export function ServerSidebar() {
               <SortableServerIcon key={serverId} id={serverId}>
                 <div className="server-icon-wrapper">
                   {hasUnread && !isActive && <div className={`server-unread-dot ${isMuted ? 'muted' : ''}`} />}
+                  {mentions > 0 && <span className="server-mention-badge">{mentions}</span>}
                   {isMuted && <div className="server-muted-icon" title="Muted">&#128263;</div>}
                   <div
                     className={`server-icon ${isActive ? 'active' : ''} ${isOffline ? 'offline' : ''}`}

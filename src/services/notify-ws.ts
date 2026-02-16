@@ -34,7 +34,7 @@ export class NotifyWebSocket {
       }, 10000);
 
       this.ws.onopen = () => {
-        this.send('identify', { token });
+        this.send('system.identify', { token });
         identified = true;
         clearTimeout(timeout);
         resolve();
