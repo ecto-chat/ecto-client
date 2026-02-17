@@ -71,3 +71,22 @@ export async function getStoredLocalCredentials(): Promise<{ username: string; p
 export async function clearLocalCredentials(): Promise<void> {
   await secureStorage.delete(LOCAL_CREDENTIALS_KEY);
 }
+
+/**
+ * Update the stored session token for a server after a password change.
+ * Call this when the server returns a new token from members.changePassword.
+ */
+export async function updateServerSessionToken(serverId: string, newToken: string): Promise<void> {
+  try {
+    const raw = await secureStorage.get(SERVER_TOKENS_KEY);
+    if (!raw) return;
+    const sessions: Record<string, StoredServerSession> = JSON.parse(raw) as Record<string, StoredServerSession>;
+    const session = sessions[serverId];
+    if (session) {
+      sessions[serverId] = { ...session, token: newToken };
+      await secureStorage.set(SERVER_TOKENS_KEY, JSON.stringify(sessions));
+    }
+  } catch {
+    // Storage unavailable
+  }
+}

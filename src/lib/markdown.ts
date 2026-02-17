@@ -17,6 +17,21 @@ renderer.html = () => '';
 renderer.link = ({ href, text }) =>
   `<a href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">${text}</a>`;
 
+// Render inline images with size constraints (HTTPS only)
+renderer.image = ({ href, text }) => {
+  if (!href || !href.startsWith('https://')) return escapeHtml(text ?? '');
+  return `<img src="${escapeHtml(href)}" alt="${escapeHtml(text ?? '')}" class="inline-image" loading="lazy" />`;
+};
+
+// Restrict image src to https:// only (block javascript:, data:, etc.)
+DOMPurify.addHook('uponSanitizeAttribute', (node, data) => {
+  if (node.tagName === 'IMG' && data.attrName === 'src') {
+    if (!data.attrValue.startsWith('https://')) {
+      data.attrValue = '';
+    }
+  }
+});
+
 function escapeHtml(text: string): string {
   return text
     .replace(/&/g, '&amp;')
@@ -48,8 +63,10 @@ export function renderMarkdown(content: string, resolver?: MentionResolver): str
       'a', 'strong', 'em', 'del', 'code', 'pre', 'blockquote',
       'ul', 'ol', 'li', 'br', 'p', 'span', 'h1', 'h2', 'h3',
       'h4', 'h5', 'h6', 'hr', 'table', 'thead', 'tbody', 'tr', 'th', 'td',
+      'img',
     ],
-    ALLOWED_ATTR: ['href', 'target', 'rel', 'class', 'data-type', 'data-id'],
+    ALLOWED_ATTR: ['href', 'target', 'rel', 'class', 'data-type', 'data-id',
+      'src', 'alt', 'loading'],
   });
 
   // Spoiler tags: ||content|| → click-to-reveal span (on sanitized output)

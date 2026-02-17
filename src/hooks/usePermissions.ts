@@ -5,11 +5,26 @@ import { useRoleStore } from '../stores/role.js';
 
 type AllowedTabs = 'all' | string[];
 
-const MODERATION_BITS =
+/** Any permission that grants access to at least one settings tab */
+const SETTINGS_BITS =
   Permissions.KICK_MEMBERS |
   Permissions.BAN_MEMBERS |
   Permissions.MANAGE_ROLES |
-  Permissions.MANAGE_MESSAGES;
+  Permissions.MANAGE_MESSAGES |
+  Permissions.MANAGE_CHANNELS |
+  Permissions.MANAGE_WEBHOOKS |
+  Permissions.VIEW_AUDIT_LOG |
+  Permissions.CREATE_INVITES;
+
+/** Map of permission bit → settings tab(s) it unlocks */
+const PERM_TAB_MAP: [number, string][] = [
+  [Permissions.BAN_MEMBERS, 'bans'],
+  [Permissions.MANAGE_ROLES, 'roles'],
+  [Permissions.MANAGE_CHANNELS, 'channels'],
+  [Permissions.MANAGE_WEBHOOKS, 'webhooks'],
+  [Permissions.VIEW_AUDIT_LOG, 'audit-log'],
+  [Permissions.CREATE_INVITES, 'invites'],
+];
 
 export function usePermissions(serverId: string | null) {
   const meta = useServerStore((s) => (serverId ? s.serverMeta.get(serverId) : undefined));
@@ -35,14 +50,19 @@ export function usePermissions(serverId: string | null) {
 
   const isOwner = !!(meta && myUserId && meta.admin_user_id === myUserId);
   const isAdmin = isOwner || (effectivePermissions & Permissions.ADMINISTRATOR) !== 0;
-  const isModerator = !isAdmin && (effectivePermissions & MODERATION_BITS) !== 0;
+  const isModerator = !isAdmin && (effectivePermissions & SETTINGS_BITS) !== 0;
   const canAccessSettings = isAdmin || isModerator;
 
   let allowedTabs: AllowedTabs = [];
   if (isAdmin) {
     allowedTabs = 'all';
   } else if (isModerator) {
-    allowedTabs = ['members', 'bans'];
+    // Members tab is viewable by anyone with settings access
+    const tabs: string[] = ['members'];
+    for (const [bit, tab] of PERM_TAB_MAP) {
+      if (effectivePermissions & bit) tabs.push(tab);
+    }
+    allowedTabs = tabs;
   }
 
   return {

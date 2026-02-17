@@ -150,6 +150,9 @@ export interface ServerRouter {
     updateDmPreference: {
       mutate: (input: { allow_dms: boolean }) => Promise<{ success: boolean }>;
     };
+    changePassword: {
+      mutate: (input: { current_password: string; new_password: string }) => Promise<{ success: boolean; new_token: string }>;
+    };
   };
 
   bans: {
@@ -349,6 +352,7 @@ export interface ServerRouter {
         before?: string;
         after?: string;
         limit?: number;
+        has?: ('attachment' | 'link')[];
       }) => Promise<{ messages: Message[]; has_more: boolean }>;
     };
   };
@@ -527,6 +531,12 @@ export interface CentralRouter {
     };
     delete: {
       mutate: (input: { message_id: string }) => Promise<{ success: boolean }>;
+    };
+    pin: {
+      mutate: (input: { message_id: string; pinned: boolean }) => Promise<{ success: boolean }>;
+    };
+    listPinned: {
+      query: (input: { user_id: string }) => Promise<DirectMessage[]>;
     };
   };
 

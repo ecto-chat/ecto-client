@@ -9,6 +9,8 @@ import { useAuthStore } from '../../stores/auth.js';
 import { useCall } from '../../hooks/useCall.js';
 import { connectionManager } from '../../services/connection-manager.js';
 import { Avatar } from '../common/Avatar.js';
+import { LoadingSpinner } from '../common/LoadingSpinner.js';
+import { renderMarkdown } from '../../lib/markdown.js';
 import { generateUUIDv7 } from 'ecto-shared';
 import type { Message, DirectMessage } from 'ecto-shared';
 
@@ -21,7 +23,7 @@ function dmToMessage(dm: DirectMessage): Message {
     content: dm.content,
     type: 0,
     reply_to: null,
-    pinned: false,
+    pinned: dm.pinned ?? false,
     mention_everyone: false,
     mention_roles: [],
     mentions: [],
@@ -95,6 +97,8 @@ export function DMView() {
         content: text.trim(),
         attachments: [],
         reactions: [],
+        pinned: false,
+        pinned_at: null,
         edited_at: null,
         created_at: new Date().toISOString(),
         sender: {
@@ -267,8 +271,43 @@ export function DMView() {
     }
   }, [userId]);
 
-  // No-op handlers for features DMs don't support
-  const noop = async () => {};
+  const [showPinned, setShowPinned] = useState(false);
+  const [pinnedMessages, setPinnedMessages] = useState<Message[]>([]);
+  const [pinnedLoading, setPinnedLoading] = useState(false);
+
+  const handlePin = useCallback(async (messageId: string) => {
+    const centralTrpc = connectionManager.getCentralTrpc();
+    if (!centralTrpc) return;
+    await centralTrpc.dms.pin.mutate({ message_id: messageId, pinned: true });
+  }, []);
+
+  const handleUnpin = useCallback(async (messageId: string) => {
+    const centralTrpc = connectionManager.getCentralTrpc();
+    if (!centralTrpc) return;
+    await centralTrpc.dms.pin.mutate({ message_id: messageId, pinned: false });
+  }, []);
+
+  const loadPinnedMessages = useCallback(async () => {
+    if (!userId) return;
+    const centralTrpc = connectionManager.getCentralTrpc();
+    if (!centralTrpc) return;
+    setPinnedLoading(true);
+    try {
+      const pinned = await centralTrpc.dms.listPinned.query({ user_id: userId });
+      setPinnedMessages(pinned.map(dmToMessage));
+    } catch {
+      // silent
+    } finally {
+      setPinnedLoading(false);
+    }
+  }, [userId]);
+
+  const togglePinned = useCallback(() => {
+    if (!showPinned) {
+      loadPinnedMessages();
+    }
+    setShowPinned((prev) => !prev);
+  }, [showPinned, loadPinnedMessages]);
 
   return (
     <div className="channel-view">
@@ -276,6 +315,14 @@ export function DMView() {
         <Avatar src={friend?.avatar_url} username={username} size={28} status={status} />
         <span className="channel-header-name" style={{ marginLeft: 8 }}>{username}</span>
         <div className="channel-header-actions" style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+          <button
+            className="icon-btn"
+            onClick={togglePinned}
+            title={showPinned ? 'Hide Pinned Messages' : 'Pinned Messages'}
+            style={{ opacity: showPinned ? 1 : 0.7 }}
+          >
+            &#128204;
+          </button>
           <button
             className="icon-btn"
             onClick={() => userId && startCall(userId, ['audio'])}
@@ -302,11 +349,79 @@ export function DMView() {
         onEdit={handleEdit}
         onDelete={handleDelete}
         onReact={handleReact}
-        onPin={noop}
-        onUnpin={noop}
-        onMarkRead={noop}
+        onPin={handlePin}
+        onUnpin={handleUnpin}
+        onMarkRead={async () => {}}
         reactOnly
       />
+
+      {showPinned && (
+        <div style={{
+          borderTop: '1px solid var(--border, #40444b)',
+          maxHeight: 300,
+          overflowY: 'auto',
+          padding: '8px 16px',
+          backgroundColor: 'var(--bg-secondary, #2f3136)',
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+            <span style={{ fontWeight: 600, color: 'var(--text-primary, #fff)', fontSize: 14 }}>
+              Pinned Messages
+            </span>
+            <button
+              onClick={() => setShowPinned(false)}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'var(--text-secondary, #b9bbbe)',
+                cursor: 'pointer',
+                fontSize: 16,
+              }}
+            >
+              &#10005;
+            </button>
+          </div>
+          {pinnedLoading && (
+            <div style={{ display: 'flex', justifyContent: 'center', padding: 16 }}>
+              <LoadingSpinner size={20} />
+            </div>
+          )}
+          {!pinnedLoading && pinnedMessages.length === 0 && (
+            <p style={{ color: 'var(--text-muted, #72767d)', fontSize: 13, textAlign: 'center', padding: 12 }}>
+              No pinned messages in this conversation.
+            </p>
+          )}
+          {pinnedMessages.map((msg) => (
+            <div
+              key={msg.id}
+              style={{
+                padding: '8px 12px',
+                borderRadius: 4,
+                backgroundColor: 'var(--bg-primary, #36393f)',
+                marginBottom: 4,
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                <Avatar
+                  src={msg.author?.avatar_url}
+                  username={msg.author?.username ?? 'Unknown'}
+                  size={18}
+                />
+                <span style={{ fontWeight: 600, color: 'var(--text-primary, #fff)', fontSize: 13 }}>
+                  {msg.author?.display_name ?? msg.author?.username ?? 'Unknown'}
+                </span>
+                <span style={{ fontSize: 11, color: 'var(--text-muted, #72767d)' }}>
+                  {new Date(msg.created_at).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                </span>
+              </div>
+              <div
+                className="message-content message-markdown"
+                style={{ fontSize: 13, color: 'var(--text-secondary, #b9bbbe)' }}
+                dangerouslySetInnerHTML={{ __html: renderMarkdown(msg.content ?? '') }}
+              />
+            </div>
+          ))}
+        </div>
+      )}
 
       <div className="channel-input-area">
         {isPeerTyping && (

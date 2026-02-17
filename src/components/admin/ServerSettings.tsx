@@ -11,7 +11,7 @@ import { MemberManager } from './MemberManager.js';
 import { WebhookManager } from './WebhookManager.js';
 import type { Server, Ban, Invite, AuditLogEntry } from 'ecto-shared';
 
-type Tab = 'overview' | 'roles' | 'channels' | 'members' | 'bans' | 'invites' | 'webhooks' | 'audit-log';
+type Tab = 'overview' | 'roles' | 'channels' | 'members' | 'bans' | 'invites' | 'webhooks' | 'audit-log' | 'danger';
 
 const ALL_TABS: { key: Tab; label: string }[] = [
   { key: 'overview', label: 'Overview' },
@@ -22,6 +22,7 @@ const ALL_TABS: { key: Tab; label: string }[] = [
   { key: 'invites', label: 'Invites' },
   { key: 'webhooks', label: 'Webhooks' },
   { key: 'audit-log', label: 'Audit Log' },
+  { key: 'danger', label: 'Danger Zone' },
 ];
 
 export function ServerSettings() {
@@ -30,10 +31,15 @@ export function ServerSettings() {
   const serverId = useUiStore((s) => s.activeServerId);
   const { allowedTabs } = usePermissions(serverId);
 
+  const meta = useServerStore((s) => (serverId ? s.serverMeta.get(serverId) : undefined));
+  const isOwner = !!(meta && meta.user_id && meta.admin_user_id === meta.user_id);
+
   const visibleTabs = useMemo(() => {
-    if (allowedTabs === 'all') return ALL_TABS;
-    return ALL_TABS.filter((tab) => (allowedTabs as string[]).includes(tab.key));
-  }, [allowedTabs]);
+    let tabs = allowedTabs === 'all' ? ALL_TABS : ALL_TABS.filter((tab) => (allowedTabs as string[]).includes(tab.key));
+    // Only show Danger Zone to server owner
+    if (!isOwner) tabs = tabs.filter((tab) => tab.key !== 'danger');
+    return tabs;
+  }, [allowedTabs, isOwner]);
 
   const defaultTab = visibleTabs[0]?.key ?? 'overview';
   const [activeTab, setActiveTab] = useState<Tab>(defaultTab);
@@ -84,6 +90,7 @@ export function ServerSettings() {
           {activeTab === 'invites' && <InvitesTab serverId={serverId} />}
           {activeTab === 'webhooks' && <WebhookManager serverId={serverId} />}
           {activeTab === 'audit-log' && <AuditLogTab serverId={serverId} />}
+          {activeTab === 'danger' && <DangerZoneTab serverId={serverId} />}
         </div>
       </div>
     </Modal>
@@ -402,6 +409,130 @@ function InvitesTab({ serverId }: { serverId: string }) {
           </button>
         </div>
       ))}
+    </div>
+  );
+}
+
+// ---------- Danger Zone Tab ----------
+
+function DangerZoneTab({ serverId }: { serverId: string }) {
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmation, setConfirmation] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const serverEntry = useServerStore((s) => s.servers.get(serverId));
+  const serverName = serverEntry?.server_name ?? '';
+
+  const handleDelete = async (e: FormEvent) => {
+    e.preventDefault();
+    setError('');
+    const trpc = connectionManager.getServerTrpc(serverId);
+    if (!trpc) return;
+
+    setLoading(true);
+    try {
+      await trpc.server.delete.mutate({ confirmation });
+      // Clean up client state
+      connectionManager.disconnectFromServer(serverId);
+      useServerStore.getState().removeServer(serverId);
+      useUiStore.getState().closeModal();
+      useUiStore.getState().setActiveServer(null);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to delete server');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div>
+      <h3 style={{ margin: '0 0 16px', color: '#ed4245' }}>Danger Zone</h3>
+
+      {error && <div className="auth-error" style={{ marginBottom: 12 }}>{error}</div>}
+
+      <div style={{
+        border: '1px solid #ed4245',
+        borderRadius: 4,
+        padding: 16,
+        backgroundColor: 'rgba(237, 66, 69, 0.05)',
+      }}>
+        <p style={{ color: 'var(--text-primary, #fff)', margin: '0 0 8px', fontWeight: 600 }}>
+          Delete This Server
+        </p>
+        <p style={{ color: 'var(--text-secondary, #b9bbbe)', fontSize: 14, margin: '0 0 16px' }}>
+          This action is <strong>permanent and irreversible</strong>. All channels, messages, roles, and member data
+          will be permanently deleted.
+        </p>
+
+        {!confirmOpen ? (
+          <button
+            type="button"
+            onClick={() => setConfirmOpen(true)}
+            style={{
+              padding: '8px 16px',
+              fontSize: 14,
+              border: 'none',
+              borderRadius: 4,
+              backgroundColor: '#ed4245',
+              color: '#fff',
+              cursor: 'pointer',
+              fontWeight: 600,
+            }}
+          >
+            Delete Server
+          </button>
+        ) : (
+          <form onSubmit={handleDelete}>
+            <label style={{ display: 'block', marginBottom: 12, fontSize: 14, color: 'var(--text-secondary, #b9bbbe)' }}>
+              Type the server name <strong style={{ color: 'var(--text-primary, #fff)' }}>{serverName}</strong> to confirm:
+              <input
+                type="text"
+                value={confirmation}
+                onChange={(e) => setConfirmation(e.target.value)}
+                className="auth-input"
+                style={{ width: '100%', marginTop: 6 }}
+                autoFocus
+                placeholder="Server name"
+              />
+            </label>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                type="button"
+                onClick={() => { setConfirmOpen(false); setConfirmation(''); setError(''); }}
+                style={{
+                  padding: '8px 16px',
+                  fontSize: 14,
+                  border: 'none',
+                  borderRadius: 4,
+                  backgroundColor: 'var(--bg-tertiary, #202225)',
+                  color: 'var(--text-primary, #fff)',
+                  cursor: 'pointer',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={loading || confirmation !== serverName}
+                style={{
+                  padding: '8px 16px',
+                  fontSize: 14,
+                  border: 'none',
+                  borderRadius: 4,
+                  backgroundColor: confirmation === serverName ? '#ed4245' : '#72767d',
+                  color: '#fff',
+                  cursor: confirmation === serverName ? 'pointer' : 'not-allowed',
+                  fontWeight: 600,
+                  opacity: loading ? 0.7 : 1,
+                }}
+              >
+                {loading ? <LoadingSpinner size={16} /> : 'Permanently Delete Server'}
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
     </div>
   );
 }

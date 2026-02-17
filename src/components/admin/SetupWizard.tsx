@@ -3,7 +3,7 @@ import { connectionManager } from '../../services/connection-manager.js';
 import { useUiStore } from '../../stores/ui.js';
 import { useServerStore } from '../../stores/server.js';
 import { LoadingSpinner } from '../common/LoadingSpinner.js';
-import { SERVER_TEMPLATES } from '../../lib/server-templates.js';
+import { SERVER_TEMPLATES, flattenTemplateChannels } from '../../lib/server-templates.js';
 import type { ServerTemplate } from '../../lib/server-templates.js';
 import type { Invite } from 'ecto-shared';
 
@@ -202,7 +202,7 @@ export function SetupWizard({ onClose }: { onClose: () => void }) {
     if (template) {
       updateState({
         selectedTemplate: template,
-        channels: template.channels.map((c) => ({ ...c })),
+        channels: flattenTemplateChannels(template),
       });
     } else {
       updateState({
@@ -221,8 +221,9 @@ export function SetupWizard({ onClose }: { onClose: () => void }) {
     const trpc = connectionManager.getServerTrpc(serverId);
     if (!trpc) return;
 
+    const template = state.selectedTemplate;
     const validChannels = state.channels.filter((c) => c.name.trim());
-    if (validChannels.length === 0) {
+    if (validChannels.length === 0 && (!template || template.categories.length === 0)) {
       setError('At least one channel is required');
       return;
     }
@@ -231,12 +232,45 @@ export function SetupWizard({ onClose }: { onClose: () => void }) {
     setError('');
 
     try {
-      for (const channel of validChannels) {
-        await trpc.channels.create.mutate({
-          name: channel.name.trim(),
-          type: channel.type,
-        });
+      if (template && template.categories.length > 0) {
+        // Create categories and their channels
+        for (const cat of template.categories) {
+          const category = await trpc.categories.create.mutate({ name: cat.name });
+          for (const ch of cat.channels) {
+            await trpc.channels.create.mutate({
+              name: ch.name.trim(),
+              type: ch.type,
+              category_id: category.id,
+            });
+          }
+        }
+        // Create uncategorized channels
+        for (const ch of template.uncategorized) {
+          await trpc.channels.create.mutate({
+            name: ch.name.trim(),
+            type: ch.type,
+          });
+        }
+      } else {
+        // No template or no categories — create flat channels
+        for (const channel of validChannels) {
+          await trpc.channels.create.mutate({
+            name: channel.name.trim(),
+            type: channel.type,
+          });
+        }
       }
+
+      // Create roles from template
+      if (template && template.roles.length > 0) {
+        for (const role of template.roles) {
+          await trpc.roles.create.mutate({
+            name: role.name,
+            color: role.color,
+          });
+        }
+      }
+
       updateState({ channelsCreated: true });
       goNext();
     } catch (err: unknown) {
@@ -518,61 +552,172 @@ export function SetupWizard({ onClose }: { onClose: () => void }) {
                 : 'Add the channels for your server.'}
             </p>
 
-            {state.channels.map((ch, i) => (
-              <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 8, alignItems: 'center' }}>
-                <select
-                  className="auth-input"
-                  style={{ width: 100, flexShrink: 0 }}
-                  value={ch.type}
-                  onChange={(e) => {
-                    const channels = [...state.channels];
-                    channels[i] = { ...ch, type: e.target.value as 'text' | 'voice' };
-                    updateState({ channels });
+            {state.selectedTemplate && state.selectedTemplate.categories.length > 0 ? (
+              <>
+                {state.selectedTemplate.categories.map((cat, catIdx) => (
+                  <div key={catIdx} style={{ marginBottom: 16 }}>
+                    <div style={{
+                      fontSize: 12,
+                      fontWeight: 600,
+                      textTransform: 'uppercase',
+                      color: 'var(--text-muted, #72767d)',
+                      marginBottom: 6,
+                      letterSpacing: '0.5px',
+                    }}>
+                      {cat.name}
+                    </div>
+                    {cat.channels.map((ch) => (
+                      <div key={ch.name} style={{
+                        display: 'flex',
+                        gap: 8,
+                        marginBottom: 4,
+                        alignItems: 'center',
+                        paddingLeft: 8,
+                      }}>
+                        <span style={{
+                          fontSize: 12,
+                          color: 'var(--text-muted, #72767d)',
+                          width: 50,
+                          flexShrink: 0,
+                        }}>
+                          {ch.type === 'text' ? '#' : '\u{1F50A}'}
+                        </span>
+                        <span style={{ fontSize: 14, color: 'var(--text-secondary, #b9bbbe)' }}>
+                          {ch.name}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ))}
+                {state.selectedTemplate.uncategorized.length > 0 && (
+                  <div style={{ marginBottom: 16 }}>
+                    <div style={{
+                      fontSize: 12,
+                      fontWeight: 600,
+                      textTransform: 'uppercase',
+                      color: 'var(--text-muted, #72767d)',
+                      marginBottom: 6,
+                      letterSpacing: '0.5px',
+                    }}>
+                      Uncategorized
+                    </div>
+                    {state.selectedTemplate.uncategorized.map((ch) => (
+                      <div key={ch.name} style={{
+                        display: 'flex',
+                        gap: 8,
+                        marginBottom: 4,
+                        alignItems: 'center',
+                        paddingLeft: 8,
+                      }}>
+                        <span style={{
+                          fontSize: 12,
+                          color: 'var(--text-muted, #72767d)',
+                          width: 50,
+                          flexShrink: 0,
+                        }}>
+                          {ch.type === 'text' ? '#' : '\u{1F50A}'}
+                        </span>
+                        <span style={{ fontSize: 14, color: 'var(--text-secondary, #b9bbbe)' }}>
+                          {ch.name}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {state.selectedTemplate.roles.length > 0 && (
+                  <div style={{ marginTop: 16 }}>
+                    <div style={{
+                      fontSize: 12,
+                      fontWeight: 600,
+                      textTransform: 'uppercase',
+                      color: 'var(--text-muted, #72767d)',
+                      marginBottom: 6,
+                      letterSpacing: '0.5px',
+                    }}>
+                      Roles
+                    </div>
+                    {state.selectedTemplate.roles.map((role) => (
+                      <div key={role.name} style={{
+                        display: 'flex',
+                        gap: 8,
+                        alignItems: 'center',
+                        marginBottom: 4,
+                        paddingLeft: 8,
+                      }}>
+                        <span style={{
+                          width: 12,
+                          height: 12,
+                          borderRadius: '50%',
+                          backgroundColor: role.color,
+                          flexShrink: 0,
+                        }} />
+                        <span style={{ fontSize: 14, color: 'var(--text-secondary, #b9bbbe)' }}>
+                          {role.name}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            ) : (
+              <>
+                {state.channels.map((ch, i) => (
+                  <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 8, alignItems: 'center' }}>
+                    <select
+                      className="auth-input"
+                      style={{ width: 100, flexShrink: 0 }}
+                      value={ch.type}
+                      onChange={(e) => {
+                        const channels = [...state.channels];
+                        channels[i] = { ...ch, type: e.target.value as 'text' | 'voice' };
+                        updateState({ channels });
+                      }}
+                    >
+                      <option value="text">Text</option>
+                      <option value="voice">Voice</option>
+                    </select>
+                    <input
+                      type="text"
+                      className="auth-input"
+                      value={ch.name}
+                      placeholder="channel-name"
+                      onChange={(e) => {
+                        const channels = [...state.channels];
+                        channels[i] = { ...ch, name: e.target.value };
+                        updateState({ channels });
+                      }}
+                    />
+                    {state.channels.length > 1 && (
+                      <button
+                        type="button"
+                        className="btn-secondary"
+                        style={{ padding: '4px 8px', flexShrink: 0 }}
+                        onClick={() => {
+                          const channels = state.channels.filter((_, idx) => idx !== i);
+                          updateState({ channels });
+                        }}
+                      >
+                        &#10005;
+                      </button>
+                    )}
+                  </div>
+                ))}
+
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  style={{ marginTop: 4 }}
+                  onClick={() => {
+                    updateState({ channels: [...state.channels, { name: '', type: 'text' }] });
                   }}
                 >
-                  <option value="text">Text</option>
-                  <option value="voice">Voice</option>
-                </select>
-                <input
-                  type="text"
-                  className="auth-input"
-                  value={ch.name}
-                  placeholder="channel-name"
-                  onChange={(e) => {
-                    const channels = [...state.channels];
-                    channels[i] = { ...ch, name: e.target.value };
-                    updateState({ channels });
-                  }}
-                />
-                {state.channels.length > 1 && (
-                  <button
-                    type="button"
-                    className="btn-secondary"
-                    style={{ padding: '4px 8px', flexShrink: 0 }}
-                    onClick={() => {
-                      const channels = state.channels.filter((_, idx) => idx !== i);
-                      updateState({ channels });
-                    }}
-                  >
-                    &#10005;
-                  </button>
-                )}
-              </div>
-            ))}
-
-            <button
-              type="button"
-              className="btn-secondary"
-              style={{ marginTop: 4 }}
-              onClick={() => {
-                updateState({ channels: [...state.channels, { name: '', type: 'text' }] });
-              }}
-            >
-              + Add Channel
-            </button>
+                  + Add Channel
+                </button>
+              </>
+            )}
 
             {state.channelsCreated && (
-              <div className="wizard-success">Channels created successfully.</div>
+              <div className="wizard-success">Channels and roles created successfully.</div>
             )}
           </div>
         )}

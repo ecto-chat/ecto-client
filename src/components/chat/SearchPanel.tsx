@@ -1,6 +1,8 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { connectionManager } from '../../services/connection-manager.js';
 import { useUiStore } from '../../stores/ui.js';
+import { useChannelStore } from '../../stores/channel.js';
+import { useMemberStore } from '../../stores/member.js';
 import { renderMarkdown } from '../../lib/markdown.js';
 import { Avatar } from '../common/Avatar.js';
 import { LoadingSpinner } from '../common/LoadingSpinner.js';
@@ -18,7 +20,27 @@ export function SearchPanel({ serverId, onNavigate, onClose }: SearchPanelProps)
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(false);
   const [searched, setSearched] = useState(false);
+  const [filterChannelId, setFilterChannelId] = useState('');
+  const [filterAuthorId, setFilterAuthorId] = useState('');
+  const [filterHasAttachment, setFilterHasAttachment] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const channelsMap = useChannelStore((s) => s.channels.get(serverId));
+  const membersMap = useMemberStore((s) => s.members.get(serverId));
+
+  const textChannels = useMemo(() => {
+    if (!channelsMap) return [];
+    return Array.from(channelsMap.values())
+      .filter((c) => c.type === 'text')
+      .sort((a, b) => a.position - b.position);
+  }, [channelsMap]);
+
+  const members = useMemo(() => {
+    if (!membersMap) return [];
+    return Array.from(membersMap.values()).sort((a, b) =>
+      (a.display_name ?? a.username).localeCompare(b.display_name ?? b.username),
+    );
+  }, [membersMap]);
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -30,8 +52,14 @@ export function SearchPanel({ serverId, onNavigate, onClose }: SearchPanelProps)
 
     setLoading(true);
     try {
+      const has: ('attachment' | 'link')[] = [];
+      if (filterHasAttachment) has.push('attachment');
+
       const result = await trpc.search.search.query({
         query: searchQuery.trim(),
+        channel_id: filterChannelId || undefined,
+        author_id: filterAuthorId || undefined,
+        has: has.length > 0 ? has : undefined,
         before,
         limit: 25,
       });
@@ -47,7 +75,7 @@ export function SearchPanel({ serverId, onNavigate, onClose }: SearchPanelProps)
     } finally {
       setLoading(false);
     }
-  }, [serverId]);
+  }, [serverId, filterChannelId, filterAuthorId, filterHasAttachment]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -101,6 +129,39 @@ export function SearchPanel({ serverId, onNavigate, onClose }: SearchPanelProps)
         </button>
       </div>
 
+      <div className="search-filter-row" style={{ display: 'flex', gap: 8, padding: '6px 12px', flexWrap: 'wrap', alignItems: 'center' }}>
+        <select
+          className="auth-input"
+          style={{ fontSize: 12, padding: '4px 8px', minWidth: 120 }}
+          value={filterChannelId}
+          onChange={(e) => setFilterChannelId(e.target.value)}
+        >
+          <option value="">All Channels</option>
+          {textChannels.map((ch) => (
+            <option key={ch.id} value={ch.id}>#{ch.name}</option>
+          ))}
+        </select>
+        <select
+          className="auth-input"
+          style={{ fontSize: 12, padding: '4px 8px', minWidth: 120 }}
+          value={filterAuthorId}
+          onChange={(e) => setFilterAuthorId(e.target.value)}
+        >
+          <option value="">All Authors</option>
+          {members.map((m) => (
+            <option key={m.user_id} value={m.user_id}>{m.display_name ?? m.username}</option>
+          ))}
+        </select>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--text-secondary, #b9bbbe)', cursor: 'pointer' }}>
+          <input
+            type="checkbox"
+            checked={filterHasAttachment}
+            onChange={(e) => setFilterHasAttachment(e.target.checked)}
+          />
+          Has attachment
+        </label>
+      </div>
+
       <div className="search-panel-results">
         {searched && results.length === 0 && !loading && (
           <p style={{ color: 'var(--text-secondary, #b9bbbe)', textAlign: 'center', padding: 20 }}>
@@ -111,6 +172,7 @@ export function SearchPanel({ serverId, onNavigate, onClose }: SearchPanelProps)
           <SearchResult
             key={msg.id}
             message={msg}
+            channelName={channelsMap?.get(msg.channel_id)?.name}
             onClick={() => onNavigate(msg.channel_id, msg.id)}
           />
         ))}
@@ -142,7 +204,7 @@ export function SearchPanel({ serverId, onNavigate, onClose }: SearchPanelProps)
   );
 }
 
-function SearchResult({ message, onClick }: { message: Message; onClick: () => void }) {
+function SearchResult({ message, channelName, onClick }: { message: Message; channelName?: string; onClick: () => void }) {
   const timestamp = new Date(message.created_at).toLocaleString([], {
     month: 'short',
     day: 'numeric',
@@ -161,6 +223,17 @@ function SearchResult({ message, onClick }: { message: Message; onClick: () => v
         <span style={{ fontWeight: 600, color: 'var(--text-primary, #fff)', fontSize: 13 }}>
           {message.author?.display_name ?? message.author?.username ?? 'Unknown'}
         </span>
+        {channelName && (
+          <span style={{
+            fontSize: 11,
+            color: 'var(--text-muted, #72767d)',
+            background: 'var(--bg-tertiary, #202225)',
+            padding: '1px 6px',
+            borderRadius: 3,
+          }}>
+            #{channelName}
+          </span>
+        )}
         <span style={{ fontSize: 11, color: 'var(--text-muted, #72767d)' }}>{timestamp}</span>
       </div>
       <div

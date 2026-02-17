@@ -73,6 +73,23 @@ export function handleCentralEvent(event: string, data: unknown) {
       break;
     }
 
+    case 'dm.pinUpdate': {
+      const messageId = d.message_id as string;
+      const pinned = d.pinned as boolean;
+      const pinnedAt = (d.pinned_at as string) ?? null;
+      // Find which peer conversation this message belongs to
+      for (const [peerId, msgs] of useDmStore.getState().messages) {
+        if (msgs.has(messageId)) {
+          useDmStore.getState().updateMessage(peerId, messageId, {
+            pinned,
+            pinned_at: pinnedAt,
+          });
+          break;
+        }
+      }
+      break;
+    }
+
     case 'dm.reaction_update': {
       const messageId = d.message_id as string;
       const reactions = d.reactions as import('ecto-shared').ReactionGroup[];

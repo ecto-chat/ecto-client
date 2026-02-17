@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { playNotificationSound } from '../../lib/notification-sounds.js';
+import { playNotificationSound, playSoundVariant, SOUND_LIBRARY } from '../../lib/notification-sounds.js';
+import type { SoundType } from '../../lib/notification-sounds.js';
 
 const STORAGE_KEY = 'ecto-notification-settings';
 
@@ -9,6 +10,7 @@ interface NotificationPrefs {
   showDMs: boolean;
   showMentions: boolean;
   showEveryone: boolean;
+  selectedSounds: { message: string; mention: string; dm: string };
 }
 
 const DEFAULT_PREFS: NotificationPrefs = {
@@ -17,13 +19,19 @@ const DEFAULT_PREFS: NotificationPrefs = {
   showDMs: true,
   showMentions: true,
   showEveryone: false,
+  selectedSounds: { message: 'default', mention: 'default', dm: 'default' },
 };
 
 function loadPrefs(): NotificationPrefs {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
-      return { ...DEFAULT_PREFS, ...JSON.parse(raw) } as NotificationPrefs;
+      const parsed = JSON.parse(raw) as Partial<NotificationPrefs>;
+      return {
+        ...DEFAULT_PREFS,
+        ...parsed,
+        selectedSounds: { ...DEFAULT_PREFS.selectedSounds, ...parsed.selectedSounds },
+      };
     }
   } catch {
     // Ignore parse errors
@@ -61,6 +69,12 @@ function ToggleRow({ label, description, checked, disabled, onChange }: ToggleRo
   );
 }
 
+const SOUND_EVENT_TYPES: { type: SoundType; label: string }[] = [
+  { type: 'message', label: 'Message' },
+  { type: 'mention', label: 'Mention' },
+  { type: 'dm', label: 'DM' },
+];
+
 export function NotificationSettings() {
   const [prefs, setPrefs] = useState<NotificationPrefs>(loadPrefs);
 
@@ -70,6 +84,13 @@ export function NotificationSettings() {
 
   const update = useCallback((key: keyof NotificationPrefs, value: boolean) => {
     setPrefs((prev) => ({ ...prev, [key]: value }));
+  }, []);
+
+  const updateSound = useCallback((type: SoundType, soundId: string) => {
+    setPrefs((prev) => ({
+      ...prev,
+      selectedSounds: { ...prev.selectedSounds, [type]: soundId },
+    }));
   }, []);
 
   const allDisabled = !prefs.enabled;
@@ -95,16 +116,33 @@ export function NotificationSettings() {
         />
 
         {prefs.soundEnabled && !allDisabled && (
-          <div className="notification-sound-preview" style={{ padding: '8px 0 4px 16px', display: 'flex', gap: 8 }}>
-            <button className="btn-secondary" style={{ fontSize: 12, padding: '4px 10px' }} onClick={() => playNotificationSound('message')}>
-              Preview Message
-            </button>
-            <button className="btn-secondary" style={{ fontSize: 12, padding: '4px 10px' }} onClick={() => playNotificationSound('mention')}>
-              Preview Mention
-            </button>
-            <button className="btn-secondary" style={{ fontSize: 12, padding: '4px 10px' }} onClick={() => playNotificationSound('dm')}>
-              Preview DM
-            </button>
+          <div style={{ padding: '8px 0 4px 16px' }}>
+            <div style={{ fontSize: 13, color: 'var(--text-secondary, #b9bbbe)', marginBottom: 8, fontWeight: 500 }}>
+              Sound Selection
+            </div>
+            {SOUND_EVENT_TYPES.map(({ type, label }) => (
+              <div key={type} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                <span style={{ fontSize: 13, color: 'var(--text-secondary, #b9bbbe)', minWidth: 60 }}>{label}</span>
+                <select
+                  className="auth-input"
+                  style={{ fontSize: 12, padding: '3px 8px', minWidth: 100 }}
+                  value={prefs.selectedSounds[type]}
+                  onChange={(e) => updateSound(type, e.target.value)}
+                >
+                  {SOUND_LIBRARY.map((s) => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                </select>
+                <button
+                  className="btn-secondary"
+                  style={{ fontSize: 11, padding: '3px 8px' }}
+                  onClick={() => playSoundVariant(prefs.selectedSounds[type], type)}
+                  title={`Preview ${label} sound`}
+                >
+                  &#9654;
+                </button>
+              </div>
+            ))}
           </div>
         )}
 
