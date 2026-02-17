@@ -11,6 +11,7 @@ import { useServerStore } from '../stores/server.js';
 import { useRoleStore } from '../stores/role.js';
 import { useToastStore } from '../stores/toast.js';
 import { playNotificationSound } from '../lib/notification-sounds.js';
+import { showOsNotification, shouldNotifyEveryone } from './notification-service.js';
 
 export function handleMainEvent(serverId: string, event: string, data: unknown, _seq: number) {
   const d = data as Record<string, unknown>;
@@ -27,10 +28,11 @@ export function handleMainEvent(serverId: string, event: string, data: unknown, 
       useNotifyStore.getState().addNotification(serverId, d.channel_id as string, Date.now(), 'mention');
       playNotificationSound('mention');
       const mentionAuthor = useMemberStore.getState().members.get(serverId)?.get(d.author_id as string);
+      const mentionAuthorName = mentionAuthor?.display_name ?? mentionAuthor?.username ?? 'Someone';
       useToastStore.getState().addToast({
         serverId,
         channelId: d.channel_id as string,
-        authorName: mentionAuthor?.display_name ?? mentionAuthor?.username ?? 'Someone',
+        authorName: mentionAuthorName,
         avatarUrl: mentionAuthor?.avatar_url ?? undefined,
         content: ((d.content as string) ?? '').slice(0, 200),
       });
@@ -118,6 +120,13 @@ export function handleMainEvent(serverId: string, event: string, data: unknown, 
 
     case 'server.update':
       useServerStore.getState().updateServer(serverId, d as Partial<import('ecto-shared').ServerListEntry>);
+      // Keep serverMeta.admin_user_id in sync (used for isOwner checks)
+      if (d.admin_user_id) {
+        const meta = useServerStore.getState().serverMeta.get(serverId);
+        if (meta) {
+          useServerStore.getState().setServerMeta(serverId, { ...meta, admin_user_id: d.admin_user_id as string });
+        }
+      }
       break;
 
     case 'invite.create':
@@ -185,13 +194,22 @@ function maybeNotify(serverId: string, d: Record<string, unknown>) {
     playNotificationSound('message');
   }
 
-  if (!document.hasFocus() && window.electronAPI) {
+  // OS notification for @everyone messages (gated by pref) and regular messages
+  if (isMention && mentionEveryone) {
+    if (shouldNotifyEveryone()) {
+      const author = d.author as { username?: string } | undefined;
+      showOsNotification(
+        author?.username ?? 'New Message',
+        (d.content as string | undefined)?.slice(0, 100) ?? '',
+        { type: 'everyone', serverId, channelId: d.channel_id as string },
+      );
+    }
+  } else if (!isMention) {
     const author = d.author as { username?: string } | undefined;
-    const content = d.content as string | undefined;
-    window.electronAPI.notifications.showNotification(
+    showOsNotification(
       author?.username ?? 'New Message',
-      content?.slice(0, 100) ?? '',
-      { serverId, channelId: d.channel_id as string },
+      (d.content as string | undefined)?.slice(0, 100) ?? '',
+      { type: 'message', serverId, channelId: d.channel_id as string },
     );
   }
 }

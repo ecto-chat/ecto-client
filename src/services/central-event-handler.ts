@@ -5,6 +5,7 @@ import { useDmStore } from '../stores/dm.js';
 import { useAuthStore } from '../stores/auth.js';
 import { handleCallWsEvent } from '../hooks/useCall.js';
 import { playNotificationSound } from '../lib/notification-sounds.js';
+import { useToastStore } from '../stores/toast.js';
 
 export function handleCentralEvent(event: string, data: unknown) {
   const d = data as Record<string, unknown>;
@@ -47,9 +48,18 @@ export function handleCentralEvent(event: string, data: unknown) {
       useDmStore.getState().addMessage(peerId, msg);
       // Ensure sidebar conversation exists/is updated
       useDmStore.getState().ensureConversation(peerId, msg);
-      // Play DM notification sound for incoming messages
+      // Play DM notification sound and show toast for incoming messages
       if (msg.sender_id !== myId) {
         playNotificationSound('dm');
+        const senderName = msg.sender?.display_name ?? msg.sender?.username ?? 'Someone';
+        useToastStore.getState().addToast({
+          serverId: '',
+          channelId: '',
+          peerId,
+          authorName: senderName,
+          avatarUrl: msg.sender?.avatar_url ?? undefined,
+          content: (msg.content ?? '').slice(0, 200),
+        });
       }
       break;
     }

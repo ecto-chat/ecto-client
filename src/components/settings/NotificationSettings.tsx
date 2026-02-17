@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { playNotificationSound, playSoundVariant, SOUND_LIBRARY } from '../../lib/notification-sounds.js';
 import type { SoundType } from '../../lib/notification-sounds.js';
+import { requestNotificationPermission } from '../../services/notification-service.js';
 
 const STORAGE_KEY = 'ecto-notification-settings';
 
@@ -77,6 +78,13 @@ const SOUND_EVENT_TYPES: { type: SoundType; label: string }[] = [
 
 export function NotificationSettings() {
   const [prefs, setPrefs] = useState<NotificationPrefs>(loadPrefs);
+  const [webPermission, setWebPermission] = useState<NotificationPermission | 'unsupported'>(
+    () => {
+      if (window.electronAPI) return 'granted';
+      if (!('Notification' in window)) return 'unsupported';
+      return Notification.permission;
+    },
+  );
 
   useEffect(() => {
     savePrefs(prefs);
@@ -106,6 +114,26 @@ export function NotificationSettings() {
           checked={prefs.enabled}
           onChange={(v) => update('enabled', v)}
         />
+
+        {!window.electronAPI && webPermission !== 'granted' && webPermission !== 'unsupported' && (
+          <div style={{ padding: '8px 0 4px', display: 'flex', alignItems: 'center', gap: 12 }}>
+            <button
+              className="auth-button"
+              style={{ fontSize: 13, padding: '6px 16px' }}
+              onClick={async () => {
+                const granted = await requestNotificationPermission();
+                setWebPermission(granted ? 'granted' : 'denied');
+              }}
+            >
+              Enable OS Notifications
+            </button>
+            <span style={{ fontSize: 13, color: 'var(--text-secondary, #b9bbbe)' }}>
+              {webPermission === 'denied'
+                ? 'Permission denied — enable in browser settings'
+                : 'Allow browser notifications to receive alerts when this tab is not focused'}
+            </span>
+          </div>
+        )}
 
         <ToggleRow
           label="Notification Sounds"

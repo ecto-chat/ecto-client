@@ -15,6 +15,7 @@ import {
   setScreenQuality,
 } from '../lib/media-presets.js';
 import { startSpeakingDetection, switchAudioOutputDevice } from '../lib/media-utils.js';
+import { showOsNotification } from '../services/notification-service.js';
 
 let callEventQueue: Promise<void> = Promise.resolve();
 let consumeQueue: Promise<void> = Promise.resolve();
@@ -50,6 +51,12 @@ async function processCallEvent(event: string, data: unknown): Promise<void> {
         d.call_id as string,
         d.caller as import('ecto-shared').CallPeerInfo,
         d.media_types as ('audio' | 'video')[],
+      );
+      const caller = d.caller as { username?: string; display_name?: string | null } | undefined;
+      showOsNotification(
+        'Incoming Call',
+        `${caller?.display_name ?? caller?.username ?? 'Someone'} is calling you`,
+        { type: 'call', callId: d.call_id as string },
       );
       break;
     }

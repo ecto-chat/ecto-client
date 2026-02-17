@@ -221,6 +221,9 @@ export interface ServerRouter {
     delete: {
       mutate: (input: { confirmation: string }) => Promise<{ success: boolean }>;
     };
+    transferOwnership: {
+      mutate: (input: { new_owner_id: string; confirmation: string }) => Promise<{ success: boolean }>;
+    };
     uploadIcon: {
       mutate: (input: { file: File }) => Promise<{
         icon_url: string;

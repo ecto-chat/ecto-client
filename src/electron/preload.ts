@@ -13,6 +13,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
     showNotification: (title: string, body: string, data?: Record<string, string>) =>
       ipcRenderer.invoke('notify:show', title, body, data),
     showBadge: (count: number) => ipcRenderer.invoke('tray:badge', count),
+    onNotificationClick: (callback: (data: Record<string, string>) => void) => {
+      const handler = (_event: Electron.IpcRendererEvent, data: Record<string, string>) => callback(data);
+      ipcRenderer.on('notify:click', handler);
+      return () => ipcRenderer.removeListener('notify:click', handler);
+    },
   },
 
   window: {

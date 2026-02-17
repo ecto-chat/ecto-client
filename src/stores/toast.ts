@@ -1,9 +1,14 @@
 import { create } from 'zustand';
+import { showOsNotification } from '../services/notification-service.js';
 
 export interface Toast {
   id: string;
+  /** Server ID — empty string for DMs */
   serverId: string;
+  /** Channel ID — empty string for DMs */
   channelId: string;
+  /** Peer user ID — set for DMs, undefined for server messages */
+  peerId?: string;
   authorName: string;
   avatarUrl?: string;
   content: string;
@@ -22,7 +27,21 @@ export const useToastStore = create<ToastStore>()((set) => ({
 
   addToast: (toast) =>
     set((state) => {
+      // Skip if user is already viewing this channel/DM
+      const path = window.location.pathname;
+      if (toast.peerId && path === `/dms/${toast.peerId}`) return state;
+      if (toast.channelId && path.endsWith(`/channels/${toast.channelId}`)) return state;
+
       const id = String(++nextId);
+      // Also fire an OS notification for every toast
+      const data: Record<string, string> = { type: 'toast' };
+      if (toast.peerId) {
+        data.peerId = toast.peerId;
+      } else {
+        data.serverId = toast.serverId;
+        data.channelId = toast.channelId;
+      }
+      showOsNotification(toast.authorName, toast.content.slice(0, 100), data);
       return { toasts: [...state.toasts.slice(-4), { ...toast, id }] };
     }),
 

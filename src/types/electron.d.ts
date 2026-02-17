@@ -7,6 +7,7 @@ interface ElectronSecureStore {
 interface ElectronNotifications {
   showNotification: (title: string, body: string, data?: Record<string, string>) => Promise<void>;
   showBadge: (count: number) => Promise<void>;
+  onNotificationClick: (callback: (data: Record<string, string>) => void) => () => void;
 }
 
 interface ElectronWindow {

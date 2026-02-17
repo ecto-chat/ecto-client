@@ -421,8 +421,57 @@ function DangerZoneTab({ serverId }: { serverId: string }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  // Transfer ownership state
+  const [transferTarget, setTransferTarget] = useState('');
+  const [transferConfirmOpen, setTransferConfirmOpen] = useState(false);
+  const [transferConfirmation, setTransferConfirmation] = useState('');
+  const [transferLoading, setTransferLoading] = useState(false);
+  const [transferSuccess, setTransferSuccess] = useState('');
+  const [globalMembers, setGlobalMembers] = useState<{ user_id: string; username: string; display_name: string | null }[]>([]);
+
   const serverEntry = useServerStore((s) => s.servers.get(serverId));
   const serverName = serverEntry?.server_name ?? '';
+  const meta = useServerStore((s) => s.serverMeta.get(serverId));
+  const myUserId = meta?.user_id;
+
+  // Load members eligible for ownership transfer
+  useEffect(() => {
+    const trpc = connectionManager.getServerTrpc(serverId);
+    if (!trpc) return;
+    trpc.members.list.query({ limit: 100 }).then((result) => {
+      const eligible = result.members.filter((m) => m.user_id !== myUserId);
+      setGlobalMembers(eligible.map((m) => ({
+        user_id: m.user_id,
+        username: m.username,
+        display_name: m.display_name ?? null,
+      })));
+    }).catch(() => {});
+  }, [serverId, myUserId]);
+
+  const handleTransfer = async (e: FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setTransferSuccess('');
+    const trpc = connectionManager.getServerTrpc(serverId);
+    if (!trpc || !transferTarget) return;
+
+    setTransferLoading(true);
+    try {
+      await trpc.server.transferOwnership.mutate({
+        new_owner_id: transferTarget,
+        confirmation: transferConfirmation,
+      });
+      setTransferSuccess('Ownership transferred successfully.');
+      setTransferConfirmOpen(false);
+      setTransferConfirmation('');
+      setTransferTarget('');
+      // The server.update event will update admin_user_id in the store
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to transfer ownership');
+    } finally {
+      setTransferLoading(false);
+    }
+  };
 
   const handleDelete = async (e: FormEvent) => {
     e.preventDefault();
@@ -450,7 +499,114 @@ function DangerZoneTab({ serverId }: { serverId: string }) {
       <h3 style={{ margin: '0 0 16px', color: '#ed4245' }}>Danger Zone</h3>
 
       {error && <div className="auth-error" style={{ marginBottom: 12 }}>{error}</div>}
+      {transferSuccess && <div style={{ color: '#3ba55d', marginBottom: 12, fontSize: 14 }}>{transferSuccess}</div>}
 
+      {/* Transfer Ownership */}
+      <div style={{
+        border: '1px solid #faa61a',
+        borderRadius: 4,
+        padding: 16,
+        backgroundColor: 'rgba(250, 166, 26, 0.05)',
+        marginBottom: 16,
+      }}>
+        <p style={{ color: 'var(--text-primary, #fff)', margin: '0 0 8px', fontWeight: 600 }}>
+          Transfer Ownership
+        </p>
+        <p style={{ color: 'var(--text-secondary, #b9bbbe)', fontSize: 14, margin: '0 0 16px' }}>
+          Transfer server ownership to another member.
+          You will remain a member but lose owner privileges.
+        </p>
+
+        {globalMembers.length === 0 ? (
+          <p style={{ color: 'var(--text-muted, #72767d)', fontSize: 13 }}>
+            No other members found to transfer ownership to.
+          </p>
+        ) : !transferConfirmOpen ? (
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <select
+              className="auth-input"
+              style={{ flex: 1, padding: '6px 8px' }}
+              value={transferTarget}
+              onChange={(e) => setTransferTarget(e.target.value)}
+            >
+              <option value="">Select a member...</option>
+              {globalMembers.map((m) => (
+                <option key={m.user_id} value={m.user_id}>
+                  {m.display_name ? `${m.display_name} (${m.username})` : m.username}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              disabled={!transferTarget}
+              onClick={() => setTransferConfirmOpen(true)}
+              style={{
+                padding: '8px 16px',
+                fontSize: 14,
+                border: 'none',
+                borderRadius: 4,
+                backgroundColor: transferTarget ? '#faa61a' : '#72767d',
+                color: '#fff',
+                cursor: transferTarget ? 'pointer' : 'not-allowed',
+                fontWeight: 600,
+              }}
+            >
+              Transfer
+            </button>
+          </div>
+        ) : (
+          <form onSubmit={handleTransfer}>
+            <label style={{ display: 'block', marginBottom: 12, fontSize: 14, color: 'var(--text-secondary, #b9bbbe)' }}>
+              Type the server name <strong style={{ color: 'var(--text-primary, #fff)' }}>{serverName}</strong> to confirm:
+              <input
+                type="text"
+                value={transferConfirmation}
+                onChange={(e) => setTransferConfirmation(e.target.value)}
+                className="auth-input"
+                style={{ width: '100%', marginTop: 6 }}
+                autoFocus
+                placeholder="Server name"
+              />
+            </label>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                type="button"
+                onClick={() => { setTransferConfirmOpen(false); setTransferConfirmation(''); setError(''); }}
+                style={{
+                  padding: '8px 16px',
+                  fontSize: 14,
+                  border: 'none',
+                  borderRadius: 4,
+                  backgroundColor: 'var(--bg-tertiary, #202225)',
+                  color: 'var(--text-primary, #fff)',
+                  cursor: 'pointer',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={transferLoading || transferConfirmation !== serverName}
+                style={{
+                  padding: '8px 16px',
+                  fontSize: 14,
+                  border: 'none',
+                  borderRadius: 4,
+                  backgroundColor: transferConfirmation === serverName ? '#faa61a' : '#72767d',
+                  color: '#fff',
+                  cursor: transferConfirmation === serverName ? 'pointer' : 'not-allowed',
+                  fontWeight: 600,
+                  opacity: transferLoading ? 0.7 : 1,
+                }}
+              >
+                {transferLoading ? <LoadingSpinner size={16} /> : 'Confirm Transfer'}
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
+
+      {/* Delete Server */}
       <div style={{
         border: '1px solid #ed4245',
         borderRadius: 4,

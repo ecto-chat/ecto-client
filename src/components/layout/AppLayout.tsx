@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Routes, Route, useLocation } from 'react-router-dom';
+import { Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import { ServerSidebar } from './ServerSidebar.js';
 import { ChannelSidebar } from './ChannelSidebar.js';
 import { MemberList } from './MemberList.js';
@@ -10,6 +10,7 @@ import { VoiceControls } from '../voice/VoiceControls.js';
 import { VoiceBanner } from '../voice/VoiceBanner.js';
 import { DMSidebar } from '../friends/DMSidebar.js';
 import { useUiStore } from '../../stores/ui.js';
+import { connectionManager } from '../../services/connection-manager.js';
 import { useVoiceStore } from '../../stores/voice.js';
 import { useNotifications } from '../../hooks/useNotifications.js';
 import { useConnectionStore } from '../../stores/connection.js';
@@ -24,6 +25,8 @@ import { SetupWizard } from '../admin/SetupWizard.js';
 import { ServerSettings } from '../admin/ServerSettings.js';
 import { UserSettingsModal } from '../settings/UserSettingsModal.js';
 import { NotificationToast } from '../common/NotificationToast.js';
+import { NotificationPrompt } from '../common/NotificationPrompt.js';
+import { setNotificationClickHandler } from '../../services/notification-service.js';
 import { useCallStore } from '../../stores/call.js';
 import { startIdleDetection, stopIdleDetection } from '../../services/idle-detector.js';
 import { useInitializeCentral } from '../../hooks/useInitializeCentral.js';
@@ -39,6 +42,8 @@ export function AppLayout() {
   const answeredElsewhere = useCallStore((s) => s.answeredElsewhere);
   const showSetupWizard = useUiStore((s) => s.activeModal === 'setup-wizard');
 
+  const navigate = useNavigate();
+
   useNotifications();
   useInitializeCentral();
   useInitializeLocal();
@@ -48,6 +53,20 @@ export function AppLayout() {
     startIdleDetection();
     return () => stopIdleDetection();
   }, []);
+
+  // Register notification click handler for routing
+  useEffect(() => {
+    return setNotificationClickHandler((data) => {
+      if (data.serverId && data.channelId) {
+        useUiStore.getState().setActiveServer(data.serverId);
+        useUiStore.getState().setActiveChannel(data.channelId);
+        connectionManager.switchServer(data.serverId).catch(() => {});
+        navigate(`/servers/${data.serverId}/channels/${data.channelId}`);
+      } else if (data.peerId) {
+        navigate(`/dms/${data.peerId}`);
+      }
+    });
+  }, [navigate]);
 
 
   // Determine whether we're in DM/friends mode or server mode
@@ -112,6 +131,7 @@ export function AppLayout() {
       <IncomingCallOverlay />
       <ActiveCallOverlay />
       <NotificationToast />
+      <NotificationPrompt />
     </div>
   );
 }

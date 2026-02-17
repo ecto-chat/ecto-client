@@ -18,10 +18,14 @@ function ToastItem({ toast }: { toast: Toast }) {
 
   const handleClick = () => {
     removeToast(toast.id);
-    useUiStore.getState().setActiveServer(toast.serverId);
-    useUiStore.getState().setActiveChannel(toast.channelId);
-    connectionManager.switchServer(toast.serverId).catch(() => {});
-    navigate(`/servers/${toast.serverId}/channels/${toast.channelId}`);
+    if (toast.peerId) {
+      navigate(`/dms/${toast.peerId}`);
+    } else {
+      useUiStore.getState().setActiveServer(toast.serverId);
+      useUiStore.getState().setActiveChannel(toast.channelId);
+      connectionManager.switchServer(toast.serverId).catch(() => {});
+      navigate(`/servers/${toast.serverId}/channels/${toast.channelId}`);
+    }
   };
 
   return (
