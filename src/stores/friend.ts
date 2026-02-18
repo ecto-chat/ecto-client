@@ -16,6 +16,7 @@ interface FriendStore {
   addOutgoingRequest: (request: FriendRequest) => void;
   acceptedRequest: (friend: Friend) => void;
   removeRequest: (requestId: string) => void;
+  updateFriendProfile: (userId: string, partial: Partial<Friend>) => void;
   blockUser: (userId: string) => void;
   unblockUser: (userId: string) => void;
 }
@@ -95,6 +96,16 @@ export const useFriendStore = create<FriendStore>()((set) => ({
       pendingIncoming.delete(requestId);
       pendingOutgoing.delete(requestId);
       return { pendingIncoming, pendingOutgoing };
+    }),
+
+  updateFriendProfile: (userId, partial) =>
+    set((state) => {
+      const friends = new Map(state.friends);
+      const existing = friends.get(userId);
+      if (existing) {
+        friends.set(userId, { ...existing, ...partial });
+      }
+      return { friends };
     }),
 
   blockUser: (userId) =>

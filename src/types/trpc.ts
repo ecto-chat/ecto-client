@@ -171,6 +171,14 @@ export interface ServerRouter {
     changePassword: {
       mutate: (input: { current_password: string; new_password: string }) => Promise<{ success: boolean; new_token: string }>;
     };
+    syncProfile: {
+      mutate: (input: {
+        display_name?: string | null;
+        avatar_url?: string | null;
+        username?: string;
+        discriminator?: string;
+      }) => Promise<{ success: boolean }>;
+    };
   };
 
   bans: {

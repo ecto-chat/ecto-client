@@ -82,9 +82,12 @@ export function ProfileEditor() {
     try {
       const trpc = connectionManager.getCentralTrpc();
       if (!trpc) throw new Error('Not connected to central');
+      // Track fields that servers care about for sync
+      const serverSyncData: Record<string, unknown> = {};
       if (avatarFile) {
         const avatarUrl = await uploadFile('avatar', avatarFile);
         setUser({ ...user, avatar_url: avatarUrl });
+        serverSyncData.avatar_url = avatarUrl;
         setAvatarFile(null);
         setAvatarPreview(null);
       }
@@ -103,6 +106,19 @@ export function ProfileEditor() {
       if (Object.keys(updates).length > 0) {
         const updated = await trpc.profile.update.mutate(updates);
         setUser({ ...user, ...updated });
+        if (updated.username !== undefined) serverSyncData.username = updated.username;
+        if (updated.discriminator !== undefined) serverSyncData.discriminator = updated.discriminator;
+        if (updated.display_name !== undefined) serverSyncData.display_name = updated.display_name;
+        if (updated.avatar_url !== undefined) serverSyncData.avatar_url = updated.avatar_url;
+      }
+      // Sync profile changes to all connected servers (fire-and-forget)
+      if (Object.keys(serverSyncData).length > 0) {
+        const connections = connectionManager.getAllConnections();
+        if (connections.length > 0) {
+          Promise.allSettled(
+            connections.map((conn) => conn.trpc.members.syncProfile.mutate(serverSyncData)),
+          );
+        }
       }
       setBannerRemoved(false);
       setSuccess('Profile updated successfully.');

@@ -113,6 +113,20 @@ export function handleCentralEvent(event: string, data: unknown) {
       break;
     }
 
+    case 'friend.profile_update':
+      useFriendStore.getState().updateFriendProfile(d.user_id as string, {
+        username: d.username as string | undefined,
+        discriminator: d.discriminator as string | undefined,
+        display_name: d.display_name as string | null | undefined,
+        avatar_url: d.avatar_url as string | null | undefined,
+        custom_status: d.custom_status as string | null | undefined,
+      });
+      break;
+
+    case 'user.update':
+      useAuthStore.getState().setUser(d as unknown as import('ecto-shared').GlobalUser);
+      break;
+
     default:
       // Route call.* events to call handler
       if (event.startsWith('call.')) {

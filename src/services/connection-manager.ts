@@ -240,29 +240,31 @@ export class ConnectionManager {
     const serverUrl = address.startsWith('http') ? address : `http://${address}`;
     let realServerId = serverId;
     let serverToken = token;
-    let joinFailed = false;
+    let joinRes: Response;
     try {
-      const joinRes = await fetch(`${serverUrl}/trpc/server.join`, {
+      joinRes = await fetch(`${serverUrl}/trpc/server.join`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({}),
       });
-      if (joinRes.ok) {
-        const joinData = (await joinRes.json()) as {
-          result: { data: { server_token: string; server: { id: string; name: string } } };
-        };
-        realServerId = joinData.result.data.server.id;
-        serverToken = joinData.result.data.server_token;
-      } else {
-        joinFailed = true;
-      }
     } catch {
-      joinFailed = true;
-    }
-
-    if (joinFailed) {
       useConnectionStore.getState().setStatus(serverId, 'disconnected');
       throw new Error(`Server unreachable: ${address}`);
+    }
+
+    if (joinRes.ok) {
+      const joinData = (await joinRes.json()) as {
+        result: { data: { server_token: string; server: { id: string; name: string } } };
+      };
+      realServerId = joinData.result.data.server.id;
+      serverToken = joinData.result.data.server_token;
+    } else {
+      useConnectionStore.getState().setStatus(serverId, 'disconnected');
+      const errData = (await joinRes.json().catch(() => ({}))) as {
+        error?: { message?: string; data?: { ecto_error?: string } };
+      };
+      const message = errData.error?.data?.ecto_error ?? errData.error?.message ?? 'Failed to join server';
+      throw new Error(message);
     }
 
     if (realServerId !== serverId) {
@@ -326,6 +328,10 @@ export class ConnectionManager {
     const conn = this.connections.get(serverId);
     if (!conn) return null;
     return { address: conn.address, token: conn.token };
+  }
+
+  getAllConnections(): ServerConnection[] {
+    return Array.from(this.connections.values());
   }
 
   getMainWs(serverId: string): MainWebSocket | null {
