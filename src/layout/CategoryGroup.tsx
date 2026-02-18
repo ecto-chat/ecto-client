@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, Settings } from 'lucide-react';
 import { easeContent } from '@/lib/animations';
 import { cn } from '@/lib/cn';
 
@@ -10,6 +10,7 @@ interface CategoryGroupProps {
   onToggle: () => void;
   children: ReactNode;
   dragHandleProps?: React.HTMLAttributes<HTMLElement>;
+  onSettingsClick?: () => void;
 }
 
 export function CategoryGroup({
@@ -18,6 +19,7 @@ export function CategoryGroup({
   onToggle,
   children,
   dragHandleProps,
+  onSettingsClick,
 }: CategoryGroupProps) {
   return (
     <div>
@@ -36,6 +38,18 @@ export function CategoryGroup({
         <span className="text-xs uppercase tracking-wider text-muted font-semibold">
           {name}
         </span>
+        {onSettingsClick && (
+          <span
+            className="ml-auto text-muted opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer hover:text-primary"
+            title="Category Settings"
+            onClick={(e) => {
+              e.stopPropagation();
+              onSettingsClick();
+            }}
+          >
+            <Settings size={12} />
+          </span>
+        )}
       </div>
       <AnimatePresence initial={false}>
         {!collapsed && (

@@ -28,6 +28,8 @@ export function MessageInput({ channelId, serverId, onSend, replyTo, onCancelRep
     handleKeyDown,
     handleInput,
     handleFileSelect,
+    slowmodeDisabled,
+    slowmodeRemaining,
   } = useMessageInput({ channelId, serverId, onSend, replyTo, onCancelReply });
 
   return (
@@ -88,8 +90,9 @@ export function MessageInput({ channelId, serverId, onSend, replyTo, onCancelRep
             onChange={handleChange}
             onKeyDown={handleKeyDown}
             onInput={handleInput}
-            placeholder="Message #channel"
+            placeholder={slowmodeDisabled ? `Slowmode: ${slowmodeRemaining}s` : 'Message #channel'}
             maxRows={10}
+            disabled={slowmodeDisabled}
           />
         </div>
       </div>

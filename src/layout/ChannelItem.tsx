@@ -1,5 +1,5 @@
 import { memo, useCallback } from 'react';
-import { Hash, BellOff, Star, FileText } from 'lucide-react';
+import { Hash, BellOff, Star, FileText, Settings, ShieldAlert } from 'lucide-react';
 import { Permissions } from 'ecto-shared';
 import { useReadStateStore } from '@/stores/read-state';
 import { useNotifyStore } from '@/stores/notify';
@@ -71,7 +71,7 @@ export const ChannelItem = memo(function ChannelItem({
       <ContextMenuTrigger asChild>
         <div
           className={cn(
-            'flex items-center gap-1.5 px-2 py-1 mx-1 rounded-md cursor-pointer transition-colors duration-150 focus-visible:ring-1 focus-visible:ring-accent/40 outline-none',
+            'group flex items-center gap-1.5 px-2 py-1 mx-1 rounded-md cursor-pointer transition-colors duration-150 focus-visible:ring-1 focus-visible:ring-accent/40 outline-none',
             isActive && 'bg-active text-primary',
             !isActive && 'hover:bg-hover',
             !isActive && unread > 0 && !isMuted && 'font-semibold text-primary',
@@ -86,19 +86,38 @@ export const ChannelItem = memo(function ChannelItem({
             <Hash size={16} className="shrink-0 text-muted" />
           )}
           <span className="text-sm truncate">{channel.name}</span>
-          {isDefault && (
-            <Star size={12} className="shrink-0 text-warning fill-warning ml-auto" />
-          )}
-          {isMuted && !isDefault && (
-            <span className="shrink-0 ml-auto text-muted" title="Muted">
-              <BellOff size={14} />
+          {channel.nsfw && (
+            <span className="shrink-0 text-warning" title="Age-restricted">
+              <ShieldAlert size={12} />
             </span>
           )}
-          {mentions > 0 && (
-            <Badge variant="danger" size="sm" className="ml-auto shrink-0">
-              {mentions}
-            </Badge>
-          )}
+          <span className="ml-auto flex items-center gap-1 shrink-0">
+            {canManageChannels && (
+              <span
+                className="text-muted opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer hover:text-primary"
+                title="Channel Settings"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  useUiStore.getState().setChannelSettingsId(channel.id);
+                }}
+              >
+                <Settings size={14} />
+              </span>
+            )}
+            {isDefault && (
+              <Star size={12} className="text-warning fill-warning" />
+            )}
+            {isMuted && !isDefault && (
+              <span className="text-muted" title="Muted">
+                <BellOff size={14} />
+              </span>
+            )}
+            {mentions > 0 && (
+              <Badge variant="danger" size="sm">
+                {mentions}
+              </Badge>
+            )}
+          </span>
         </div>
       </ContextMenuTrigger>
       <ContextMenuContent>

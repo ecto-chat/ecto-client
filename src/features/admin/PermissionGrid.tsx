@@ -21,6 +21,8 @@ const PERMISSION_LABELS: { key: PermissionKey; label: string; category: string }
   { key: 'ADD_REACTIONS', label: 'Add Reactions', category: 'Channel' },
   { key: 'CONNECT_VOICE', label: 'Connect to Voice', category: 'Voice' },
   { key: 'SPEAK_VOICE', label: 'Speak in Voice', category: 'Voice' },
+  { key: 'USE_VIDEO', label: 'Use Video', category: 'Voice' },
+  { key: 'SCREEN_SHARE', label: 'Screen Share', category: 'Voice' },
   { key: 'MUTE_MEMBERS', label: 'Mute Members', category: 'Voice' },
   { key: 'DEAFEN_MEMBERS', label: 'Deafen Members', category: 'Voice' },
   { key: 'USE_VOICE_ACTIVITY', label: 'Use Voice Activity', category: 'Voice' },
@@ -40,7 +42,7 @@ export function PermissionGrid({ permissions, onChange }: PermissionGridProps) {
   };
 
   return (
-    <ScrollArea className="max-h-72">
+    <ScrollArea className="max-h-[60vh]">
       <div className="space-y-4 pr-2">
         {CATEGORIES.map((cat) => (
           <div key={cat}>

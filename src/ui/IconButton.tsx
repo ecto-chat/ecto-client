@@ -49,7 +49,7 @@ const IconButtonInner = forwardRef<HTMLButtonElement, IconButtonProps>(
           'transition-colors duration-150',
           variantStyles[variant],
           sizeStyles[size],
-          disabled && 'opacity-50 cursor-not-allowed pointer-events-none',
+          disabled && 'opacity-50 cursor-not-allowed',
           className,
         )}
         {...props}

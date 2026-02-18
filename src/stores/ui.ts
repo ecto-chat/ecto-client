@@ -10,15 +10,23 @@ interface UiStore {
   modalData: unknown;
   theme: 'dark' | 'light';
   customCSS: string;
+  channelSettingsId: string | null;
+  channelLocked: boolean;
+  nsfwDismissed: Set<string>;
+  bypassNsfwWarnings: boolean;
 
   setActiveServer: (serverId: string | null) => void;
   setActiveChannel: (channelId: string | null) => void;
+  setChannelLocked: (locked: boolean) => void;
   toggleSidebar: () => void;
   toggleMemberList: () => void;
   openModal: (modal: string, data?: unknown) => void;
   closeModal: () => void;
   setTheme: (theme: 'dark' | 'light') => void;
   setCustomCSS: (css: string) => void;
+  setChannelSettingsId: (id: string | null) => void;
+  dismissNsfw: (channelId: string) => void;
+  setBypassNsfwWarnings: (bypass: boolean) => void;
 }
 
 export const useUiStore = create<UiStore>()(
@@ -32,15 +40,33 @@ export const useUiStore = create<UiStore>()(
       modalData: null,
       theme: 'dark',
       customCSS: '',
+      channelSettingsId: null,
+      channelLocked: false,
+      nsfwDismissed: new Set(
+        (() => { try { return JSON.parse(localStorage.getItem('ecto-nsfw-dismissed') ?? '[]') as string[]; } catch { return []; } })(),
+      ),
+      bypassNsfwWarnings: localStorage.getItem('ecto-bypass-nsfw') === 'true',
 
       setActiveServer: (serverId) => set({ activeServerId: serverId }),
-      setActiveChannel: (channelId) => set({ activeChannelId: channelId }),
+      setActiveChannel: (channelId) => set({ activeChannelId: channelId, channelLocked: false }),
+      setChannelLocked: (locked) => set({ channelLocked: locked }),
       toggleSidebar: () => set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
       toggleMemberList: () => set((state) => ({ memberListVisible: !state.memberListVisible })),
       openModal: (modal, data) => set({ activeModal: modal, modalData: data }),
       closeModal: () => set({ activeModal: null, modalData: null }),
       setTheme: (theme) => set({ theme }),
       setCustomCSS: (css) => set({ customCSS: css }),
+      setChannelSettingsId: (id) => set({ channelSettingsId: id }),
+      dismissNsfw: (channelId) => set((state) => {
+        const next = new Set(state.nsfwDismissed);
+        next.add(channelId);
+        localStorage.setItem('ecto-nsfw-dismissed', JSON.stringify([...next]));
+        return { nsfwDismissed: next };
+      }),
+      setBypassNsfwWarnings: (bypass) => {
+        localStorage.setItem('ecto-bypass-nsfw', String(bypass));
+        set({ bypassNsfwWarnings: bypass });
+      },
     }),
     {
       name: 'ecto-ui',

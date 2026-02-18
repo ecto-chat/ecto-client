@@ -1,6 +1,11 @@
-import { useState, useRef, useCallback, type KeyboardEvent } from 'react';
+import { useState, useRef, useCallback, useEffect, type KeyboardEvent } from 'react';
+
+import { Permissions } from 'ecto-shared';
 
 import { connectionManager } from '@/services/connection-manager';
+import { useChannelStore } from '@/stores/channel';
+import { useUiStore } from '@/stores/ui';
+import { usePermissions } from '@/hooks/usePermissions';
 
 import { useFileUpload } from './useFileUpload';
 import { useAutocomplete } from './useAutocomplete';
@@ -16,6 +21,24 @@ type UseMessageInputOptions = {
 export function useMessageInput({ channelId, serverId, onSend, replyTo, onCancelReply }: UseMessageInputOptions) {
   const [content, setContent] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Slowmode
+  const channel = useChannelStore((s) => s.channels.get(serverId)?.get(channelId));
+  const slowmodeSeconds = channel?.slowmode_seconds ?? 0;
+  const { isAdmin, effectivePermissions } = usePermissions(useUiStore.getState().activeServerId);
+  const canBypassSlowmode = isAdmin || (effectivePermissions & Permissions.MANAGE_MESSAGES) !== 0 || (effectivePermissions & Permissions.MANAGE_CHANNELS) !== 0;
+  const [slowmodeRemaining, setSlowmodeRemaining] = useState(0);
+  const slowmodeTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const slowmodeDisabled = slowmodeSeconds > 0 && !canBypassSlowmode && slowmodeRemaining > 0;
+
+  // Clear slowmode timer on unmount or channel change
+  useEffect(() => {
+    setSlowmodeRemaining(0);
+    if (slowmodeTimerRef.current) {
+      clearInterval(slowmodeTimerRef.current);
+      slowmodeTimerRef.current = null;
+    }
+  }, [channelId]);
 
   const getContent = useCallback(() => content, [content]);
   const getReplyId = useCallback(() => replyTo?.id, [replyTo]);
@@ -45,6 +68,7 @@ export function useMessageInput({ channelId, serverId, onSend, replyTo, onCancel
   const handleSend = useCallback(async () => {
     const text = content.trim();
     if (!text && !replyTo) return;
+    if (slowmodeDisabled) return;
 
     const ws = connectionManager.getMainWs(serverId);
     ws?.send('typing.stop', { channel_id: channelId });
@@ -54,10 +78,26 @@ export function useMessageInput({ channelId, serverId, onSend, replyTo, onCancel
       setContent('');
       onCancelReply?.();
       if (textareaRef.current) textareaRef.current.style.height = 'auto';
+
+      // Start slowmode countdown
+      if (slowmodeSeconds > 0 && !canBypassSlowmode) {
+        setSlowmodeRemaining(slowmodeSeconds);
+        if (slowmodeTimerRef.current) clearInterval(slowmodeTimerRef.current);
+        slowmodeTimerRef.current = setInterval(() => {
+          setSlowmodeRemaining((prev) => {
+            if (prev <= 1) {
+              if (slowmodeTimerRef.current) clearInterval(slowmodeTimerRef.current);
+              slowmodeTimerRef.current = null;
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+      }
     } catch {
       // Error handling done in hook
     }
-  }, [content, replyTo, onSend, onCancelReply, channelId, serverId]);
+  }, [content, replyTo, onSend, onCancelReply, channelId, serverId, slowmodeSeconds, canBypassSlowmode, slowmodeDisabled]);
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setContent(e.target.value);
@@ -100,5 +140,7 @@ export function useMessageInput({ channelId, serverId, onSend, replyTo, onCancel
     handleKeyDown,
     handleInput,
     handleFileSelect,
+    slowmodeDisabled,
+    slowmodeRemaining,
   };
 }

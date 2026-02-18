@@ -1,4 +1,5 @@
 import { Mic, MicOff, Headphones, HeadphoneOff, Video, VideoOff, PhoneOff } from 'lucide-react';
+import { Permissions } from 'ecto-shared';
 
 import { IconButton } from '@/ui';
 
@@ -27,6 +28,14 @@ export function VoiceControls() {
   const pttEnabled = useVoiceStore((s) => s.pttEnabled);
   const pttActive = useVoiceStore((s) => s.pttActive);
   const pttKey = useVoiceStore((s) => s.pttKey);
+
+  const myPerms = useChannelStore((s) =>
+    currentServerId && currentChannelId
+      ? s.channels.get(currentServerId)?.get(currentChannelId)?.my_permissions
+      : undefined,
+  );
+  const canSpeak = myPerms === undefined || (myPerms & Permissions.SPEAK_VOICE) !== 0;
+  const canVideo = myPerms === undefined || (myPerms & Permissions.USE_VIDEO) !== 0;
 
   if (!isInVoice || !currentServerId || !currentChannelId) return null;
 
@@ -67,11 +76,12 @@ export function VoiceControls() {
 
       <div className="flex items-center gap-1">
         <IconButton
-          tooltip={selfMuted ? 'Unmute' : 'Mute'}
+          tooltip={!canSpeak ? "You don't have permission to speak" : selfMuted ? 'Unmute' : 'Mute'}
           size="sm"
           variant={selfMuted ? 'danger' : 'default'}
           className={cn(selfMuted && 'bg-danger text-white hover:bg-danger-hover')}
-          onClick={toggleMute}
+          onClick={canSpeak ? toggleMute : undefined}
+          disabled={!canSpeak}
         >
           {selfMuted ? <MicOff size={16} /> : <Mic size={16} />}
         </IconButton>
@@ -87,9 +97,10 @@ export function VoiceControls() {
         </IconButton>
 
         <IconButton
-          tooltip={cameraProducerActive ? 'Turn Off Camera' : 'Turn On Camera'}
+          tooltip={!canVideo ? "You don't have permission to use video" : cameraProducerActive ? 'Turn Off Camera' : 'Turn On Camera'}
           size="sm"
-          onClick={toggleCamera}
+          onClick={canVideo ? toggleCamera : undefined}
+          disabled={!canVideo}
         >
           {cameraProducerActive ? <VideoOff size={16} /> : <Video size={16} />}
         </IconButton>

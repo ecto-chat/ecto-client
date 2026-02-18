@@ -21,6 +21,8 @@ import type {
   DMConversation,
   PageContent,
   PageRevision,
+  ChannelPermissionOverride,
+  CategoryPermissionOverride,
 } from 'ecto-shared';
 
 // ---------- Server tRPC Router ----------
@@ -75,6 +77,8 @@ export interface ServerRouter {
         type: 'text' | 'voice' | 'page';
         category_id?: string;
         topic?: string;
+        slowmode_seconds?: number;
+        nsfw?: boolean;
         permission_overrides?: { target_type: 'role' | 'member'; target_id: string; allow: number; deny: number }[];
       }) => Promise<Channel>;
     };
@@ -84,8 +88,13 @@ export interface ServerRouter {
         name?: string;
         topic?: string;
         category_id?: string;
+        slowmode_seconds?: number;
+        nsfw?: boolean;
         permission_overrides?: { target_type: 'role' | 'member'; target_id: string; allow: number; deny: number }[];
       }) => Promise<Channel>;
+    };
+    getOverrides: {
+      query: (input: { channel_id: string }) => Promise<ChannelPermissionOverride[]>;
     };
     delete: {
       mutate: (input: { channel_id: string }) => Promise<{ success: boolean }>;
@@ -102,7 +111,14 @@ export interface ServerRouter {
       mutate: (input: { name: string }) => Promise<Category>;
     };
     update: {
-      mutate: (input: { category_id: string; name: string }) => Promise<Category>;
+      mutate: (input: {
+        category_id: string;
+        name?: string;
+        permission_overrides?: { target_type: 'role' | 'member'; target_id: string; allow: number; deny: number }[];
+      }) => Promise<Category>;
+    };
+    getOverrides: {
+      query: (input: { category_id: string }) => Promise<CategoryPermissionOverride[]>;
     };
     delete: {
       mutate: (input: { category_id: string }) => Promise<{ success: boolean }>;

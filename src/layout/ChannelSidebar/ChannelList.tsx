@@ -1,5 +1,5 @@
 import { type ReactNode, useState, useCallback, useEffect, useRef, useMemo } from 'react';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import {
   DndContext,
   DragOverlay,
@@ -20,8 +20,11 @@ import {
   defaultAnimateLayoutChanges, type AnimateLayoutChanges,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { Permissions } from 'ecto-shared';
 import { ScrollArea } from '@/ui/ScrollArea';
 import { useChannelStore } from '@/stores/channel';
+import { useUiStore } from '@/stores/ui';
+import { usePermissions } from '@/hooks/usePermissions';
 import { connectionManager } from '@/services/connection-manager';
 import { CategoryGroup } from '../CategoryGroup';
 import { ChannelItem } from '../ChannelItem';
@@ -65,6 +68,7 @@ function SortableCategoryGroup({
   name: string;
   collapsed: boolean;
   onToggle: () => void;
+  onSettingsClick?: () => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({
     id,
@@ -137,6 +141,13 @@ export function ChannelList({
   canReorder,
   serverId,
 }: ChannelListProps) {
+  const { isAdmin, effectivePermissions } = usePermissions(serverId);
+  const canManageChannels = isAdmin || (effectivePermissions & Permissions.MANAGE_CHANNELS) !== 0;
+
+  const handleCategorySettings = useCallback((categoryId: string) => {
+    useUiStore.getState().setChannelSettingsId(`cat:${categoryId}`);
+  }, []);
+
   const allChannels = useMemo(() => {
     const all = [...uncategorized];
     for (const list of categorized.values()) all.push(...list);
@@ -342,42 +353,49 @@ export function ChannelList({
     return (
       <ScrollArea className="flex-1" fadeEdges fadeHeight={40}>
         <div className="p-2 space-y-2">
-          {uncategorized.map((ch) => {
-            const delay = itemIndex++ * 0.04 + 0.02;
-            return (
-              <motion.div
-                key={ch.id}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay, duration: 0.2 }}
-              >
-                {renderChannelItem(ch)}
-              </motion.div>
-            );
-          })}
-
-          {sortedCategories.map(([catId, category]) => {
-            const catChannels = categorized.get(catId) ?? [];
-            const delay = itemIndex++ * 0.04 + 0.02;
-            return (
-              <motion.div
-                key={catId}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay, duration: 0.2 }}
-              >
-                <CategoryGroup
-                  name={category.name}
-                  collapsed={collapsedCategories.has(catId)}
-                  onToggle={() => onToggleCategory(catId)}
+          <AnimatePresence mode="popLayout">
+            {uncategorized.map((ch) => {
+              const delay = itemIndex++ * 0.04 + 0.02;
+              return (
+                <motion.div
+                  key={ch.id}
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1], delay }}
                 >
-                  {catChannels.map((ch) => (
-                    <div key={ch.id}>{renderChannelItem(ch)}</div>
-                  ))}
-                </CategoryGroup>
-              </motion.div>
-            );
-          })}
+                  {renderChannelItem(ch)}
+                </motion.div>
+              );
+            })}
+          </AnimatePresence>
+
+          <AnimatePresence mode="popLayout">
+            {sortedCategories.map(([catId, category]) => {
+              const catChannels = categorized.get(catId) ?? [];
+              const delay = itemIndex++ * 0.04 + 0.02;
+              return (
+                <motion.div
+                  key={catId}
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1], delay }}
+                >
+                  <CategoryGroup
+                    name={category.name}
+                    collapsed={collapsedCategories.has(catId)}
+                    onToggle={() => onToggleCategory(catId)}
+                    onSettingsClick={canManageChannels ? () => handleCategorySettings(catId) : undefined}
+                  >
+                    {catChannels.map((ch) => (
+                      <div key={ch.id}>{renderChannelItem(ch)}</div>
+                    ))}
+                  </CategoryGroup>
+                </motion.div>
+              );
+            })}
+          </AnimatePresence>
         </div>
       </ScrollArea>
     );
@@ -421,6 +439,7 @@ export function ChannelList({
                   name={category.name}
                   collapsed={collapsedCategories.has(catId)}
                   onToggle={() => onToggleCategory(catId)}
+                  onSettingsClick={canManageChannels ? () => handleCategorySettings(catId) : undefined}
                   containerChannelIds={catItems}
                   activeId={activeId}
                 >

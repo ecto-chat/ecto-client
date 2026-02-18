@@ -10,8 +10,10 @@ import { useAuthStore } from '../stores/auth.js';
 import { useServerStore } from '../stores/server.js';
 import { useRoleStore } from '../stores/role.js';
 import { useToastStore } from '../stores/toast.js';
+import { useUiStore } from '../stores/ui.js';
 import { playNotificationSound } from '../lib/notification-sounds.js';
 import { showOsNotification, shouldNotifyEveryone } from './notification-service.js';
+import { connectionManager } from './connection-manager.js';
 import { pageEventListeners } from '../hooks/usePage.js';
 
 export function handleMainEvent(serverId: string, event: string, data: unknown, _seq: number) {
@@ -172,6 +174,10 @@ export function handleMainEvent(serverId: string, event: string, data: unknown, 
       }
       break;
 
+    case 'permissions.update':
+      handlePermissionsUpdate(serverId);
+      break;
+
     case 'page.update':
       for (const listener of pageEventListeners) {
         listener(d as unknown as PageContent);
@@ -191,6 +197,71 @@ export function handleMainEvent(serverId: string, event: string, data: unknown, 
     case 'voice.error':
       // These are dispatched to voice event listeners
       break;
+  }
+}
+
+async function handlePermissionsUpdate(serverId: string) {
+  const trpc = connectionManager.getServerTrpc(serverId);
+  if (!trpc) return;
+
+  try {
+    const result = await trpc.channels.list.query();
+
+    // Flatten all channels from the response
+    const newChannels = new Map<string, Channel>();
+    for (const ch of result.uncategorized as Channel[]) {
+      newChannels.set(ch.id, ch);
+    }
+    for (const cat of result.categories as Array<Category & { channels: Channel[] }>) {
+      for (const ch of cat.channels) {
+        newChannels.set(ch.id, ch);
+      }
+    }
+
+    // Flatten categories
+    const newCategories = new Map<string, Category>();
+    for (const cat of result.categories as Array<Category & { channels: Channel[] }>) {
+      const { channels: _, ...categoryOnly } = cat;
+      newCategories.set(cat.id, categoryOnly as Category);
+    }
+
+    // Diff channels
+    const currentChannels = useChannelStore.getState().channels.get(serverId) ?? new Map<string, Channel>();
+    for (const [id] of currentChannels) {
+      if (!newChannels.has(id)) {
+        useChannelStore.getState().removeChannel(serverId, id);
+      }
+    }
+    for (const [id, ch] of newChannels) {
+      if (!currentChannels.has(id)) {
+        useChannelStore.getState().addChannel(serverId, ch);
+      } else {
+        useChannelStore.getState().updateChannel(serverId, ch as Channel & { id: string });
+      }
+    }
+
+    // Diff categories
+    const currentCategories = useChannelStore.getState().categories.get(serverId) ?? new Map<string, Category>();
+    for (const [id] of currentCategories) {
+      if (!newCategories.has(id)) {
+        useChannelStore.getState().removeCategory(serverId, id);
+      }
+    }
+    for (const [id, cat] of newCategories) {
+      if (!currentCategories.has(id)) {
+        useChannelStore.getState().addCategory(serverId, cat);
+      } else {
+        useChannelStore.getState().updateCategory(serverId, cat as Category & { id: string });
+      }
+    }
+
+    // If active channel was removed, show lock screen
+    const activeChannelId = useUiStore.getState().activeChannelId;
+    if (activeChannelId && !newChannels.has(activeChannelId) && useUiStore.getState().activeServerId === serverId) {
+      useUiStore.getState().setChannelLocked(true);
+    }
+  } catch {
+    // Silently ignore — server may be unreachable
   }
 }
 

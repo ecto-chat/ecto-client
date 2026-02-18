@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Switch } from '@/ui';
 
 import { useAuthStore } from '@/stores/auth';
+import { useUiStore } from '@/stores/ui';
 
 import { connectionManager } from '@/services/connection-manager';
 
@@ -22,6 +23,7 @@ function loadPrefs(): PrivacyPrefs {
 
 export function PrivacySettings() {
   const user = useAuthStore((s) => s.user);
+  const bypassNsfw = useUiStore((s) => s.bypassNsfwWarnings);
   const [prefs, setPrefs] = useState<PrivacyPrefs>(loadPrefs);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -65,6 +67,13 @@ export function PrivacySettings() {
         checked={prefs.allowDmsFromStrangers}
         disabled={saving}
         onCheckedChange={handleToggleDmsFromStrangers}
+      />
+
+      <Switch
+        label="Bypass NSFW warnings"
+        description="Skip age-restriction warnings when entering NSFW channels."
+        checked={bypassNsfw}
+        onCheckedChange={(checked) => useUiStore.getState().setBypassNsfwWarnings(checked)}
       />
 
       <div className="space-y-2">

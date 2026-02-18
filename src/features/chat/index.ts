@@ -14,3 +14,4 @@ export { SearchFilters } from './SearchFilters';
 export { PinnedMessages } from './PinnedMessages';
 export { LinkPreviews } from './LinkPreview';
 export { ImageLightbox } from './ImageLightbox';
+export { NsfwWarning } from './NsfwWarning';

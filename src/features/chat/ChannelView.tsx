@@ -18,6 +18,8 @@ import { MessageInput } from './MessageInput';
 import { TypingIndicator } from './TypingIndicator';
 import { SearchPanel } from './SearchPanel';
 import { PinnedMessages } from './PinnedMessages';
+import { NsfwWarning } from './NsfwWarning';
+import { ChannelLockedScreen } from './ChannelLockedScreen';
 import { VoiceView } from '@/features/voice';
 import { PageView } from '@/features/page';
 
@@ -76,11 +78,36 @@ export function ChannelView() {
     return () => clearInterval(timer);
   }, []);
 
+  const nsfwDismissed = useUiStore((s) => s.nsfwDismissed.has(channelId ?? ''));
+  const bypassNsfw = useUiStore((s) => s.bypassNsfwWarnings);
+
+  const channelLocked = useUiStore((s) => s.channelLocked);
+
   if (!channelId || !channel) {
     return (
       <div className="flex flex-1 items-center justify-center">
         <EmptyState icon={<Hash />} title="Select a channel" description="Pick a channel from the sidebar to start chatting." />
       </div>
+    );
+  }
+
+  if (channelLocked) {
+    return (
+      <ChannelLockedScreen
+        onGoBack={() => {
+          useUiStore.getState().setChannelLocked(false);
+          navigate(`/servers/${sid}`);
+        }}
+      />
+    );
+  }
+
+  if (channel.nsfw && !nsfwDismissed && !bypassNsfw) {
+    return (
+      <NsfwWarning
+        channelId={channelId}
+        onGoBack={() => navigate(`/servers/${sid}`)}
+      />
     );
   }
 

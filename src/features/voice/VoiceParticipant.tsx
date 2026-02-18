@@ -62,9 +62,11 @@ export function VoiceParticipant({
       transition={{ type: 'spring', stiffness: 350, damping: 25, delay: index * 0.05 }}
       className="flex flex-col gap-2"
     >
-      <button
-        type="button"
+      <div
+        role="button"
+        tabIndex={0}
         onClick={handleCardClick}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleCardClick(); } }}
         className={cn(
           'group relative flex flex-col items-center justify-center gap-2',
           'rounded-xl bg-secondary p-4 cursor-pointer',
@@ -128,7 +130,7 @@ export function VoiceParticipant({
         <div className="absolute bottom-1 left-1 opacity-0 group-hover:opacity-100 transition-opacity">
           <UserVolumeControl userId={p.user_id} />
         </div>
-      </button>
+      </div>
 
       {screenStream && (
         <div className="relative rounded-xl bg-secondary overflow-hidden min-h-[100px]">

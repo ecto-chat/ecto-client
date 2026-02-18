@@ -9,7 +9,7 @@ import { ChannelSidebar } from '../layout/ChannelSidebar';
 import { MemberList } from '../layout/MemberList';
 
 // features
-import { ServerSettings, SetupWizard } from '@/features/admin';
+import { ServerSettings, SetupWizard, ChannelSettingsModal } from '@/features/admin';
 import { CentralSignInModal } from '@/features/auth';
 import { IncomingCallOverlay, ActiveCallOverlay, CallBanner } from '@/features/call';
 import { ChannelView, ImageLightbox } from '@/features/chat';
@@ -153,6 +153,7 @@ export function AppLayout() {
       <UserProfileModal />
       <CentralSignInModal />
       <ServerSettings />
+      <ChannelSettingsModal />
       <UserSettingsModal />
       <IncomingCallOverlay />
       <ActiveCallOverlay />

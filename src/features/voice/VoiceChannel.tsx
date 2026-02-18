@@ -1,12 +1,14 @@
 import { useNavigate } from 'react-router-dom';
 
-import { Volume2, MicOff, VolumeX } from 'lucide-react';
+import { Volume2, MicOff, VolumeX, Settings } from 'lucide-react';
+import { Permissions } from 'ecto-shared';
 
 import { Avatar, Button } from '@/ui';
 
 import { useVoiceStore } from '@/stores/voice';
 import { useUiStore } from '@/stores/ui';
 import { useMemberStore } from '@/stores/member';
+import { usePermissions } from '@/hooks/usePermissions';
 
 import { cn } from '@/lib/cn';
 
@@ -24,6 +26,8 @@ export function VoiceChannel({ channel, isActive }: VoiceChannelProps) {
   const currentChannelId = useVoiceStore((s) => s.currentChannelId);
   const activeServerId = useUiStore((s) => s.activeServerId);
   const members = useMemberStore((s) => (activeServerId ? s.members.get(activeServerId) : undefined));
+  const { isAdmin, effectivePermissions } = usePermissions(activeServerId);
+  const canManageChannels = isAdmin || (effectivePermissions & Permissions.MANAGE_CHANNELS) !== 0;
   const navigate = useNavigate();
 
   const isConnected = currentChannelId === channel.id;
@@ -41,24 +45,38 @@ export function VoiceChannel({ channel, isActive }: VoiceChannelProps) {
   return (
     <div
       className={cn(
-        'mx-1 rounded-md transition-colors duration-150',
+        'group mx-1 rounded-md transition-colors duration-150',
         isConnected && 'bg-active',
         isActive && 'bg-hover',
       )}
     >
-      <Button
-        type="button"
-        variant="ghost"
-        onClick={handleClick}
-        className={cn(
-          'flex w-full items-center gap-1.5 rounded-md px-2 py-1 h-auto',
-          'text-sm text-secondary hover:text-primary hover:bg-hover',
-          'justify-start font-normal',
+      <div className="flex items-center">
+        <Button
+          type="button"
+          variant="ghost"
+          onClick={handleClick}
+          className={cn(
+            'flex flex-1 items-center gap-1.5 rounded-md px-2 py-1 h-auto min-w-0',
+            'text-sm text-secondary hover:text-primary hover:bg-hover',
+            'justify-start font-normal',
+          )}
+        >
+          <Volume2 size={16} className="shrink-0 text-muted" />
+          <span className="truncate font-medium">{channel.name}</span>
+        </Button>
+        {canManageChannels && (
+          <span
+            className="shrink-0 pr-2 text-muted opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer hover:text-primary"
+            title="Channel Settings"
+            onClick={(e) => {
+              e.stopPropagation();
+              useUiStore.getState().setChannelSettingsId(channel.id);
+            }}
+          >
+            <Settings size={14} />
+          </span>
         )}
-      >
-        <Volume2 size={16} className="shrink-0 text-muted" />
-        <span className="truncate font-medium">{channel.name}</span>
-      </Button>
+      </div>
 
       {channelParticipants.length > 0 && (
         <div className="flex flex-col gap-0.5 pb-1.5 pl-6 pr-2">
