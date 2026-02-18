@@ -85,10 +85,25 @@ export function GeneralSettings({ serverId }: GeneralSettingsProps) {
   const handleIconUpload = async (file: File) => {
     setError('');
     try {
+      const conn = connectionManager.getServerConnection(serverId);
+      if (!conn) throw new Error('Not connected');
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetch(`${conn.address}/upload/icon`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${conn.token}` },
+        body: formData,
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({ error: 'Upload failed' }));
+        throw new Error((data as { error?: string }).error ?? 'Upload failed');
+      }
+      const data = (await res.json()) as { icon_url: string };
       const trpc = connectionManager.getServerTrpc(serverId);
-      if (!trpc) throw new Error('Not connected');
-      const result = await trpc.server.uploadIcon.mutate({ file });
-      setServer((prev) => prev ? { ...prev, icon_url: result.icon_url } : prev);
+      if (trpc) {
+        await trpc.server.uploadIcon.mutate({ icon_url: data.icon_url });
+      }
+      setServer((prev) => prev ? { ...prev, icon_url: data.icon_url } : prev);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to upload icon');
     }

@@ -253,7 +253,7 @@ export interface ServerRouter {
       mutate: (input: { new_owner_id: string; confirmation: string }) => Promise<{ success: boolean }>;
     };
     uploadIcon: {
-      mutate: (input: { file: File }) => Promise<{
+      mutate: (input: { icon_url: string }) => Promise<{
         icon_url: string;
         sizes: { 64: string; 128: string; 256: string; 512: string };
       }>;
