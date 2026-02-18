@@ -460,7 +460,7 @@ export class ConnectionManager {
 
       const readyData = ready as unknown as {
         user_id?: string;
-        server?: { setup_completed?: boolean; admin_user_id?: string | null };
+        server?: { setup_completed?: boolean; admin_user_id?: string | null; default_channel_id?: string | null; banner_url?: string | null };
         channels?: Channel[];
         categories?: Category[];
         members?: Member[];
@@ -475,6 +475,8 @@ export class ConnectionManager {
           setup_completed: readyData.server.setup_completed ?? true,
           admin_user_id: readyData.server.admin_user_id ?? null,
           user_id: readyData.user_id ?? null,
+          default_channel_id: readyData.server.default_channel_id ?? null,
+          banner_url: readyData.server.banner_url ?? null,
         });
       }
 

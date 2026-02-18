@@ -6,6 +6,7 @@
 export function startSpeakingDetection(
   stream: MediaStream,
   onSpeaking: (speaking: boolean) => void,
+  onAudioLevel?: (level: number) => void,
 ): () => void {
   const audioCtx = new AudioContext();
   const source = audioCtx.createMediaStreamSource(stream);
@@ -28,6 +29,12 @@ export function startSpeakingDetection(
     if (isSpeaking !== wasSpeaking) {
       wasSpeaking = isSpeaking;
       onSpeaking(isSpeaking);
+    }
+
+    // Emit normalized audio level (0-1) when speaking
+    if (onAudioLevel) {
+      const normalized = isSpeaking ? Math.min(avg / 80, 1) : 0;
+      onAudioLevel(normalized);
     }
   }, 100);
 

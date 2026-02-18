@@ -74,6 +74,8 @@ export const useDmStore = create<DmStore>()((set) => ({
         if (!existingSet.has(msg.id)) newIds.push(msg.id);
       }
       messages.set(userId, userMessages);
+      // History API returns newest-first; reverse to chronological (oldest first)
+      newIds.reverse();
       messageOrder.set(userId, [...newIds, ...existing]);
       return { messages, messageOrder };
     }),

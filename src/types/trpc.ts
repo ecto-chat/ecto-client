@@ -90,7 +90,7 @@ export interface ServerRouter {
     };
     reorder: {
       mutate: (input: {
-        channels: { channel_id: string; position: number; category_id?: string }[];
+        channels: { channel_id: string; position: number; category_id?: string | null }[];
       }) => Promise<{ success: boolean }>;
     };
   };
@@ -206,6 +206,8 @@ export interface ServerRouter {
         name?: string;
         description?: string;
         icon_url?: string;
+        banner_url?: string | null;
+        default_channel_id?: string | null;
       }) => Promise<Server>;
     };
     join: {
@@ -367,6 +369,7 @@ export interface ServerRouter {
         allow_local_accounts: boolean;
         require_invite: boolean;
         allow_member_dms: boolean;
+        show_system_messages: boolean;
         version: string;
       }>;
     };
@@ -376,6 +379,7 @@ export interface ServerRouter {
         allow_local_accounts?: boolean;
         require_invite?: boolean;
         allow_member_dms?: boolean;
+        show_system_messages?: boolean;
       }) => Promise<{ success: boolean }>;
     };
     completeSetup: {
@@ -443,6 +447,7 @@ export interface CentralRouter {
         username?: string;
         display_name?: string | null;
         avatar_url?: string | null;
+        banner_url?: string | null;
         bio?: string | null;
         custom_status?: string | null;
         allow_dms_from_strangers?: boolean;

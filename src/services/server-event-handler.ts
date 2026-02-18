@@ -44,6 +44,7 @@ export function handleMainEvent(serverId: string, event: string, data: unknown, 
         id: d.id as string,
         content: d.content as string,
         edited_at: d.edited_at as string,
+        pinned: d.pinned as boolean,
       });
       break;
 
@@ -120,11 +121,16 @@ export function handleMainEvent(serverId: string, event: string, data: unknown, 
 
     case 'server.update':
       useServerStore.getState().updateServer(serverId, d as Partial<import('ecto-shared').ServerListEntry>);
-      // Keep serverMeta.admin_user_id in sync (used for isOwner checks)
-      if (d.admin_user_id) {
+      // Keep serverMeta in sync with server updates
+      {
         const meta = useServerStore.getState().serverMeta.get(serverId);
         if (meta) {
-          useServerStore.getState().setServerMeta(serverId, { ...meta, admin_user_id: d.admin_user_id as string });
+          const metaUpdates: Partial<typeof meta> = {};
+          if (d.admin_user_id !== undefined) metaUpdates.admin_user_id = d.admin_user_id as string;
+          if (d.banner_url !== undefined) metaUpdates.banner_url = d.banner_url as string | null;
+          if (Object.keys(metaUpdates).length > 0) {
+            useServerStore.getState().setServerMeta(serverId, { ...meta, ...metaUpdates });
+          }
         }
       }
       break;

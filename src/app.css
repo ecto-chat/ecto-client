@@ -1,0 +1,273 @@
+@import 'tailwindcss';
+@plugin 'tailwindcss-animate';
+
+/* Semantic bg/text tokens as plain CSS vars (NOT in @theme to avoid prefix collisions) */
+:root {
+  --color-bg-primary: #0c0c14;
+  --color-bg-secondary: #12121e;
+  --color-bg-tertiary: #1a1a2e;
+  --color-bg-hover: #1e2a4a;
+  --color-bg-active: #253456;
+  --color-bg-input: #111a30;
+  --color-bg-surface: #161625;
+
+  --color-text-primary: #e8e8ed;
+  --color-text-secondary: #a0a0b0;
+  --color-text-muted: #5a5a6e;
+  --color-text-inverse: #0c0c14;
+}
+
+@theme {
+  /* Spacing base (locked to 4px; prevents 15px root font-size from shrinking rem-based spacing) */
+  --spacing: 4px;
+
+  /* Accent */
+  --color-accent: #6c63ff;
+  --color-accent-hover: #5a52d5;
+  --color-accent-subtle: rgba(108, 99, 255, 0.12);
+
+  /* Danger */
+  --color-danger: #e74c3c;
+  --color-danger-hover: #c0392b;
+  --color-danger-subtle: rgba(231, 76, 60, 0.12);
+
+  /* Success */
+  --color-success: #2ecc71;
+  --color-success-subtle: rgba(46, 204, 113, 0.12);
+
+  /* Warning */
+  --color-warning: #f39c12;
+  --color-warning-subtle: rgba(243, 156, 18, 0.12);
+
+  /* Status (presence only) */
+  --color-status-online: #2ecc71;
+  --color-status-idle: #f39c12;
+  --color-status-dnd: #e74c3c;
+  --color-status-offline: #5a5a6e;
+
+  /* Borders */
+  --color-border: #1e1e32;
+  --color-border-hover: #2a2a44;
+  --color-border-active: #3a3a55;
+
+  /* Typography */
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+
+  --text-2xs: 10px;
+  --text-xs: 12px;
+  --text-sm: 13px;
+  --text-base: 15px;
+  --text-lg: 18px;
+  --text-xl: 24px;
+  --text-2xl: 30px;
+
+  /* Border Radius */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 20px;
+
+  /* Z-Index */
+  --z-dropdown: 50;
+  --z-modal: 100;
+  --z-overlay: 150;
+  --z-toast: 200;
+
+  /* Layout */
+  --sidebar-width: 72px;
+  --channel-sidebar-width: 240px;
+  --member-list-width: 240px;
+
+  /* Animations */
+  --ease-page: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  --ease-content: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ── Background utilities (custom — can't live in @theme due to prefix collision) ── */
+@utility bg-primary { background-color: var(--color-bg-primary); }
+@utility bg-secondary { background-color: var(--color-bg-secondary); }
+@utility bg-tertiary { background-color: var(--color-bg-tertiary); }
+@utility bg-hover { background-color: var(--color-bg-hover); }
+@utility bg-active { background-color: var(--color-bg-active); }
+@utility bg-input { background-color: var(--color-bg-input); }
+@utility bg-surface { background-color: var(--color-bg-surface); }
+
+/* ── Text utilities ── */
+@utility text-primary { color: var(--color-text-primary); }
+@utility text-secondary { color: var(--color-text-secondary); }
+@utility text-muted { color: var(--color-text-muted); }
+@utility text-inverse { color: var(--color-text-inverse); }
+
+/* ── Base styles (must be in @layer base so Tailwind utilities can override them) ── */
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  html, body {
+    height: 100%;
+    font-family: var(--font-sans);
+    font-size: 15px;
+    background-color: var(--color-bg-primary);
+    color: var(--color-text-primary);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  #root {
+    height: 100%;
+  }
+
+  a {
+    color: var(--color-accent);
+    text-decoration: none;
+  }
+  a:hover {
+    text-decoration: underline;
+  }
+
+  /* ── Scrollbar (fallback for non-ScrollArea containers) ── */
+  ::-webkit-scrollbar { width: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-bg-tertiary);
+    border-radius: 9999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-bg-hover);
+  }
+
+  /* ── Selection ── */
+  ::selection {
+    background-color: rgba(108, 99, 255, 0.3);
+    color: var(--color-text-primary);
+  }
+}
+
+/* ── Markdown message content ── */
+
+.message-markdown {
+  font-size: 15px;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.message-markdown strong {
+  font-weight: 700;
+}
+
+.message-markdown em {
+  font-style: italic;
+}
+
+.message-markdown del {
+  text-decoration: line-through;
+  opacity: 0.7;
+}
+
+.message-markdown code {
+  background: rgba(0, 0, 0, 0.3);
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+
+.message-markdown pre {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: var(--radius-md);
+  padding: 12px;
+  margin: 6px 0;
+  overflow-x: auto;
+}
+.message-markdown pre code {
+  background: none;
+  padding: 0;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.message-markdown blockquote {
+  border-left: 3px solid var(--color-accent);
+  padding-left: 12px;
+  margin: 4px 0;
+  color: var(--color-text-secondary);
+}
+
+.message-markdown a {
+  color: var(--color-accent);
+  text-decoration: none;
+}
+.message-markdown a:hover {
+  text-decoration: underline;
+}
+
+.message-markdown ul,
+.message-markdown ol {
+  padding-left: 20px;
+  margin: 4px 0;
+}
+
+.message-markdown .spoiler {
+  background: var(--color-bg-tertiary);
+  color: transparent;
+  border-radius: var(--radius-sm);
+  padding: 0 4px;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+.message-markdown .spoiler.revealed {
+  color: var(--color-text-primary);
+}
+
+.message-markdown .mention {
+  background: rgba(108, 99, 255, 0.15);
+  color: var(--color-accent);
+  padding: 0 4px;
+  border-radius: var(--radius-sm);
+  font-weight: 500;
+  cursor: pointer;
+}
+.message-markdown .mention:hover {
+  background: rgba(108, 99, 255, 0.25);
+}
+
+.message-markdown .inline-image {
+  max-width: 400px;
+  max-height: 300px;
+  border-radius: var(--radius-sm);
+  margin: 4px 0;
+  cursor: pointer;
+  display: block;
+}
+
+.message-markdown table {
+  border-collapse: collapse;
+  margin: 8px 0;
+  max-width: 100%;
+  overflow-x: auto;
+  display: block;
+}
+
+.message-markdown th,
+.message-markdown td {
+  border: 1px solid var(--color-border);
+  padding: 6px 12px;
+  text-align: left;
+}
+
+.message-markdown th {
+  background: var(--color-bg-tertiary);
+  font-weight: 600;
+}
+
+.message-markdown tr:nth-child(even) {
+  background: rgba(255, 255, 255, 0.02);
+}

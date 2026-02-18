@@ -32,9 +32,11 @@ const consumerSpeakingCleanups = new Map<string, () => void>();
 
 /** Start speaking detection that updates the voice store for a given user. */
 function startVoiceSpeakingDetection(stream: MediaStream, userId: string): () => void {
-  return startSpeakingDetection(stream, (speaking) => {
-    useVoiceStore.getState().setSpeaking(userId, speaking);
-  });
+  return startSpeakingDetection(
+    stream,
+    (speaking) => { useVoiceStore.getState().setSpeaking(userId, speaking); },
+    (level) => { useVoiceStore.getState().setAudioLevel(userId, level); },
+  );
 }
 
 export function useVoice() {

@@ -15,7 +15,20 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
-    "rootDir": "src"
+    "rootDir": "src",
+    "baseUrl": ".",
+    "paths": {
+      "@/ui": ["src/ui"],
+      "@/ui/*": ["src/ui/*"],
+      "@/features/*": ["src/features/*"],
+      "@/layout": ["src/layout"],
+      "@/layout/*": ["src/layout/*"],
+      "@/stores/*": ["src/stores/*"],
+      "@/hooks/*": ["src/hooks/*"],
+      "@/services/*": ["src/services/*"],
+      "@/lib/*": ["src/lib/*"],
+      "@/types/*": ["src/types/*"]
+    }
   },
   "include": ["src"],
   "exclude": ["node_modules", "dist", "src/electron"]

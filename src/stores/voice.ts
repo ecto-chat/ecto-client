@@ -14,6 +14,7 @@ interface VoiceStore {
   pttKey: string;
   pttActive: boolean;
   speaking: Set<string>;
+  audioLevels: Map<string, number>;
   participants: Map<string, VoiceState>;
   videoStreams: Map<string, MediaStream>;
   screenStreams: Map<string, MediaStream>;
@@ -41,6 +42,7 @@ interface VoiceStore {
   toggleMute: () => void;
   toggleDeafen: () => void;
   setSpeaking: (userId: string, isSpeaking: boolean) => void;
+  setAudioLevel: (userId: string, level: number) => void;
   addParticipant: (state: VoiceState) => void;
   removeParticipant: (userId: string) => void;
   updateParticipant: (state: VoiceState) => void;
@@ -66,6 +68,7 @@ export const useVoiceStore = create<VoiceStore>()((set, get) => ({
   pttKey: localStorage.getItem('ecto-ptt-key') ?? ' ',
   pttActive: false,
   speaking: new Set(),
+  audioLevels: new Map(),
   participants: new Map(),
   videoStreams: new Map(),
   screenStreams: new Map(),
@@ -100,6 +103,7 @@ export const useVoiceStore = create<VoiceStore>()((set, get) => ({
       selfMuted: false,
       selfDeafened: false,
       speaking: new Set(),
+      audioLevels: new Map(),
       participants: new Map(),
       pendingTransfer: null,
     }),
@@ -116,7 +120,20 @@ export const useVoiceStore = create<VoiceStore>()((set, get) => ({
       const speaking = new Set(state.speaking);
       if (isSpeaking) speaking.add(userId);
       else speaking.delete(userId);
+      // Clear audio level when not speaking
+      if (!isSpeaking) {
+        const audioLevels = new Map(state.audioLevels);
+        audioLevels.delete(userId);
+        return { speaking, audioLevels };
+      }
       return { speaking };
+    }),
+
+  setAudioLevel: (userId, level) =>
+    set((state) => {
+      const audioLevels = new Map(state.audioLevels);
+      audioLevels.set(userId, level);
+      return { audioLevels };
     }),
 
   addParticipant: (voiceState) =>
@@ -211,6 +228,7 @@ export const useVoiceStore = create<VoiceStore>()((set, get) => ({
       selfMuted: false,
       selfDeafened: false,
       speaking: new Set(),
+      audioLevels: new Map(),
       participants: new Map(),
       videoStreams: new Map(),
       screenStreams: new Map(),

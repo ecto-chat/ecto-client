@@ -5,6 +5,8 @@ interface ServerMeta {
   setup_completed: boolean;
   admin_user_id: string | null;
   user_id: string | null;
+  default_channel_id: string | null;
+  banner_url: string | null;
 }
 
 interface ServerStore {

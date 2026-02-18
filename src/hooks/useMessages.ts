@@ -158,18 +158,28 @@ export function useMessages(channelId: string) {
   const pinMessage = useCallback(async (messageId: string) => {
     const serverId = useUiStore.getState().activeServerId;
     if (!serverId) return;
+    useMessageStore.getState().updateMessage(channelId, { id: messageId, pinned: true });
     const trpc = connectionManager.getServerTrpc(serverId);
     if (!trpc) return;
-    await trpc.messages.pin.mutate({ message_id: messageId, pinned: true });
-  }, []);
+    try {
+      await trpc.messages.pin.mutate({ message_id: messageId, pinned: true });
+    } catch {
+      useMessageStore.getState().updateMessage(channelId, { id: messageId, pinned: false });
+    }
+  }, [channelId]);
 
   const unpinMessage = useCallback(async (messageId: string) => {
     const serverId = useUiStore.getState().activeServerId;
     if (!serverId) return;
+    useMessageStore.getState().updateMessage(channelId, { id: messageId, pinned: false });
     const trpc = connectionManager.getServerTrpc(serverId);
     if (!trpc) return;
-    await trpc.messages.pin.mutate({ message_id: messageId, pinned: false });
-  }, []);
+    try {
+      await trpc.messages.pin.mutate({ message_id: messageId, pinned: false });
+    } catch {
+      useMessageStore.getState().updateMessage(channelId, { id: messageId, pinned: true });
+    }
+  }, [channelId]);
 
   const markRead = useCallback(
     async (messageId: string) => {

@@ -1,29 +1,33 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { LoginPage } from './components/auth/LoginPage.js';
-import { RegisterPage } from './components/auth/RegisterPage.js';
-import { LandingPage } from './components/auth/LandingPage.js';
-import { DirectConnectForm } from './components/auth/DirectConnectForm.js';
-import { AuthGuard } from './components/common/AuthGuard.js';
-import { AppLayout } from './components/layout/AppLayout.js';
+import { MotionConfig } from 'motion/react';
+import * as TooltipPrimitive from '@radix-ui/react-tooltip';
+
+import { LoginPage, RegisterPage, LandingPage, DirectConnectForm } from '@/features/auth';
+import { AuthGuard } from '@/features/common';
+import { AppLayout } from '@/layout/AppLayout';
 
 export function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/landing" element={<LandingPage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
-        <Route path="/direct-connect" element={<DirectConnectForm />} />
-        <Route
-          path="/*"
-          element={
-            <AuthGuard>
-              <AppLayout />
-            </AuthGuard>
-          }
-        />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </BrowserRouter>
+    <MotionConfig reducedMotion="user">
+      <TooltipPrimitive.Provider delayDuration={300}>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/landing" element={<LandingPage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+          <Route path="/direct-connect" element={<DirectConnectForm />} />
+          <Route
+            path="/*"
+            element={
+              <AuthGuard>
+                <AppLayout />
+              </AuthGuard>
+            }
+          />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </BrowserRouter>
+      </TooltipPrimitive.Provider>
+    </MotionConfig>
   );
 }
