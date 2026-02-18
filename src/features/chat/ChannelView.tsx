@@ -19,6 +19,7 @@ import { TypingIndicator } from './TypingIndicator';
 import { SearchPanel } from './SearchPanel';
 import { PinnedMessages } from './PinnedMessages';
 import { VoiceView } from '@/features/voice';
+import { PageView } from '@/features/page';
 
 export function ChannelView() {
   const { channelId, serverId } = useParams<{ channelId: string; serverId: string }>();
@@ -81,6 +82,10 @@ export function ChannelView() {
         <EmptyState icon={<Hash />} title="Select a channel" description="Pick a channel from the sidebar to start chatting." />
       </div>
     );
+  }
+
+  if (channel.type === 'page') {
+    return <PageView />;
   }
 
   if (channel.type === 'voice') {

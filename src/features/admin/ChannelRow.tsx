@@ -1,6 +1,6 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { GripVertical, Hash, Volume2, Pencil, Trash2 } from 'lucide-react';
+import { GripVertical, Hash, Volume2, FileText, Pencil, Trash2 } from 'lucide-react';
 
 import { Button, IconButton, Input, Tooltip } from '@/ui';
 
@@ -78,7 +78,7 @@ function ChannelRowInner({
           <GripVertical size={14} />
         </span>
         <span className="text-muted">
-          {channel.type === 'voice' ? <Volume2 size={16} /> : <Hash size={16} />}
+          {channel.type === 'voice' ? <Volume2 size={16} /> : channel.type === 'page' ? <FileText size={16} /> : <Hash size={16} />}
         </span>
         <span className="text-sm text-primary">{channel.name}</span>
         {channel.topic && (

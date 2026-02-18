@@ -1,5 +1,5 @@
 import { memo, useCallback } from 'react';
-import { Hash, BellOff, Star } from 'lucide-react';
+import { Hash, BellOff, Star, FileText } from 'lucide-react';
 import { Permissions } from 'ecto-shared';
 import { useReadStateStore } from '@/stores/read-state';
 import { useNotifyStore } from '@/stores/notify';
@@ -80,7 +80,11 @@ export const ChannelItem = memo(function ChannelItem({
           )}
           onClick={() => onClick(channel)}
         >
-          <Hash size={16} className="shrink-0 text-muted" />
+          {channel.type === 'page' ? (
+            <FileText size={16} className="shrink-0 text-muted" />
+          ) : (
+            <Hash size={16} className="shrink-0 text-muted" />
+          )}
           <span className="text-sm truncate">{channel.name}</span>
           {isDefault && (
             <Star size={12} className="shrink-0 text-warning fill-warning ml-auto" />

@@ -19,6 +19,8 @@ import type {
   FriendRequest,
   DirectMessage,
   DMConversation,
+  PageContent,
+  PageRevision,
 } from 'ecto-shared';
 
 // ---------- Server tRPC Router ----------
@@ -70,7 +72,7 @@ export interface ServerRouter {
     create: {
       mutate: (input: {
         name: string;
-        type: 'text' | 'voice';
+        type: 'text' | 'voice' | 'page';
         category_id?: string;
         topic?: string;
         permission_overrides?: { target_type: 'role' | 'member'; target_id: string; allow: number; deny: number }[];
@@ -359,6 +361,32 @@ export interface ServerRouter {
         limit?: number;
         has?: ('attachment' | 'link')[];
       }) => Promise<{ messages: Message[]; has_more: boolean }>;
+    };
+  };
+
+  pages: {
+    getContent: {
+      query: (input: { channel_id: string }) => Promise<PageContent>;
+    };
+    updateContent: {
+      mutate: (input: {
+        channel_id: string;
+        content: string;
+        version: number;
+      }) => Promise<PageContent>;
+    };
+    updateBanner: {
+      mutate: (input: {
+        channel_id: string;
+        banner_url: string | null;
+      }) => Promise<{ banner_url: string | null }>;
+    };
+    getHistory: {
+      query: (input: {
+        channel_id: string;
+        limit?: number;
+        cursor?: string;
+      }) => Promise<{ revisions: PageRevision[]; has_more: boolean }>;
     };
   };
 

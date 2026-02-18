@@ -1,4 +1,4 @@
-import type { Channel, Category, Member, Role, VoiceState, PresenceStatus, Message } from 'ecto-shared';
+import type { Channel, Category, Member, Role, VoiceState, PresenceStatus, Message, PageContent } from 'ecto-shared';
 import { useChannelStore } from '../stores/channel.js';
 import { useMemberStore } from '../stores/member.js';
 import { usePresenceStore } from '../stores/presence.js';
@@ -12,6 +12,7 @@ import { useRoleStore } from '../stores/role.js';
 import { useToastStore } from '../stores/toast.js';
 import { playNotificationSound } from '../lib/notification-sounds.js';
 import { showOsNotification, shouldNotifyEveryone } from './notification-service.js';
+import { pageEventListeners } from '../hooks/usePage.js';
 
 export function handleMainEvent(serverId: string, event: string, data: unknown, _seq: number) {
   const d = data as Record<string, unknown>;
@@ -168,6 +169,12 @@ export function handleMainEvent(serverId: string, event: string, data: unknown, 
         useVoiceStore.getState().removeParticipant(d.user_id as string);
       } else {
         useVoiceStore.getState().addParticipant(d as unknown as VoiceState);
+      }
+      break;
+
+    case 'page.update':
+      for (const listener of pageEventListeners) {
+        listener(d as unknown as PageContent);
       }
       break;
 
