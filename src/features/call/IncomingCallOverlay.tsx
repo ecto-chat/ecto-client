@@ -6,6 +6,7 @@ import { Phone, Video, PhoneOff, ArrowRightLeft, X } from 'lucide-react';
 import { Avatar, IconButton } from '@/ui';
 
 import { useCall } from '@/hooks/useCall';
+import { playIncomingRingtone } from '@/lib/ringtone';
 
 export function IncomingCallOverlay() {
   const { callState, peer, mediaTypes, answeredElsewhere, answerCall, rejectCall, transferCall, dismissCall } = useCall();
@@ -13,10 +14,12 @@ export function IncomingCallOverlay() {
 
   useEffect(() => {
     if (callState !== 'incoming_ringing') return;
+    const ringtone = playIncomingRingtone();
     timerRef.current = setTimeout(() => {
       // Server will send call.ended with timeout
     }, 30_000);
     return () => {
+      ringtone.stop();
       if (timerRef.current) clearTimeout(timerRef.current);
     };
   }, [callState]);

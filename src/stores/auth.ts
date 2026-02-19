@@ -31,7 +31,7 @@ interface AuthStore {
   signInToCentralFromModal: (email: string, password: string) => Promise<void>;
 }
 
-const DEFAULT_CENTRAL_URL = 'http://localhost:4000';
+const DEFAULT_CENTRAL_URL = import.meta.env.VITE_CENTRAL_URL ?? 'http://localhost:4000';
 
 export const useAuthStore = create<AuthStore>()((set, get) => {
   let refreshTimerId: ReturnType<typeof setTimeout> | null = null;

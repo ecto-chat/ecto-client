@@ -51,17 +51,13 @@ function createTrpcProxy(baseUrl: string, getToken: () => string | null): unknow
             );
           }
 
-          if (response.status === 401) {
-            throw new TrpcError('UNAUTHORIZED', 'Authentication required', 401);
-          }
-
           const json = await response.json();
 
           if (!response.ok) {
             const errData = json?.error ?? json;
             throw new TrpcError(
-              errData?.code ?? 'INTERNAL_SERVER_ERROR',
-              errData?.message ?? 'Request failed',
+              errData?.code ?? (response.status === 401 ? 'UNAUTHORIZED' : 'INTERNAL_SERVER_ERROR'),
+              errData?.message ?? (response.status === 401 ? 'Authentication required' : 'Request failed'),
               response.status,
               errData?.data?.retry_after,
               errData?.data?.ecto_code,

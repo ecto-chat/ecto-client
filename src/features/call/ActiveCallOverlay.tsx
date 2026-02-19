@@ -7,6 +7,7 @@ import { Avatar } from '@/ui';
 
 import { useCall } from '@/hooks/useCall';
 import { cn } from '@/lib/cn';
+import { playOutgoingRingback } from '@/lib/ringtone';
 
 import { CallControls } from './CallControls';
 
@@ -23,6 +24,12 @@ export function ActiveCallOverlay() {
   const remoteScreenRef = useRef<HTMLVideoElement>(null);
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const localScreenRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    if (callState !== 'outgoing_ringing') return;
+    const ringback = playOutgoingRingback();
+    return () => ringback.stop();
+  }, [callState]);
 
   useEffect(() => {
     if (callState !== 'active' || !startedAt) return;
