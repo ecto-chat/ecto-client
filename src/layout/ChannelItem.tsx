@@ -71,9 +71,10 @@ export const ChannelItem = memo(function ChannelItem({
       <ContextMenuTrigger asChild>
         <div
           className={cn(
-            'group flex items-center gap-1.5 px-2 py-1 mx-1 rounded-md cursor-pointer transition-colors duration-150 focus-visible:ring-1 focus-visible:ring-accent/40 outline-none',
-            isActive && 'bg-active text-primary',
-            !isActive && 'hover:bg-hover',
+            'group flex items-center gap-1.5 px-2 py-1 cursor-pointer transition-colors duration-150 focus-visible:ring-1 focus-visible:ring-accent/40 outline-none',
+            isActive && 'bg-primary text-primary border-l-4 border-[#6f53ef]',
+            !isActive && 'border-l-4 border-transparent',
+            !isActive && 'hover:bg-primary',
             !isActive && unread > 0 && !isMuted && 'font-semibold text-primary',
             !isActive && unread === 0 && 'text-secondary',
             isMuted && 'opacity-50',

@@ -352,7 +352,7 @@ export function ChannelList({
   if (!canReorder) {
     return (
       <ScrollArea className="flex-1" fadeEdges fadeHeight={40}>
-        <div className="p-2 space-y-2">
+        <div className="py-2 space-y-2">
           <AnimatePresence mode="popLayout">
             {uncategorized.map((ch) => {
               const delay = itemIndex++ * 0.04 + 0.02;
@@ -407,7 +407,7 @@ export function ChannelList({
 
   return (
     <ScrollArea className="flex-1" fadeEdges fadeHeight={40}>
-      <div className="p-2 space-y-2">
+      <div className="py-2 space-y-2">
         <DndContext
           sensors={sensors}
           collisionDetection={collisionDetection}

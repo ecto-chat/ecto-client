@@ -45,9 +45,10 @@ export function VoiceChannel({ channel, isActive }: VoiceChannelProps) {
   return (
     <div
       className={cn(
-        'group mx-1 rounded-md transition-colors duration-150',
-        isConnected && 'bg-active',
-        isActive && 'bg-hover',
+        'group transition-colors duration-150',
+        isConnected && 'bg-primary border-l-4 border-[#6f53ef]',
+        !isConnected && isActive && 'bg-primary border-l-4 border-[#6f53ef]',
+        !isConnected && !isActive && 'border-l-4 border-transparent',
       )}
     >
       <div className="flex items-center">
@@ -56,8 +57,8 @@ export function VoiceChannel({ channel, isActive }: VoiceChannelProps) {
           variant="ghost"
           onClick={handleClick}
           className={cn(
-            'flex flex-1 items-center gap-1.5 rounded-md px-2 py-1 h-auto min-w-0',
-            'text-sm text-secondary hover:text-primary hover:bg-hover',
+            'flex flex-1 items-center gap-1.5 px-2 py-1 h-auto min-w-0',
+            'text-sm text-secondary hover:text-primary hover:bg-primary rounded-none',
             'justify-start font-normal',
           )}
         >
@@ -99,8 +100,8 @@ export function VoiceChannel({ channel, isActive }: VoiceChannelProps) {
                 variant="ghost"
                 key={p.user_id}
                 className={cn(
-                  'flex items-center gap-2 rounded-md px-1.5 py-1 h-auto',
-                  'text-xs text-secondary hover:text-primary hover:bg-hover',
+                  'flex items-center gap-2 rounded-none px-1.5 py-1 h-auto',
+                  'text-xs text-secondary hover:text-primary hover:bg-primary',
                   'justify-start font-normal',
                 )}
                 onClick={handleUserClick}

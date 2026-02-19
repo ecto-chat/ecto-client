@@ -39,8 +39,8 @@ export function DMSidebar() {
 
       <div
         className={cn(
-          'flex items-center gap-2 px-3 py-2 mx-2 rounded-lg cursor-pointer transition-colors',
-          openConversationId === null ? 'bg-active' : 'hover:bg-hover',
+          'flex items-center gap-2 px-3 py-2 cursor-pointer transition-colors',
+          openConversationId === null ? 'bg-primary border-l-4 border-[#6f53ef]' : 'hover:bg-primary border-l-4 border-transparent',
         )}
         onClick={() => navigate('/friends')}
       >
@@ -71,8 +71,8 @@ export function DMSidebar() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.04 + 0.02, duration: 0.2 }}
                     className={cn(
-                      'flex items-center gap-2 px-3 py-2 mx-2 rounded-lg cursor-pointer transition-colors',
-                      isActive ? 'bg-active' : 'hover:bg-hover',
+                      'flex items-center gap-2 px-3 py-2 cursor-pointer transition-colors',
+                      isActive ? 'bg-primary border-l-4 border-[#6f53ef]' : 'hover:bg-primary border-l-4 border-transparent',
                     )}
                     onClick={() => navigate(`/dms/${conv.user_id}`)}
                   >
