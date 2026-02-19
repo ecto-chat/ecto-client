@@ -130,6 +130,7 @@ const PAGE_ALLOWED_TAGS = [
 
 const ALLOWED_ATTR = [
   'href', 'target', 'rel', 'class', 'data-type', 'data-id',
+  'data-channel', 'data-user',
   'src', 'alt', 'loading', 'width', 'height', 'frameborder',
   'allow', 'allowfullscreen', 'title', 'style',
   'align', 'valign', 'colspan', 'rowspan', 'scope',

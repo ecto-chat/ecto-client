@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, type FormEvent } from 'react';
 
-import { Button, Input, TextArea, Spinner, Switch, Select, Separator } from '@/ui';
+import { Button, Input, TextArea, Spinner, Switch, Select, Separator, ImageCropModal } from '@/ui';
 
 import { cn } from '@/lib/cn';
 
@@ -45,6 +45,8 @@ export function GeneralSettings({ serverId }: GeneralSettingsProps) {
 
   const [config, setConfig] = useState<ServerConfig | null>(null);
   const [savingConfig, setSavingConfig] = useState(false);
+  const [iconCropSrc, setIconCropSrc] = useState<string | null>(null);
+  const [bannerCropSrc, setBannerCropSrc] = useState<string | null>(null);
   const [configError, setConfigError] = useState('');
   const [configSuccess, setConfigSuccess] = useState('');
 
@@ -212,7 +214,15 @@ export function GeneralSettings({ serverId }: GeneralSettingsProps) {
               hidden
               onChange={(e) => {
                 const file = e.target.files?.[0];
-                if (file) handleIconUpload(file);
+                if (e.target) e.target.value = '';
+                if (!file) return;
+                if (file.type === 'image/gif') {
+                  handleIconUpload(file);
+                  return;
+                }
+                const reader = new FileReader();
+                reader.onload = () => setIconCropSrc(reader.result as string);
+                reader.readAsDataURL(file);
               }}
             />
             <Button
@@ -270,7 +280,15 @@ export function GeneralSettings({ serverId }: GeneralSettingsProps) {
             hidden
             onChange={(e) => {
               const file = e.target.files?.[0];
-              if (file) handleBannerUpload(file);
+              if (e.target) e.target.value = '';
+              if (!file) return;
+              if (file.type === 'image/gif') {
+                handleBannerUpload(file);
+                return;
+              }
+              const reader = new FileReader();
+              reader.onload = () => setBannerCropSrc(reader.result as string);
+              reader.readAsDataURL(file);
             }}
           />
         </div>
@@ -346,6 +364,36 @@ export function GeneralSettings({ serverId }: GeneralSettingsProps) {
           </div>
         )}
       </div>
+      {iconCropSrc && (
+        <ImageCropModal
+          open
+          imageSrc={iconCropSrc}
+          aspect={1}
+          cropShape="round"
+          title="Crop Server Icon"
+          onConfirm={(blob) => {
+            const file = new File([blob], 'icon.jpg', { type: 'image/jpeg' });
+            handleIconUpload(file);
+            setIconCropSrc(null);
+          }}
+          onCancel={() => setIconCropSrc(null)}
+        />
+      )}
+
+      {bannerCropSrc && (
+        <ImageCropModal
+          open
+          imageSrc={bannerCropSrc}
+          aspect={5}
+          title="Crop Server Banner"
+          onConfirm={(blob) => {
+            const file = new File([blob], 'banner.jpg', { type: 'image/jpeg' });
+            handleBannerUpload(file);
+            setBannerCropSrc(null);
+          }}
+          onCancel={() => setBannerCropSrc(null)}
+        />
+      )}
     </div>
   );
 }

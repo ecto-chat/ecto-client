@@ -2,9 +2,7 @@ import { useRef, useState, type ChangeEvent } from 'react';
 
 import { ImagePlus, Trash2 } from 'lucide-react';
 
-import { Button } from '@/ui';
-
-import { BannerCropModal } from './BannerCropModal';
+import { Button, ImageCropModal } from '@/ui';
 
 type BannerUploadProps = {
   currentSrc: string | null;
@@ -101,9 +99,11 @@ export function BannerUpload({ currentSrc, previewSrc, onFileReady, onRemove, on
       </div>
 
       {cropSrc && (
-        <BannerCropModal
+        <ImageCropModal
           open
           imageSrc={cropSrc}
+          aspect={5}
+          title="Crop Banner"
           onConfirm={handleCropConfirm}
           onCancel={() => setCropSrc(null)}
         />

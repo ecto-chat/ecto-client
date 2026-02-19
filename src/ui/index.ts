@@ -20,6 +20,7 @@ export {
 } from './DropdownMenu';
 export { EmptyState } from './EmptyState';
 export { IconButton } from './IconButton';
+export { ImageCropModal } from './ImageCropModal';
 export { Input } from './Input';
 export { Modal } from './Modal';
 export { ProgressiveBlur } from './ProgressiveBlur';

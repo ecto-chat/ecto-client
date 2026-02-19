@@ -1,8 +1,8 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 
 import { Upload, Camera } from 'lucide-react';
 
-import { Button, Input, TextArea } from '@/ui';
+import { Button, Input, TextArea, ImageCropModal } from '@/ui';
 
 import { cn } from '@/lib/cn';
 
@@ -14,6 +14,7 @@ type ServerInfoStepProps = Pick<StepProps, 'state' | 'updateState'> & {
 
 export function ServerInfoStep({ state, updateState, onIconUpload }: ServerInfoStepProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [iconCropSrc, setIconCropSrc] = useState<string | null>(null);
 
   return (
     <div className="flex flex-col gap-5">
@@ -58,7 +59,15 @@ export function ServerInfoStep({ state, updateState, onIconUpload }: ServerInfoS
           hidden
           onChange={(e) => {
             const file = e.target.files?.[0];
-            if (file) onIconUpload(file);
+            if (e.target) e.target.value = '';
+            if (!file) return;
+            if (file.type === 'image/gif') {
+              onIconUpload(file);
+              return;
+            }
+            const reader = new FileReader();
+            reader.onload = () => setIconCropSrc(reader.result as string);
+            reader.readAsDataURL(file);
           }}
         />
         <span className="flex items-center gap-1 text-xs text-muted">
@@ -83,6 +92,22 @@ export function ServerInfoStep({ state, updateState, onIconUpload }: ServerInfoS
         placeholder="A place for friends to hang out"
         maxRows={3}
       />
+
+      {iconCropSrc && (
+        <ImageCropModal
+          open
+          imageSrc={iconCropSrc}
+          aspect={1}
+          cropShape="round"
+          title="Crop Server Icon"
+          onConfirm={(blob) => {
+            const file = new File([blob], 'icon.jpg', { type: 'image/jpeg' });
+            onIconUpload(file);
+            setIconCropSrc(null);
+          }}
+          onCancel={() => setIconCropSrc(null)}
+        />
+      )}
     </div>
   );
 }

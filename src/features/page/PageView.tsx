@@ -1,8 +1,9 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { FileText, Pencil, History, X, Bold, Italic, Heading, Link, ImageIcon, AtSign, HashIcon, Upload, Trash2, Video } from 'lucide-react';
 import { Permissions } from 'ecto-shared';
 
-import { Button, IconButton, Spinner, EmptyState } from '@/ui';
+import { Button, IconButton, Spinner, EmptyState, ImageCropModal } from '@/ui';
 import { ScrollArea } from '@/ui/ScrollArea';
 
 import { useUiStore } from '@/stores/ui';
@@ -42,6 +43,20 @@ export function PageView() {
   const channels = useChannelStore((s) =>
     activeServerId ? s.channels.get(activeServerId) : undefined,
   );
+
+  const navigate = useNavigate();
+
+  // Handle clicks on elements with data-channel or channel mention spans
+  const handleContentClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const target = (e.target as HTMLElement).closest<HTMLElement>('[data-channel], .mention[data-type="channel"]');
+    if (!target) return;
+    const channelId = target.dataset.channel ?? target.dataset.id;
+    if (channelId && activeServerId) {
+      e.preventDefault();
+      useUiStore.getState().setActiveChannel(channelId);
+      navigate(`/servers/${activeServerId}/channels/${channelId}`);
+    }
+  }, [activeServerId, navigate]);
 
   const mentionResolver = useMemo(() => {
     const memberMap = new Map<string, string>();
@@ -136,6 +151,7 @@ export function PageView() {
 
   const bannerInputRef = useRef<HTMLInputElement>(null);
   const [bannerUploading, setBannerUploading] = useState(false);
+  const [bannerCropSrc, setBannerCropSrc] = useState<string | null>(null);
 
   const handleBannerUpload = useCallback(async (file: File) => {
     if (!activeServerId || !activeChannelId) return;
@@ -248,8 +264,15 @@ export function PageView() {
                 className="hidden"
                 onChange={(e) => {
                   const file = e.target.files?.[0];
-                  if (file) handleBannerUpload(file);
-                  e.target.value = '';
+                  if (e.target) e.target.value = '';
+                  if (!file) return;
+                  if (file.type === 'image/gif') {
+                    handleBannerUpload(file);
+                    return;
+                  }
+                  const reader = new FileReader();
+                  reader.onload = () => setBannerCropSrc(reader.result as string);
+                  reader.readAsDataURL(file);
                 }}
               />
               <IconButton variant="ghost" size="sm" tooltip="Edit Page" onClick={handleStartEdit}>
@@ -316,6 +339,7 @@ export function PageView() {
                 ref={previewRef}
                 className="page-markdown max-w-7xl mx-auto px-8 py-6"
                 dangerouslySetInnerHTML={{ __html: renderedPreview }}
+                onClick={handleContentClick}
               />
             </ScrollArea>
           </div>
@@ -369,6 +393,7 @@ export function PageView() {
             <div
               className="page-markdown max-w-7xl mx-auto px-8 py-6"
               dangerouslySetInnerHTML={{ __html: renderedContent }}
+              onClick={handleContentClick}
             />
           ) : (
             <div className="flex items-center justify-center py-20">
@@ -380,6 +405,21 @@ export function PageView() {
             </div>
           )}
         </ScrollArea>
+      )}
+
+      {bannerCropSrc && (
+        <ImageCropModal
+          open
+          imageSrc={bannerCropSrc}
+          aspect={5}
+          title="Crop Page Banner"
+          onConfirm={(blob) => {
+            const file = new File([blob], 'banner.jpg', { type: 'image/jpeg' });
+            handleBannerUpload(file);
+            setBannerCropSrc(null);
+          }}
+          onCancel={() => setBannerCropSrc(null)}
+        />
       )}
 
       {/* History panel */}

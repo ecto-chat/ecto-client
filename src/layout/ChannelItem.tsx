@@ -130,6 +130,9 @@ export const ChannelItem = memo(function ChannelItem({
             {isDefault ? 'Unset Default Channel' : 'Set as Default Channel'}
           </ContextMenuItem>
         )}
+        <ContextMenuItem onClick={() => navigator.clipboard.writeText(channel.id)}>
+          Copy ID
+        </ContextMenuItem>
       </ContextMenuContent>
     </ContextMenu>
   );

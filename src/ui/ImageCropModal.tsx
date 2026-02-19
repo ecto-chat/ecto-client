@@ -2,11 +2,15 @@ import { useState, useCallback } from 'react';
 import Cropper from 'react-easy-crop';
 import type { Area } from 'react-easy-crop';
 
-import { Modal, Button } from '@/ui';
+import { Modal } from './Modal';
+import { Button } from './Button';
 
-type BannerCropModalProps = {
+type ImageCropModalProps = {
   open: boolean;
   imageSrc: string;
+  aspect: number;
+  cropShape?: 'rect' | 'round';
+  title?: string;
   onConfirm: (blob: Blob) => void;
   onCancel: () => void;
 };
@@ -32,7 +36,15 @@ function getCroppedBlob(imageSrc: string, crop: Area): Promise<Blob> {
   });
 }
 
-export function BannerCropModal({ open, imageSrc, onConfirm, onCancel }: BannerCropModalProps) {
+export function ImageCropModal({
+  open,
+  imageSrc,
+  aspect,
+  cropShape = 'rect',
+  title = 'Crop Image',
+  onConfirm,
+  onCancel,
+}: ImageCropModalProps) {
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [croppedArea, setCroppedArea] = useState<Area | null>(null);
@@ -56,13 +68,14 @@ export function BannerCropModal({ open, imageSrc, onConfirm, onCancel }: BannerC
   };
 
   return (
-    <Modal open={open} onOpenChange={(v) => { if (!v) onCancel(); }} title="Crop Banner">
+    <Modal open={open} onOpenChange={(v) => { if (!v) onCancel(); }} title={title}>
       <div className="relative w-full" style={{ height: 280 }}>
         <Cropper
           image={imageSrc}
           crop={crop}
           zoom={zoom}
-          aspect={5}
+          aspect={aspect}
+          cropShape={cropShape}
           onCropChange={setCrop}
           onZoomChange={setZoom}
           onCropComplete={onCropComplete}

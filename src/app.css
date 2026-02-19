@@ -483,6 +483,9 @@
 .page-markdown .mention:hover {
   background: rgba(108, 99, 255, 0.25);
 }
+.page-markdown [data-channel] {
+  cursor: pointer;
+}
 
 /* Video embeds */
 .page-markdown .video-embed {
