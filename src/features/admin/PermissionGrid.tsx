@@ -14,6 +14,11 @@ const PERMISSION_LABELS: { key: PermissionKey; label: string; category: string }
   { key: 'CREATE_INVITES', label: 'Create Invites', category: 'Server' },
   { key: 'VIEW_AUDIT_LOG', label: 'View Audit Log', category: 'Server' },
   { key: 'MANAGE_MESSAGES', label: 'Manage Messages', category: 'Server' },
+  { key: 'MANAGE_WEBHOOKS', label: 'Manage Webhooks', category: 'Server' },
+  { key: 'VIEW_SERVER_HUB', label: 'View Server Hub', category: 'Server' },
+  { key: 'BROWSE_FILES', label: 'Browse Files', category: 'Server' },
+  { key: 'UPLOAD_SHARED_FILES', label: 'Upload Shared Files', category: 'Server' },
+  { key: 'MANAGE_FILES', label: 'Manage Files', category: 'Server' },
   { key: 'READ_MESSAGES', label: 'Read Messages', category: 'Channel' },
   { key: 'SEND_MESSAGES', label: 'Send Messages', category: 'Channel' },
   { key: 'ATTACH_FILES', label: 'Attach Files', category: 'Channel' },
@@ -42,7 +47,7 @@ export function PermissionGrid({ permissions, onChange }: PermissionGridProps) {
   };
 
   return (
-    <ScrollArea className="max-h-[60vh]">
+    <ScrollArea className="h-full">
       <div className="space-y-4 pr-2">
         {CATEGORIES.map((cat) => (
           <div key={cat}>

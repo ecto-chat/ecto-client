@@ -85,7 +85,7 @@ export function RoleEditor({ serverId }: { serverId: string }) {
   if (loading) return <div className="flex items-center justify-center py-10"><Spinner /></div>;
 
   return (
-    <div className="flex gap-4 min-h-[25rem]">
+    <div className="flex gap-4 min-h-[25rem] max-h-[65vh]">
       <div className="min-w-44 border-r border-border pr-3">
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-medium text-primary">Roles</h3>
@@ -111,13 +111,13 @@ export function RoleEditor({ serverId }: { serverId: string }) {
         </ScrollArea>
       </div>
 
-      <div className="flex-1 space-y-4">
+      <div className="flex-1 flex flex-col gap-4 min-h-0">
         {!selectedRole ? (
           <p className="text-sm text-secondary">Select a role to edit.</p>
         ) : (
           <>
             {error && <p className="text-sm text-danger">{error}</p>}
-            <div className="flex gap-3 items-end">
+            <div className="flex gap-3 items-end shrink-0">
               <div className="flex-1">
                 <Input label="Role Name" value={editName} onChange={(e) => setEditName(e.target.value)} disabled={selectedRole.is_default} />
               </div>
@@ -127,9 +127,11 @@ export function RoleEditor({ serverId }: { serverId: string }) {
               </div>
             </div>
 
-            <PermissionGrid permissions={editPerms} onChange={setEditPerms} />
+            <div className="flex-1 min-h-0">
+              <PermissionGrid permissions={editPerms} onChange={setEditPerms} />
+            </div>
 
-            <div className="flex justify-between">
+            <div className="flex justify-between shrink-0">
               {!selectedRole.is_default && (
                 <Button variant="danger" size="sm" onClick={() => setDeleteOpen(true)}>Delete Role</Button>
               )}

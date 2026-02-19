@@ -18,6 +18,7 @@ import { NotificationPrompt, NotificationToast } from '@/features/common';
 import { FriendList, DMView, DMSidebar } from '@/features/friends';
 import { FloatingMediaWindow, SnappedMediaSidebar, ResizeHandle } from '@/features/media-window';
 import { AddServerModal, LeaveServerModal } from '@/features/servers';
+import { FileBrowserView } from '@/features/hub/FileBrowserView';
 import { UserSettingsModal } from '@/features/settings';
 import { UserProfileModal } from '@/features/user';
 import { VoiceControls, VoiceBanner } from '@/features/voice';
@@ -39,6 +40,7 @@ import { blurToClear, easePage } from '@/lib/animations';
 
 export function AppLayout() {
   const activeServerId = useUiStore((s) => s.activeServerId);
+  const hubSection = useUiStore((s) => s.hubSection);
   const memberListVisible = useUiStore((s) => s.memberListVisible);
   const sidebarCollapsed = useUiStore((s) => s.sidebarCollapsed);
   const mediaViewMode = useUiStore((s) => s.mediaViewMode);
@@ -113,6 +115,8 @@ export function AppLayout() {
             description="Please contact the server admin to bring it back online."
             className="flex-1"
           />
+        ) : !isHomeMode && hubSection === 'file-browser' ? (
+          <FileBrowserView />
         ) : (
           <AnimatePresence mode="wait">
             <motion.div

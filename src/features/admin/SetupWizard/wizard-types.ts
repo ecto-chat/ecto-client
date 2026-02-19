@@ -21,6 +21,15 @@ export const UPLOAD_SIZE_OPTIONS = [
   { label: '100 MB', value: 100 * 1024 * 1024 },
 ] as const;
 
+export const SHARED_STORAGE_OPTIONS = [
+  { label: '100 MB', value: 100 * 1024 * 1024 },
+  { label: '250 MB', value: 250 * 1024 * 1024 },
+  { label: '500 MB', value: 500 * 1024 * 1024 },
+  { label: '1 GB', value: 1024 * 1024 * 1024 },
+  { label: '5 GB', value: 5 * 1024 * 1024 * 1024 },
+  { label: '10 GB', value: 10 * 1024 * 1024 * 1024 },
+] as const;
+
 export type WizardState = {
   serverName: string;
   serverDescription: string;

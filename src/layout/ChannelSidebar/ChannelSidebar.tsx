@@ -9,6 +9,7 @@ import { ServerHeader } from '../ServerHeader';
 import { SetupBanner } from '../SetupBanner';
 import { UserBar } from '../UserBar';
 import { ChannelList } from './ChannelList';
+import { ServerHub } from './ServerHub';
 import type { Channel } from 'ecto-shared';
 
 export function ChannelSidebar() {
@@ -34,6 +35,9 @@ export function ChannelSidebar() {
     !meta.setup_completed &&
     meta.admin_user_id &&
     meta.user_id === meta.admin_user_id;
+
+  const canViewHub =
+    isAdmin || (effectivePermissions & Permissions.VIEW_SERVER_HUB) !== 0;
 
   const handleChannelClick = useCallback(
     (channel: Channel) => {
@@ -88,6 +92,7 @@ export function ChannelSidebar() {
           onClick={() => useUiStore.getState().openModal('setup-wizard')}
         />
       )}
+      {canViewHub && <ServerHub />}
       <ChannelList
         uncategorized={uncategorized}
         categories={categories}

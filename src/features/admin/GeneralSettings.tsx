@@ -6,7 +6,7 @@ import { cn } from '@/lib/cn';
 
 import { connectionManager } from '@/services/connection-manager';
 
-import { UPLOAD_SIZE_OPTIONS } from './SetupWizard/wizard-types';
+import { UPLOAD_SIZE_OPTIONS, SHARED_STORAGE_OPTIONS } from './SetupWizard/wizard-types';
 
 import type { Server } from 'ecto-shared';
 
@@ -15,8 +15,14 @@ const uploadSizeSelectOptions = UPLOAD_SIZE_OPTIONS.map((opt) => ({
   label: opt.label,
 }));
 
+const sharedStorageSelectOptions = SHARED_STORAGE_OPTIONS.map((opt) => ({
+  value: String(opt.value),
+  label: opt.label,
+}));
+
 type ServerConfig = {
   max_upload_size_bytes: number;
+  max_shared_storage_bytes: number;
   allow_local_accounts: boolean;
   require_invite: boolean;
   allow_member_dms: boolean;
@@ -53,6 +59,7 @@ export function GeneralSettings({ serverId }: GeneralSettingsProps) {
     trpc.serverConfig.get.query().then((cfg) => {
       setConfig({
         max_upload_size_bytes: cfg.max_upload_size_bytes,
+        max_shared_storage_bytes: cfg.max_shared_storage_bytes,
         allow_local_accounts: cfg.allow_local_accounts,
         require_invite: cfg.require_invite,
         allow_member_dms: cfg.allow_member_dms,
@@ -154,6 +161,7 @@ export function GeneralSettings({ serverId }: GeneralSettingsProps) {
       if (!trpc) throw new Error('Not connected');
       await trpc.serverConfig.update.mutate({
         max_upload_size_bytes: config.max_upload_size_bytes,
+        max_shared_storage_bytes: config.max_shared_storage_bytes,
         allow_local_accounts: config.allow_local_accounts,
         require_invite: config.require_invite,
         allow_member_dms: config.allow_member_dms,
@@ -313,10 +321,17 @@ export function GeneralSettings({ serverId }: GeneralSettingsProps) {
             />
 
             <Select
-              label="Max Upload Size"
+              label="Max File Size"
               options={uploadSizeSelectOptions}
               value={String(config.max_upload_size_bytes)}
               onValueChange={(value) => setConfig({ ...config, max_upload_size_bytes: Number(value) })}
+            />
+
+            <Select
+              label="Shared Storage Capacity"
+              options={sharedStorageSelectOptions}
+              value={String(config.max_shared_storage_bytes)}
+              onValueChange={(value) => setConfig({ ...config, max_shared_storage_bytes: Number(value) })}
             />
 
             <div className="flex justify-end">

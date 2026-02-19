@@ -57,7 +57,7 @@ export function VoiceChannel({ channel, isActive }: VoiceChannelProps) {
           variant="ghost"
           onClick={handleClick}
           className={cn(
-            'flex flex-1 items-center gap-1.5 px-2 py-1 h-auto min-w-0',
+            'flex flex-1 items-center gap-1.5 px-2 py-1.5 h-auto min-w-0',
             'text-sm text-secondary hover:text-primary hover:bg-primary rounded-none',
             'justify-start font-normal',
           )}

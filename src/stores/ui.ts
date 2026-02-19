@@ -16,9 +16,11 @@ interface UiStore {
   bypassNsfwWarnings: boolean;
   mediaViewMode: 'fullscreen' | 'floating' | 'snapped-left' | 'snapped-right';
   snappedSidebarWidth: number;
+  hubSection: string | null;
 
   setActiveServer: (serverId: string | null) => void;
   setActiveChannel: (channelId: string | null) => void;
+  setHubSection: (section: string | null) => void;
   setChannelLocked: (locked: boolean) => void;
   setMediaViewMode: (mode: 'fullscreen' | 'floating' | 'snapped-left' | 'snapped-right') => void;
   setSnappedSidebarWidth: (width: number) => void;
@@ -51,10 +53,12 @@ export const useUiStore = create<UiStore>()(
       ),
       bypassNsfwWarnings: localStorage.getItem('ecto-bypass-nsfw') === 'true',
       mediaViewMode: 'fullscreen',
+      hubSection: null,
       snappedSidebarWidth: (() => { try { const v = localStorage.getItem('ecto-snapped-width'); return v ? Number(v) : 360; } catch { return 360; } })(),
 
       setActiveServer: (serverId) => set({ activeServerId: serverId }),
-      setActiveChannel: (channelId) => set({ activeChannelId: channelId, channelLocked: false }),
+      setActiveChannel: (channelId) => set({ activeChannelId: channelId, channelLocked: false, hubSection: null }),
+      setHubSection: (section) => set({ hubSection: section, activeChannelId: null }),
       setChannelLocked: (locked) => set({ channelLocked: locked }),
       toggleSidebar: () => set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
       toggleMemberList: () => set((state) => ({ memberListVisible: !state.memberListVisible })),

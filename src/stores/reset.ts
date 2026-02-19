@@ -19,6 +19,7 @@ import { useNotifyStore } from './notify.js';
 import { useVoiceStore } from './voice.js';
 import { useCallStore } from './call.js';
 import { useUiStore } from './ui.js';
+import { useHubFilesStore } from './hub-files.js';
 
 export async function fullLogout() {
   // 1. Stop media resources (voice transports, producers, consumers, mic/camera)
@@ -94,11 +95,14 @@ export async function fullLogout() {
     notifications: new Map(),
   });
 
+  useHubFilesStore.getState().clear();
+
   // 5. Reset navigation state (preserve user preferences: theme, customCSS, sidebar, memberList)
   useUiStore.setState({
     activeServerId: null,
     activeChannelId: null,
     activeModal: null,
     modalData: null,
+    hubSection: null,
   });
 }

@@ -23,6 +23,12 @@ import type {
   PageRevision,
   ChannelPermissionOverride,
   CategoryPermissionOverride,
+  SharedFolder,
+  SharedFile,
+  ChannelFile,
+  SharedStorageQuota,
+  ChannelFileStat,
+  SharedItemPermissionOverride,
 } from 'ecto-shared';
 
 // ---------- Server tRPC Router ----------
@@ -414,10 +420,62 @@ export interface ServerRouter {
     };
   };
 
+  hubFiles: {
+    listFolders: {
+      query: (input: { parent_id: string | null }) => Promise<SharedFolder[]>;
+    };
+    createFolder: {
+      mutate: (input: { name: string; parent_id: string | null }) => Promise<SharedFolder>;
+    };
+    renameFolder: {
+      mutate: (input: { folder_id: string; name: string }) => Promise<{ success: boolean }>;
+    };
+    deleteFolder: {
+      mutate: (input: { folder_id: string }) => Promise<{ success: boolean }>;
+    };
+    listSharedFiles: {
+      query: (input: {
+        folder_id: string | null;
+        cursor?: string;
+        limit?: number;
+      }) => Promise<{ files: SharedFile[]; has_more: boolean }>;
+    };
+    deleteSharedFile: {
+      mutate: (input: { file_id: string }) => Promise<{ success: boolean }>;
+    };
+    listChannelFiles: {
+      query: (input: {
+        channel_id?: string;
+        cursor?: string;
+        limit?: number;
+      }) => Promise<{ files: ChannelFile[]; has_more: boolean }>;
+    };
+    deleteChannelFile: {
+      mutate: (input: { attachment_id: string }) => Promise<{ success: boolean }>;
+    };
+    getStorageQuota: {
+      query: () => Promise<SharedStorageQuota>;
+    };
+    channelFileStats: {
+      query: () => Promise<ChannelFileStat[]>;
+    };
+    getItemOverrides: {
+      query: (input: { item_type: 'folder' | 'file'; item_id: string }) => Promise<SharedItemPermissionOverride[]>;
+    };
+    updateItemOverrides: {
+      mutate: (input: {
+        item_type: 'folder' | 'file';
+        item_id: string;
+        permission_overrides: { target_type: 'role'; target_id: string; allow: number; deny: number }[];
+      }) => Promise<{ success: boolean }>;
+    };
+  };
+
   serverConfig: {
     get: {
       query: () => Promise<{
         max_upload_size_bytes: number;
+        max_shared_storage_bytes: number;
         allow_local_accounts: boolean;
         require_invite: boolean;
         allow_member_dms: boolean;
@@ -428,6 +486,7 @@ export interface ServerRouter {
     update: {
       mutate: (input: {
         max_upload_size_bytes?: number;
+        max_shared_storage_bytes?: number;
         allow_local_accounts?: boolean;
         require_invite?: boolean;
         allow_member_dms?: boolean;

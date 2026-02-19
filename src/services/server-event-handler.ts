@@ -1,4 +1,4 @@
-import type { Channel, Category, Member, Role, VoiceState, PresenceStatus, Message, PageContent } from 'ecto-shared';
+import type { Channel, Category, Member, Role, VoiceState, PresenceStatus, Message, PageContent, SharedFile, SharedFolder } from 'ecto-shared';
 import { useChannelStore } from '../stores/channel.js';
 import { useMemberStore } from '../stores/member.js';
 import { usePresenceStore } from '../stores/presence.js';
@@ -15,6 +15,7 @@ import { playNotificationSound } from '../lib/notification-sounds.js';
 import { showOsNotification, shouldNotifyEveryone } from './notification-service.js';
 import { connectionManager } from './connection-manager.js';
 import { pageEventListeners } from '../hooks/usePage.js';
+import { useHubFilesStore } from '../stores/hub-files.js';
 
 export function handleMainEvent(serverId: string, event: string, data: unknown, _seq: number) {
   const d = data as Record<string, unknown>;
@@ -182,6 +183,27 @@ export function handleMainEvent(serverId: string, event: string, data: unknown, 
       for (const listener of pageEventListeners) {
         listener(d as unknown as PageContent);
       }
+      break;
+
+    // Hub file events
+    case 'shared_file.create':
+      useHubFilesStore.getState().addSharedFile(d as unknown as SharedFile);
+      break;
+    case 'shared_file.delete':
+      useHubFilesStore.getState().removeSharedFile(d.id as string);
+      break;
+    case 'shared_folder.create':
+      useHubFilesStore.getState().addSharedFolder(d as unknown as SharedFolder);
+      break;
+    case 'shared_folder.delete':
+      useHubFilesStore.getState().removeSharedFolder(d.id as string);
+      break;
+    case 'channel_file.delete':
+      useHubFilesStore.getState().removeChannelFile(d.id as string);
+      break;
+    case 'shared_item.permissions_update':
+      // Reload shared folder/file listings to reflect permission changes
+      useHubFilesStore.getState().requestReload();
       break;
 
     // Voice signaling events are handled by the voice service
