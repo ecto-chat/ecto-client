@@ -43,7 +43,7 @@ export function DeviceSelector({ kind, onSelect }: DeviceSelectorProps) {
   };
 
   return (
-    <DropdownMenuContent side="top" align="center" sideOffset={8}>
+    <DropdownMenuContent side="top" align="center" sideOffset={8} className="z-[350]">
       <DropdownMenuLabel>{heading}</DropdownMenuLabel>
       {devices.length === 0 ? (
         <div className="px-2 py-1.5 text-sm text-muted">No devices found</div>

@@ -28,6 +28,7 @@ function getLocalUserId(): string | undefined {
 let speakingCleanup: (() => void) | null = null;
 let voiceEventQueue: Promise<void> = Promise.resolve();
 let pendingProduceResolve: ((id: string) => void) | null = null;
+let pendingProduceReject: ((err: Error) => void) | null = null;
 const consumerSpeakingCleanups = new Map<string, () => void>();
 
 /** Start speaking detection that updates the voice store for a given user. */
@@ -156,7 +157,16 @@ export function useVoice() {
         const d = data as Record<string, unknown>;
         pendingProduceResolve?.(d.producer_id as string);
         pendingProduceResolve = null;
+        pendingProduceReject = null;
         return;
+      }
+
+      // Reject pending produce on error to avoid deadlock — then let it flow into queue for cleanup
+      if (event === 'voice.error' && pendingProduceReject) {
+        const d = data as Record<string, unknown>;
+        pendingProduceReject(new Error(`voice.error: ${d.code} ${d.message}`));
+        pendingProduceResolve = null;
+        pendingProduceReject = null;
       }
 
       voiceEventQueue = voiceEventQueue.then(() => handleVoiceEvent(ws, event, data)).catch((err) => {
@@ -175,6 +185,7 @@ export function useVoice() {
     for (const cleanup of consumerSpeakingCleanups.values()) cleanup();
     consumerSpeakingCleanups.clear();
     pendingProduceResolve = null;
+    pendingProduceReject = null;
     useVoiceStore.getState().cleanup();
   }, []);
 
@@ -493,8 +504,9 @@ async function handleVoiceEvent(ws: ReturnType<typeof connectionManager.getMainW
           callback();
         });
         sendTransport.on('produce', async ({ kind, rtpParameters, appData }, callback) => {
-          const idPromise = new Promise<string>((resolve) => {
+          const idPromise = new Promise<string>((resolve, reject) => {
             pendingProduceResolve = resolve;
+            pendingProduceReject = reject;
           });
           ws.voiceProduce(sendTransport.id, kind as 'audio' | 'video', rtpParameters, appData?.source as string | undefined);
           const id = await idPromise;
@@ -508,10 +520,14 @@ async function handleVoiceEvent(ws: ReturnType<typeof connectionManager.getMainW
             audio: savedAudioDevice ? { deviceId: { ideal: savedAudioDevice } } : true,
           });
           const audioTrack = stream.getAudioTracks()[0]!;
-          const producer = await sendTransport.produce({ track: audioTrack, appData: { source: 'mic' } });
-          useVoiceStore.getState().setProducer('audio', producer);
-          const localUserId = getLocalUserId();
-          if (localUserId) speakingCleanup = startVoiceSpeakingDetection(stream, localUserId);
+          try {
+            const producer = await sendTransport.produce({ track: audioTrack, appData: { source: 'mic' } });
+            useVoiceStore.getState().setProducer('audio', producer);
+            const localUserId = getLocalUserId();
+            if (localUserId) speakingCleanup = startVoiceSpeakingDetection(stream, localUserId);
+          } catch (produceErr) {
+            console.warn('[voice] produce rejected (permission denied?):', produceErr);
+          }
         } catch (err) {
           console.error('[voice] audio setup failed:', err);
         }
@@ -646,6 +662,7 @@ async function handleVoiceEvent(ws: ReturnType<typeof connectionManager.getMainW
       for (const cleanup of consumerSpeakingCleanups.values()) cleanup();
       consumerSpeakingCleanups.clear();
       pendingProduceResolve = null;
+      pendingProduceReject = null;
       useVoiceStore.getState().cleanup();
       break;
     }

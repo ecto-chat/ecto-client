@@ -20,6 +20,7 @@ import { showOsNotification } from '../services/notification-service.js';
 let callEventQueue: Promise<void> = Promise.resolve();
 let consumeQueue: Promise<void> = Promise.resolve();
 let pendingCallProduceResolve: ((id: string) => void) | null = null;
+let pendingCallProduceReject: ((err: Error) => void) | null = null;
 let localSpeakingCleanup: (() => void) | null = null;
 let remoteSpeakingCleanup: (() => void) | null = null;
 let callAudioElement: HTMLAudioElement | null = null;
@@ -32,7 +33,16 @@ export function handleCallWsEvent(event: string, data: unknown): void {
     const d = data as Record<string, unknown>;
     pendingCallProduceResolve?.(d.producer_id as string);
     pendingCallProduceResolve = null;
+    pendingCallProduceReject = null;
     return;
+  }
+
+  // Reject pending produce on error to avoid deadlock — then let it flow into queue for cleanup
+  if (event === 'call.error' && pendingCallProduceReject) {
+    const d = data as Record<string, unknown>;
+    pendingCallProduceReject(new Error(`call.error: ${d.code} ${d.message}`));
+    pendingCallProduceResolve = null;
+    pendingCallProduceReject = null;
   }
 
   callEventQueue = callEventQueue.then(() => processCallEvent(event, data)).catch(() => {});
@@ -133,8 +143,17 @@ async function processCallEvent(event: string, data: unknown): Promise<void> {
         });
         sendTransport.on('connectionstatechange', () => {});
         sendTransport.on('produce', async ({ kind, rtpParameters, appData }, callback) => {
-          const idPromise = new Promise<string>((resolve) => {
+          const idPromise = new Promise<string>((resolve, reject) => {
             pendingCallProduceResolve = resolve;
+            pendingCallProduceReject = reject;
+            // Safety timeout to prevent permanent deadlock
+            setTimeout(() => {
+              if (pendingCallProduceResolve === resolve) {
+                reject(new Error('call.produce timeout'));
+                pendingCallProduceResolve = null;
+                pendingCallProduceReject = null;
+              }
+            }, 5000);
           });
           centralWs.send('call.produce', {
             call_id: callId,
@@ -156,14 +175,18 @@ async function processCallEvent(event: string, data: unknown): Promise<void> {
             audio: savedAudioDevice ? { deviceId: { ideal: savedAudioDevice } } : true,
           });
           const audioTrack = stream.getAudioTracks()[0]!;
-          const producer = await sendTransport.produce({ track: audioTrack, appData: { source: 'mic' } });
-          useCallStore.getState().setProducer('audio', producer);
-          useCallStore.getState().setLocalAudioStream(stream);
+          try {
+            const producer = await sendTransport.produce({ track: audioTrack, appData: { source: 'mic' } });
+            useCallStore.getState().setProducer('audio', producer);
+            useCallStore.getState().setLocalAudioStream(stream);
 
-          // Speaking detection
-          localSpeakingCleanup = startSpeakingDetection(stream, (speaking) => {
-            useCallStore.getState().setLocalSpeaking(speaking);
-          });
+            // Speaking detection
+            localSpeakingCleanup = startSpeakingDetection(stream, (speaking) => {
+              useCallStore.getState().setLocalSpeaking(speaking);
+            });
+          } catch (produceErr) {
+            console.warn('[call] produce rejected (permission denied?):', produceErr);
+          }
         } catch (err) {
           console.warn('[call] audio setup failed (no microphone?):', err);
           // Continue without audio — call can still work for receiving/video/screen
@@ -407,6 +430,7 @@ async function processCallEvent(event: string, data: unknown): Promise<void> {
       if (callAudioElement) { callAudioElement.remove(); callAudioElement = null; }
       document.querySelectorAll('audio[data-call-audio]').forEach((el) => el.remove());
       pendingCallProduceResolve = null;
+      pendingCallProduceReject = null;
       consumedProducerIds.clear();
       consumeQueue = Promise.resolve();
 
@@ -463,6 +487,7 @@ function cleanupCall(): void {
   // Remove any extra audio elements (screen-audio etc)
   document.querySelectorAll('audio[data-call-audio]').forEach((el) => el.remove());
   pendingCallProduceResolve = null;
+  pendingCallProduceReject = null;
   consumedProducerIds.clear();
   callEventQueue = Promise.resolve();
   consumeQueue = Promise.resolve();

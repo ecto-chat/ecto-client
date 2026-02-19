@@ -31,7 +31,7 @@ export function QualitySelector({ kind }: QualitySelectorProps) {
   };
 
   return (
-    <DropdownMenuContent side="top" align="center" sideOffset={8}>
+    <DropdownMenuContent side="top" align="center" sideOffset={8} className="z-[350]">
       <DropdownMenuLabel>
         {kind === 'video' ? 'Camera Quality' : 'Screen Share Quality'}
       </DropdownMenuLabel>

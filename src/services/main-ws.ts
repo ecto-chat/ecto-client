@@ -120,13 +120,17 @@ export class MainWebSocket {
         }
       }, 15000);
 
+      // After reconnect we get a new hello with a fresh session_id, but
+      // resume needs the *old* session_id the server knows about.
+      const sessionId = this._sessionId;
+
       this.ws.onmessage = (event) => {
         const msg = JSON.parse(event.data as string) as WsMessage<unknown>;
 
         if (msg.event === 'system.hello') {
           const hello = msg.data as SystemHelloPayload;
           this.startHeartbeat(hello.heartbeat_interval ?? HEARTBEAT_INTERVAL);
-          this.send('system.resume', { token, last_seq: lastSeq });
+          this.send('system.resume', { session_id: sessionId, last_seq: lastSeq });
           return;
         }
 
