@@ -14,10 +14,14 @@ interface UiStore {
   channelLocked: boolean;
   nsfwDismissed: Set<string>;
   bypassNsfwWarnings: boolean;
+  mediaViewMode: 'fullscreen' | 'floating' | 'snapped-left' | 'snapped-right';
+  snappedSidebarWidth: number;
 
   setActiveServer: (serverId: string | null) => void;
   setActiveChannel: (channelId: string | null) => void;
   setChannelLocked: (locked: boolean) => void;
+  setMediaViewMode: (mode: 'fullscreen' | 'floating' | 'snapped-left' | 'snapped-right') => void;
+  setSnappedSidebarWidth: (width: number) => void;
   toggleSidebar: () => void;
   toggleMemberList: () => void;
   openModal: (modal: string, data?: unknown) => void;
@@ -46,6 +50,8 @@ export const useUiStore = create<UiStore>()(
         (() => { try { return JSON.parse(localStorage.getItem('ecto-nsfw-dismissed') ?? '[]') as string[]; } catch { return []; } })(),
       ),
       bypassNsfwWarnings: localStorage.getItem('ecto-bypass-nsfw') === 'true',
+      mediaViewMode: 'fullscreen',
+      snappedSidebarWidth: (() => { try { const v = localStorage.getItem('ecto-snapped-width'); return v ? Number(v) : 360; } catch { return 360; } })(),
 
       setActiveServer: (serverId) => set({ activeServerId: serverId }),
       setActiveChannel: (channelId) => set({ activeChannelId: channelId, channelLocked: false }),
@@ -66,6 +72,11 @@ export const useUiStore = create<UiStore>()(
       setBypassNsfwWarnings: (bypass) => {
         localStorage.setItem('ecto-bypass-nsfw', String(bypass));
         set({ bypassNsfwWarnings: bypass });
+      },
+      setMediaViewMode: (mode) => set({ mediaViewMode: mode }),
+      setSnappedSidebarWidth: (width) => {
+        localStorage.setItem('ecto-snapped-width', String(width));
+        set({ snappedSidebarWidth: width });
       },
     }),
     {

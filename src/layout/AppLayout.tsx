@@ -1,12 +1,13 @@
 import { useEffect } from 'react';
 import { Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'motion/react';
-import { Hash, WifiOff } from 'lucide-react';
+import { WifiOff } from 'lucide-react';
 
 // layout
 import { ServerSidebar } from '../layout/ServerSidebar';
 import { ChannelSidebar } from '../layout/ChannelSidebar';
 import { MemberList } from '../layout/MemberList';
+import { ServerFallback } from '../layout/ServerFallback';
 
 // features
 import { ServerSettings, SetupWizard, ChannelSettingsModal } from '@/features/admin';
@@ -15,13 +16,13 @@ import { IncomingCallOverlay, ActiveCallOverlay, CallBanner } from '@/features/c
 import { ChannelView, ImageLightbox } from '@/features/chat';
 import { NotificationPrompt, NotificationToast } from '@/features/common';
 import { FriendList, DMView, DMSidebar } from '@/features/friends';
+import { FloatingMediaWindow, SnappedMediaSidebar, ResizeHandle } from '@/features/media-window';
 import { AddServerModal, LeaveServerModal } from '@/features/servers';
 import { UserSettingsModal } from '@/features/settings';
 import { UserProfileModal } from '@/features/user';
 import { VoiceControls, VoiceBanner } from '@/features/voice';
 
 // stores, hooks, services, ui
-import { useServerStore } from '@/stores/server';
 import { useUiStore } from '@/stores/ui';
 import { useVoiceStore } from '@/stores/voice';
 import { useConnectionStore } from '@/stores/connection';
@@ -36,30 +37,12 @@ import { EmptyState } from '@/ui/EmptyState';
 import { ToastContainer } from '@/ui/Toast';
 import { blurToClear, easePage } from '@/lib/animations';
 
-/** Redirects to the default channel if one is set, otherwise shows empty state */
-function ServerFallback() {
-  const activeServerId = useUiStore((s) => s.activeServerId);
-  const serverMeta = useServerStore(
-    (s) => activeServerId ? s.serverMeta.get(activeServerId) ?? null : null,
-  );
-  const defaultChannelId = serverMeta?.default_channel_id ?? null;
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    if (activeServerId && defaultChannelId) {
-      useUiStore.getState().setActiveChannel(defaultChannelId);
-      navigate(`/servers/${activeServerId}/channels/${defaultChannelId}`, { replace: true });
-    }
-  }, [activeServerId, defaultChannelId, navigate]);
-
-  if (activeServerId && defaultChannelId) return null;
-  return <EmptyState icon={<Hash />} title="Select a channel" />;
-}
-
 export function AppLayout() {
   const activeServerId = useUiStore((s) => s.activeServerId);
   const memberListVisible = useUiStore((s) => s.memberListVisible);
   const sidebarCollapsed = useUiStore((s) => s.sidebarCollapsed);
+  const mediaViewMode = useUiStore((s) => s.mediaViewMode);
+  const snappedSidebarWidth = useUiStore((s) => s.snappedSidebarWidth);
   const voiceServerId = useVoiceStore((s) => s.currentServerId);
   const showVoiceBanner = voiceServerId !== null && voiceServerId !== activeServerId;
   const callState = useCallStore((s) => s.callState);
@@ -100,6 +83,9 @@ export function AppLayout() {
     !isHomeMode && activeServerId != null &&
     (!activeServerStatus || activeServerStatus === 'disconnected');
 
+  const isSnappedLeft = mediaViewMode === 'snapped-left';
+  const isSnappedRight = mediaViewMode === 'snapped-right';
+
   return (
     <div className="flex h-full w-full">
       <ServerSidebar />
@@ -108,6 +94,12 @@ export function AppLayout() {
           {isHomeMode ? <DMSidebar /> : <ChannelSidebar />}
           <VoiceControls />
         </div>
+      )}
+      {isSnappedLeft && (
+        <>
+          <SnappedMediaSidebar />
+          <ResizeHandle side="left" />
+        </>
       )}
       <main className="flex flex-1 flex-col min-w-0 bg-primary">
         {showVoiceBanner && <VoiceBanner />}
@@ -147,6 +139,12 @@ export function AppLayout() {
           </AnimatePresence>
         )}
       </main>
+      {isSnappedRight && (
+        <>
+          <ResizeHandle side="right" />
+          <SnappedMediaSidebar />
+        </>
+      )}
       {!isHomeMode && !isServerOffline && memberListVisible && <MemberList />}
       <AddServerModal />
       <LeaveServerModal />
@@ -157,6 +155,7 @@ export function AppLayout() {
       <UserSettingsModal />
       <IncomingCallOverlay />
       <ActiveCallOverlay />
+      <FloatingMediaWindow />
       <ImageLightbox />
       <NotificationToast />
       <NotificationPrompt />

@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 
 import { motion } from 'motion/react';
-import { MicOff } from 'lucide-react';
+import { MicOff, Minimize2 } from 'lucide-react';
 
-import { Avatar } from '@/ui';
+import { Avatar, IconButton } from '@/ui';
 
 import { useCall } from '@/hooks/useCall';
+import { useUiStore } from '@/stores/ui';
 import { cn } from '@/lib/cn';
 import { playOutgoingRingback } from '@/lib/ringtone';
 
@@ -63,6 +64,8 @@ export function ActiveCallOverlay() {
     }
   }, [localScreenStream]);
 
+  const mediaViewMode = useUiStore((s) => s.mediaViewMode);
+
   if (answeredElsewhere) return null;
 
   const isVisible =
@@ -70,6 +73,9 @@ export function ActiveCallOverlay() {
     callState === 'active' || callState === 'ended';
 
   if (!isVisible || !peer) return null;
+
+  // When in floating/snapped mode and actively in call, hide the fullscreen overlay
+  if (mediaViewMode !== 'fullscreen' && callState === 'active') return null;
 
   const formatTime = (seconds: number) => {
     const m = Math.floor(seconds / 60);
@@ -106,6 +112,19 @@ export function ActiveCallOverlay() {
       transition={{ type: 'spring', stiffness: 260, damping: 20 }}
       className="fixed inset-0 z-[300] flex flex-col items-center justify-between bg-[rgba(12,12,20,0.95)] backdrop-blur-sm"
     >
+      {/* Minimize button */}
+      {callState === 'active' && (
+        <div className="absolute top-4 right-4 z-10">
+          <IconButton
+            tooltip="Minimize"
+            onClick={() => useUiStore.getState().setMediaViewMode('floating')}
+            className="text-white/70 hover:text-white hover:bg-white/10"
+          >
+            <Minimize2 className="size-[18px]" />
+          </IconButton>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col items-center gap-1 pt-10">
         <span className="text-lg font-medium text-primary">{peer.display_name ?? peer.username}</span>

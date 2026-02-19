@@ -63,3 +63,20 @@ export const staggerItem: Variants = {
   hidden: { opacity: 0, y: 8 },
   visible: { opacity: 1, y: 0 },
 };
+
+// ── Float in (for PiP media window) ──
+export const floatIn: Variants = {
+  hidden: { opacity: 0, scale: 0.8, y: 20 },
+  visible: { opacity: 1, scale: 1, y: 0 },
+  exit: { opacity: 0, scale: 0.8, y: 20 },
+};
+
+// ── Snap indicator (edge highlight) ──
+export const snapIndicator: Variants = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1 },
+  exit: { opacity: 0 },
+};
+
+// ── Spring dock (snap to edge) ──
+export const springDock: Transition = { type: 'spring', stiffness: 500, damping: 35 };

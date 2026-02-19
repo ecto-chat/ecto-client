@@ -1,11 +1,16 @@
 import { useState, useEffect } from 'react';
+import { Maximize2 } from 'lucide-react';
 
-import { Button } from '@/ui';
+import { Button, IconButton } from '@/ui';
 
 import { useCall } from '@/hooks/useCall';
+import { useUiStore } from '@/stores/ui';
+import { useExpandMedia } from '@/features/media-window';
 
 export function CallBanner() {
   const { callState, peer, startedAt, answeredElsewhere, transferCall, dismissCall } = useCall();
+  const mediaViewMode = useUiStore((s) => s.mediaViewMode);
+  const expandMedia = useExpandMedia();
   const [elapsed, setElapsed] = useState(0);
 
   useEffect(() => {
@@ -34,11 +39,23 @@ export function CallBanner() {
   const s = elapsed % 60;
   const timeStr = `${m}:${s.toString().padStart(2, '0')}`;
 
+  const isMinimized = mediaViewMode === 'floating' || mediaViewMode === 'snapped-left' || mediaViewMode === 'snapped-right';
+
   return (
     <div className="flex items-center gap-3 bg-accent-subtle border border-accent/20 rounded-lg px-4 py-2">
       <span className="text-sm text-secondary">
         In call with <span className="font-medium text-primary">{peer.display_name ?? peer.username}</span> &middot; {timeStr}
       </span>
+      {isMinimized && (
+        <IconButton
+          size="sm"
+          variant="ghost"
+          tooltip="Return to call"
+          onClick={expandMedia}
+        >
+          <Maximize2 className="size-3.5" />
+        </IconButton>
+      )}
     </div>
   );
 }
