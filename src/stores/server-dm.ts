@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { ServerDmConversation, ServerDmMessage, ReactionGroup } from 'ecto-shared';
+import { useAuthStore } from './auth.js';
 
 interface ServerDmStore {
   /** Conversation ID → conversation */
@@ -143,6 +144,8 @@ export const useServerDmStore = create<ServerDmStore>()((set) => ({
       const msg = convoMessages?.get(messageId);
       if (!msg) return state;
 
+      const myId = useAuthStore.getState().user?.id;
+      const isMe = userId === myId;
       let reactions = [...msg.reactions];
       const existing = reactions.findIndex((r) => r.emoji === emoji);
 
@@ -153,10 +156,10 @@ export const useServerDmStore = create<ServerDmStore>()((set) => ({
             ...r,
             count,
             users: r.users.includes(userId) ? r.users : [...r.users, userId],
-            me: r.me || userId === userId,
+            me: r.me || isMe,
           };
         } else {
-          reactions.push({ emoji, count, users: [userId], me: true });
+          reactions.push({ emoji, count, users: [userId], me: isMe });
         }
       } else {
         if (existing >= 0) {
@@ -168,7 +171,7 @@ export const useServerDmStore = create<ServerDmStore>()((set) => ({
               ...r,
               count,
               users: r.users.filter((u) => u !== userId),
-              me: r.me && userId !== userId,
+              me: isMe ? false : r.me,
             };
           }
         }
