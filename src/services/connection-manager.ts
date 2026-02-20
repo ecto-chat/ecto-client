@@ -524,7 +524,9 @@ export class ConnectionManager {
       if (readyData.server?.allow_member_dms && conn.trpc) {
         conn.trpc.serverDms.list.query().then((convos) => {
           useServerDmStore.getState().hydrateUnreads(conn.serverId, convos);
-        }).catch(() => {});
+        }).catch((err: unknown) => {
+          console.warn('[server-dm] Failed to fetch DM list:', err);
+        });
       }
 
       const { activeServerId, activeChannelId } = useUiStore.getState();
