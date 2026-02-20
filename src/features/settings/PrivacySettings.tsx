@@ -6,19 +6,14 @@ import { useAuthStore } from '@/stores/auth';
 import { useUiStore } from '@/stores/ui';
 
 import { connectionManager } from '@/services/connection-manager';
-
-const STORAGE_KEY = 'ecto-privacy-settings';
+import { preferenceManager } from '@/services/preference-manager';
 
 type PrivacyPrefs = {
   allowDmsFromStrangers: boolean;
 };
 
 function loadPrefs(): PrivacyPrefs {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw) as PrivacyPrefs;
-  } catch { /* ignore */ }
-  return { allowDmsFromStrangers: true };
+  return preferenceManager.getUser<PrivacyPrefs>('privacy-settings', { allowDmsFromStrangers: true });
 }
 
 export function PrivacySettings() {
@@ -30,7 +25,7 @@ export function PrivacySettings() {
   const [success, setSuccess] = useState('');
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
+    preferenceManager.setUser('privacy-settings', prefs);
   }, [prefs]);
 
   const handleToggleDmsFromStrangers = useCallback(async (checked: boolean) => {

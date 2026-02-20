@@ -7,31 +7,69 @@ import {
   globalShortcut,
   BrowserWindow,
 } from 'electron';
+import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
 
-const store = new Map<string, Buffer>();
+const STORE_PATH = join(app.getPath('userData'), 'secure-store.enc');
+
+function loadStore(): Map<string, string> {
+  if (!existsSync(STORE_PATH)) return new Map();
+  try {
+    const encrypted = readFileSync(STORE_PATH);
+    if (!safeStorage.isEncryptionAvailable()) return new Map();
+    const decrypted = safeStorage.decryptString(encrypted);
+    const parsed = JSON.parse(decrypted) as Record<string, string>;
+    return new Map(Object.entries(parsed));
+  } catch {
+    return new Map();
+  }
+}
+
+function saveStore(data: Map<string, string>): void {
+  try {
+    const obj = Object.fromEntries(data);
+    const json = JSON.stringify(obj);
+    if (safeStorage.isEncryptionAvailable()) {
+      const encrypted = safeStorage.encryptString(json);
+      writeFileSync(STORE_PATH, encrypted);
+    } else {
+      writeFileSync(STORE_PATH, json);
+    }
+  } catch {
+    // Write failed — storage unavailable
+  }
+}
+
+const store = loadStore();
 
 export function registerIpcHandlers() {
   ipcMain.handle('get-version', () => app.getVersion());
 
-  // Secure store using safeStorage
+  // Secure store using safeStorage + encrypted disk persistence
   ipcMain.handle('secure-store:get', (_event, key: string) => {
-    const encrypted = store.get(key);
-    if (!encrypted) return null;
-    if (!safeStorage.isEncryptionAvailable()) return null;
-    return safeStorage.decryptString(encrypted);
+    return store.get(key) ?? null;
   });
 
   ipcMain.handle('secure-store:set', (_event, key: string, value: string) => {
-    if (!safeStorage.isEncryptionAvailable()) {
-      store.set(key, Buffer.from(value));
-      return;
-    }
-    store.set(key, safeStorage.encryptString(value));
+    store.set(key, value);
+    saveStore(store);
   });
 
   ipcMain.handle('secure-store:delete', (_event, key: string) => {
     store.delete(key);
+    saveStore(store);
+  });
+
+  ipcMain.handle('secure-store:delete-by-prefix', (_event, prefix: string) => {
+    let changed = false;
+    for (const key of [...store.keys()]) {
+      if (key.startsWith(prefix)) {
+        store.delete(key);
+        changed = true;
+      }
+    }
+    if (changed) saveStore(store);
   });
 
   // Notifications

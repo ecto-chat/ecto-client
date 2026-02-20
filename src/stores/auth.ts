@@ -4,6 +4,17 @@ import { createCentralTrpcClient } from '../services/trpc.js';
 import type { CentralTrpcClient } from '../types/trpc.js';
 import { useUiStore } from './ui.js';
 import { secureStorage } from '../services/secure-storage.js';
+import { preferenceManager } from '../services/preference-manager.js';
+import {
+  addAccount as registryAddAccount,
+  removeAccount as registryRemoveAccount,
+  getActiveUserId,
+  setActiveUserId,
+  getAccounts,
+  clearRegistry,
+} from '../services/account-registry.js';
+import type { AccountEntry } from '../services/account-registry.js';
+import { reclaimLegacyData, hasLegacyData } from '../services/preference-migration.js';
 
 type AuthState = 'idle' | 'loading' | 'authenticated' | 'unauthenticated';
 type CentralAuthState = 'idle' | 'loading' | 'authenticated' | 'unauthenticated';
@@ -29,9 +40,23 @@ interface AuthStore {
   enterLocalOnly: () => void;
   signInToCentral: () => void;
   signInToCentralFromModal: (email: string, password: string) => Promise<void>;
+  switchAccount: (targetUserId: string) => Promise<void>;
+  logoutAll: () => Promise<void>;
 }
 
 const DEFAULT_CENTRAL_URL = import.meta.env.VITE_CENTRAL_URL ?? 'http://localhost:4000';
+
+function parseUserId(token: string): string | null {
+  try {
+    const parts = token.split('.');
+    const encoded = parts[1];
+    if (!encoded) return null;
+    const payload = JSON.parse(atob(encoded)) as Record<string, unknown>;
+    return (payload.sub as string) ?? null;
+  } catch {
+    return null;
+  }
+}
 
 export const useAuthStore = create<AuthStore>()((set, get) => {
   let refreshTimerId: ReturnType<typeof setTimeout> | null = null;
@@ -39,7 +64,9 @@ export const useAuthStore = create<AuthStore>()((set, get) => {
   function scheduleRefresh(token: string) {
     if (refreshTimerId) clearTimeout(refreshTimerId);
     try {
-      const payload = JSON.parse(atob(token.split('.')[1]!));
+      const encoded = token.split('.')[1];
+      if (!encoded) return;
+      const payload = JSON.parse(atob(encoded)) as Record<string, unknown>;
       const exp = payload.exp as number;
       const msUntilExpiry = exp * 1000 - Date.now();
       const refreshIn = Math.max(msUntilExpiry - 60000, 5000);
@@ -53,34 +80,34 @@ export const useAuthStore = create<AuthStore>()((set, get) => {
     }
   }
 
-  async function storeTokens(accessToken: string, refreshTok: string) {
-    if (window.electronAPI) {
-      await window.electronAPI.secureStore.set('access_token', accessToken);
-      await window.electronAPI.secureStore.set('refresh_token', refreshTok);
-    } else {
-      localStorage.setItem('access_token', accessToken);
-      localStorage.setItem('refresh_token', refreshTok);
-    }
+  async function storeTokens(userId: string, accessToken: string, refreshTok: string) {
+    await secureStorage.set(`auth:${userId}:access_token`, accessToken);
+    await secureStorage.set(`auth:${userId}:refresh_token`, refreshTok);
   }
 
-  async function clearTokens() {
-    if (window.electronAPI) {
-      await window.electronAPI.secureStore.delete('access_token');
-      await window.electronAPI.secureStore.delete('refresh_token');
-    } else {
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('refresh_token');
-    }
+  async function clearTokensForUser(userId: string) {
+    await secureStorage.deleteByPrefix(`auth:${userId}:`);
   }
 
-  async function getStoredRefreshToken(): Promise<string | null> {
-    if (window.electronAPI) {
-      return window.electronAPI.secureStore.get('refresh_token');
-    }
-    return localStorage.getItem('refresh_token');
+  async function getStoredRefreshToken(userId?: string): Promise<string | null> {
+    const uid = userId ?? getActiveUserId();
+    if (!uid) return null;
+    return secureStorage.get(`auth:${uid}:refresh_token`);
   }
 
   async function hasStoredServerSessions(): Promise<boolean> {
+    // Check for server tokens under any user prefix, or legacy key
+    const uid = getActiveUserId();
+    if (uid) {
+      try {
+        const raw = await secureStorage.get(`auth:${uid}:server_tokens`);
+        if (raw) {
+          const parsed = JSON.parse(raw) as Record<string, unknown>;
+          if (Object.keys(parsed).length > 0) return true;
+        }
+      } catch { /* ignore */ }
+    }
+    // Also check legacy key for backward compatibility
     try {
       const raw = await secureStorage.get('ecto-server-tokens');
       if (!raw) return false;
@@ -89,6 +116,43 @@ export const useAuthStore = create<AuthStore>()((set, get) => {
     } catch {
       return false;
     }
+  }
+
+  function buildAccountEntry(user: GlobalUser): AccountEntry {
+    return {
+      userId: user.id,
+      username: user.username,
+      discriminator: user.discriminator ?? '0000',
+      displayName: user.display_name ?? user.username,
+      avatarUrl: user.avatar_url ?? null,
+      addedAt: Date.now(),
+    };
+  }
+
+  async function onLoginSuccess(user: GlobalUser, accessToken: string, refreshTok: string) {
+    const userId = user.id;
+
+    // Store tokens keyed by userId
+    await storeTokens(userId, accessToken, refreshTok);
+    scheduleRefresh(accessToken);
+
+    // Update account registry
+    registryAddAccount(buildAccountEntry(user));
+    setActiveUserId(userId);
+    preferenceManager.setActiveUser(userId);
+
+    // Reclaim legacy data if present
+    if (hasLegacyData()) {
+      reclaimLegacyData(userId);
+    }
+
+    set({
+      user,
+      token: accessToken,
+      refreshToken_: refreshTok,
+      authState: 'authenticated',
+      centralAuthState: 'authenticated',
+    });
   }
 
   return {
@@ -120,57 +184,41 @@ export const useAuthStore = create<AuthStore>()((set, get) => {
       set({ authState: 'loading', centralAuthState: 'loading' });
       const trpc = createCentralTrpcClient(get().centralUrl, () => null);
       const result = await trpc.auth.login.mutate({ email, password });
-      await storeTokens(result.access_token, result.refresh_token);
-      scheduleRefresh(result.access_token);
-      set({
-        user: result.user,
-        token: result.access_token,
-        refreshToken_: result.refresh_token,
-        authState: 'authenticated',
-        centralAuthState: 'authenticated',
-      });
+      await onLoginSuccess(result.user, result.access_token, result.refresh_token);
     },
 
     loginGoogle: async (googleToken) => {
       set({ authState: 'loading', centralAuthState: 'loading' });
       const trpc = createCentralTrpcClient(get().centralUrl, () => null);
       const result = await trpc.auth.loginGoogle.mutate({ google_token: googleToken });
-      await storeTokens(result.access_token, result.refresh_token);
-      scheduleRefresh(result.access_token);
-      set({
-        user: result.user,
-        token: result.access_token,
-        refreshToken_: result.refresh_token,
-        authState: 'authenticated',
-        centralAuthState: 'authenticated',
-      });
+      await onLoginSuccess(result.user, result.access_token, result.refresh_token);
     },
 
     register: async (email, password, username) => {
       set({ authState: 'loading', centralAuthState: 'loading' });
       const trpc = createCentralTrpcClient(get().centralUrl, () => null);
       const result = await trpc.auth.register.mutate({ email, password, username });
-      await storeTokens(result.access_token, result.refresh_token);
-      scheduleRefresh(result.access_token);
-      set({
-        user: result.user,
-        token: result.access_token,
-        refreshToken_: result.refresh_token,
-        authState: 'authenticated',
-        centralAuthState: 'authenticated',
-      });
+      await onLoginSuccess(result.user, result.access_token, result.refresh_token);
     },
 
     logout: async () => {
       if (refreshTimerId) clearTimeout(refreshTimerId);
-      const { refreshToken_: rt } = get();
+      const { refreshToken_: rt, user } = get();
+      const userId = user?.id;
+
+      // Revoke token server-side (best effort)
       if (rt) {
         const trpc = createCentralTrpcClient(get().centralUrl, () => get().token);
         await trpc.auth.logout.mutate({ refresh_token: rt }).catch(() => {});
       }
-      await clearTokens();
-      await secureStorage.delete('ecto-server-tokens');
-      await secureStorage.delete('ecto-local-credentials');
+
+      // Clear user data
+      if (userId) {
+        await clearTokensForUser(userId);
+        preferenceManager.clearUserData(userId);
+        registryRemoveAccount(userId);
+      }
+
       set({
         user: null,
         token: null,
@@ -188,7 +236,11 @@ export const useAuthStore = create<AuthStore>()((set, get) => {
       }
       const trpc = createCentralTrpcClient(get().centralUrl, () => null);
       const result = await trpc.auth.refresh.mutate({ refresh_token: rt });
-      await storeTokens(result.access_token, rt);
+
+      const userId = parseUserId(result.access_token);
+      if (userId) {
+        await storeTokens(userId, result.access_token, rt);
+      }
       scheduleRefresh(result.access_token);
       set({ token: result.access_token, refreshToken_: rt });
     },
@@ -197,8 +249,15 @@ export const useAuthStore = create<AuthStore>()((set, get) => {
 
     restoreSession: async () => {
       set({ authState: 'loading', centralAuthState: 'loading' });
+
+      // Check account registry first
+      const activeUserId = getActiveUserId();
+      if (activeUserId) {
+        preferenceManager.setActiveUser(activeUserId);
+      }
+
       try {
-        const rt = await getStoredRefreshToken();
+        const rt = await getStoredRefreshToken(activeUserId ?? undefined);
         if (!rt) {
           // No Central refresh token — check for stored server sessions (Branch B)
           if (await hasStoredServerSessions()) {
@@ -214,15 +273,25 @@ export const useAuthStore = create<AuthStore>()((set, get) => {
         }
         const trpc = createCentralTrpcClient(get().centralUrl, () => null);
         const result = await trpc.auth.refresh.mutate({ refresh_token: rt });
-        await storeTokens(result.access_token, rt);
+
+        const userId = parseUserId(result.access_token);
+        if (userId) {
+          await storeTokens(userId, result.access_token, rt);
+          preferenceManager.setActiveUser(userId);
+        }
         scheduleRefresh(result.access_token);
         set({ token: result.access_token, refreshToken_: rt });
 
         // Fetch user profile
         const userTrpc = createCentralTrpcClient(get().centralUrl, () => result.access_token);
-        // Parse user_id from JWT
-        const payload = JSON.parse(atob(result.access_token.split('.')[1]!));
-        const user = await userTrpc.profile.get.query({ user_id: payload.sub as string });
+        const uid = parseUserId(result.access_token);
+        if (!uid) throw new Error('Invalid access token');
+        const user = await userTrpc.profile.get.query({ user_id: uid });
+
+        // Update registry with latest user info
+        registryAddAccount(buildAccountEntry(user));
+        setActiveUserId(uid);
+
         set({ user, authState: 'authenticated', centralAuthState: 'authenticated' });
       } catch {
         // Central refresh failed — check for stored server sessions (Branch B)
@@ -242,13 +311,28 @@ export const useAuthStore = create<AuthStore>()((set, get) => {
       try {
         const trpc = createCentralTrpcClient(get().centralUrl, () => null);
         const result = await trpc.auth.login.mutate({ email, password });
-        await storeTokens(result.access_token, result.refresh_token);
+
+        const userId = parseUserId(result.access_token);
+        if (userId) {
+          await storeTokens(userId, result.access_token, result.refresh_token);
+          preferenceManager.setActiveUser(userId);
+        }
         scheduleRefresh(result.access_token);
 
         // Fetch user profile
         const userTrpc = createCentralTrpcClient(get().centralUrl, () => result.access_token);
-        const payload = JSON.parse(atob(result.access_token.split('.')[1]!));
-        const user = await userTrpc.profile.get.query({ user_id: payload.sub as string });
+        const modalUid = parseUserId(result.access_token);
+        if (!modalUid) throw new Error('Invalid access token');
+        const user = await userTrpc.profile.get.query({ user_id: modalUid });
+
+        // Update registry
+        registryAddAccount(buildAccountEntry(user));
+        setActiveUserId(modalUid);
+
+        // Reclaim legacy data if present
+        if (hasLegacyData()) {
+          reclaimLegacyData(modalUid);
+        }
 
         set({
           user,
@@ -260,6 +344,106 @@ export const useAuthStore = create<AuthStore>()((set, get) => {
         set({ centralAuthState: 'unauthenticated' });
         throw err;
       }
+    },
+
+    switchAccount: async (targetUserId: string) => {
+      if (refreshTimerId) clearTimeout(refreshTimerId);
+
+      // Save current navigation state
+      const currentActiveServer = useUiStore.getState().activeServerId;
+      if (currentActiveServer) {
+        preferenceManager.setUser('last-active-server', currentActiveServer);
+      }
+
+      // Set the target as active
+      setActiveUserId(targetUserId);
+      preferenceManager.setActiveUser(targetUserId);
+
+      // Restore session for the target account
+      set({
+        user: null,
+        token: null,
+        refreshToken_: null,
+        authState: 'loading',
+        centralAuthState: 'loading',
+      });
+
+      try {
+        const rt = await getStoredRefreshToken(targetUserId);
+        if (!rt) {
+          throw new Error('No refresh token for account');
+        }
+
+        const trpc = createCentralTrpcClient(get().centralUrl, () => null);
+        const result = await trpc.auth.refresh.mutate({ refresh_token: rt });
+        await storeTokens(targetUserId, result.access_token, rt);
+        scheduleRefresh(result.access_token);
+
+        // Fetch user profile
+        const userTrpc = createCentralTrpcClient(get().centralUrl, () => result.access_token);
+        const user = await userTrpc.profile.get.query({ user_id: targetUserId });
+
+        // Update registry with fresh info
+        registryAddAccount(buildAccountEntry(user));
+
+        set({
+          user,
+          token: result.access_token,
+          refreshToken_: rt,
+          authState: 'authenticated',
+          centralAuthState: 'authenticated',
+        });
+      } catch {
+        // Refresh failed — remove the broken account
+        registryRemoveAccount(targetUserId);
+        await clearTokensForUser(targetUserId);
+        preferenceManager.clearUserData(targetUserId);
+
+        // Try next account or go to unauthenticated
+        const remaining = getAccounts();
+        const nextAccount = remaining[0];
+        if (nextAccount) {
+          await get().switchAccount(nextAccount.userId);
+        } else {
+          preferenceManager.setActiveUser(null);
+          set({
+            authState: 'unauthenticated',
+            centralAuthState: 'unauthenticated',
+          });
+        }
+      }
+    },
+
+    logoutAll: async () => {
+      if (refreshTimerId) clearTimeout(refreshTimerId);
+
+      // Revoke all tokens (best effort)
+      const accounts = getAccounts();
+      const trpc = createCentralTrpcClient(get().centralUrl, () => get().token);
+      await Promise.allSettled(
+        accounts.map(async (account) => {
+          const rt = await getStoredRefreshToken(account.userId);
+          if (rt) {
+            await trpc.auth.logout.mutate({ refresh_token: rt }).catch(() => {});
+          }
+        }),
+      );
+
+      // Clear all user data and session data
+      for (const account of accounts) {
+        await clearTokensForUser(account.userId);
+      }
+      preferenceManager.clearAllUserData();
+      preferenceManager.setActiveUser(null);
+      clearRegistry();
+
+      set({
+        user: null,
+        token: null,
+        refreshToken_: null,
+        authState: 'unauthenticated',
+        centralAuthState: 'unauthenticated',
+      });
     },
   };
 });

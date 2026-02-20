@@ -21,18 +21,11 @@ import { useCallStore } from './call.js';
 import { useUiStore } from './ui.js';
 import { useHubFilesStore } from './hub-files.js';
 
-export async function fullLogout() {
-  // 1. Stop media resources (voice transports, producers, consumers, mic/camera)
-  useVoiceStore.getState().cleanup();
-  useCallStore.getState().cleanup();
-
-  // 2. Tear down ALL WebSocket connections and tRPC clients
-  connectionManager.disconnectAll();
-
-  // 3. Sign out (invalidate refresh token, clear stored tokens, reset auth state)
-  await useAuthStore.getState().logout();
-
-  // 4. Reset every Zustand store to initial state
+/**
+ * Reset all Zustand entity stores to initial state.
+ * Reusable by both `fullLogout` and `switchAccount`.
+ */
+export function resetAllStores() {
   useServerStore.setState({
     servers: new Map(),
     serverOrder: [],
@@ -97,7 +90,7 @@ export async function fullLogout() {
 
   useHubFilesStore.getState().clear();
 
-  // 5. Reset navigation state (preserve user preferences: theme, customCSS, sidebar, memberList)
+  // Reset navigation state (preserve user preferences: theme, customCSS, sidebar, memberList)
   useUiStore.setState({
     activeServerId: null,
     activeChannelId: null,
@@ -105,4 +98,19 @@ export async function fullLogout() {
     modalData: null,
     hubSection: null,
   });
+}
+
+export async function fullLogout() {
+  // 1. Stop media resources (voice transports, producers, consumers, mic/camera)
+  useVoiceStore.getState().cleanup();
+  useCallStore.getState().cleanup();
+
+  // 2. Tear down ALL WebSocket connections and tRPC clients
+  connectionManager.disconnectAll();
+
+  // 3. Sign out (invalidate refresh token, clear stored tokens, reset auth state)
+  await useAuthStore.getState().logout();
+
+  // 4. Reset every Zustand store to initial state
+  resetAllStores();
 }

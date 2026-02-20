@@ -1,23 +1,10 @@
 import { create } from 'zustand';
 
+import { preferenceManager } from '../services/preference-manager.js';
+
 interface NotifyEntry {
   ts: number;
   type: 'message' | 'mention';
-}
-
-const MUTED_SERVERS_KEY = 'ecto-muted-servers';
-const MUTED_CHANNELS_KEY = 'ecto-muted-channels';
-
-function loadSet(key: string): Set<string> {
-  try {
-    const raw = localStorage.getItem(key);
-    if (raw) return new Set(JSON.parse(raw) as string[]);
-  } catch { /* ignore */ }
-  return new Set();
-}
-
-function saveSet(key: string, s: Set<string>) {
-  localStorage.setItem(key, JSON.stringify([...s]));
 }
 
 interface NotifyStore {
@@ -32,12 +19,13 @@ interface NotifyStore {
   toggleMuteChannel: (channelId: string) => void;
   isServerMuted: (serverId: string) => boolean;
   isChannelMuted: (channelId: string) => boolean;
+  hydrateFromPreferences: () => void;
 }
 
 export const useNotifyStore = create<NotifyStore>()((set, get) => ({
   notifications: new Map(),
-  mutedServers: loadSet(MUTED_SERVERS_KEY),
-  mutedChannels: loadSet(MUTED_CHANNELS_KEY),
+  mutedServers: new Set(preferenceManager.getUser<string[]>('muted-servers', [])),
+  mutedChannels: new Set(preferenceManager.getUser<string[]>('muted-channels', [])),
 
   addNotification: (serverId, channelId, ts, type) =>
     set((state) => {
@@ -66,7 +54,7 @@ export const useNotifyStore = create<NotifyStore>()((set, get) => ({
       const mutedServers = new Set(state.mutedServers);
       if (mutedServers.has(serverId)) mutedServers.delete(serverId);
       else mutedServers.add(serverId);
-      saveSet(MUTED_SERVERS_KEY, mutedServers);
+      preferenceManager.setUser('muted-servers', [...mutedServers]);
       return { mutedServers };
     }),
 
@@ -75,10 +63,15 @@ export const useNotifyStore = create<NotifyStore>()((set, get) => ({
       const mutedChannels = new Set(state.mutedChannels);
       if (mutedChannels.has(channelId)) mutedChannels.delete(channelId);
       else mutedChannels.add(channelId);
-      saveSet(MUTED_CHANNELS_KEY, mutedChannels);
+      preferenceManager.setUser('muted-channels', [...mutedChannels]);
       return { mutedChannels };
     }),
 
   isServerMuted: (serverId) => get().mutedServers.has(serverId),
   isChannelMuted: (channelId) => get().mutedChannels.has(channelId),
+
+  hydrateFromPreferences: () => set({
+    mutedServers: new Set(preferenceManager.getUser<string[]>('muted-servers', [])),
+    mutedChannels: new Set(preferenceManager.getUser<string[]>('muted-channels', [])),
+  }),
 }));

@@ -5,6 +5,7 @@ import { useAuthStore } from '../stores/auth.js';
 import { useServerStore } from '../stores/server.js';
 import { connectionManager } from '../services/connection-manager.js';
 import { useCallStore } from '../stores/call.js';
+import { preferenceManager } from '../services/preference-manager.js';
 import {
   CAMERA_PRESETS,
   SCREEN_PRESETS,
@@ -230,7 +231,7 @@ export function useVoice() {
   }, []);
 
   const switchAudioOutput = useCallback(async (deviceId: string) => {
-    localStorage.setItem('ecto-audio-output', deviceId);
+    preferenceManager.setDevice('audio-output', deviceId);
     const audioEls = document.querySelectorAll<HTMLAudioElement>('audio[data-consumer-id]');
     await switchAudioOutputDevice(audioEls, deviceId);
   }, []);
@@ -264,7 +265,7 @@ export function useVoice() {
       useVoiceStore.getState().removeProducer('video');
       if (userId) useVoiceStore.getState().setVideoStream(userId, null);
     } else if (sendTransport && ws) {
-      const savedVideoDevice = localStorage.getItem('ecto-video-device');
+      const savedVideoDevice = preferenceManager.getDevice('video-input', '');
       const preset = CAMERA_PRESETS[getVideoQuality()];
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { ...preset.constraints, ...(savedVideoDevice ? { deviceId: { ideal: savedVideoDevice } } : {}) },
@@ -515,7 +516,7 @@ async function handleVoiceEvent(ws: ReturnType<typeof connectionManager.getMainW
         useVoiceStore.getState().setSendTransport(sendTransport);
 
         try {
-          const savedAudioDevice = localStorage.getItem('ecto-audio-device');
+          const savedAudioDevice = preferenceManager.getDevice('audio-input', '');
           const stream = await navigator.mediaDevices.getUserMedia({
             audio: savedAudioDevice ? { deviceId: { ideal: savedAudioDevice } } : true,
           });
@@ -581,7 +582,7 @@ async function handleVoiceEvent(ws: ReturnType<typeof connectionManager.getMainW
         audio.autoplay = true;
         audio.dataset['consumerId'] = consumer.id;
         // Apply saved audio output device
-        const savedOutput = localStorage.getItem('ecto-audio-output');
+        const savedOutput = preferenceManager.getDevice('audio-output', '');
         if (savedOutput && 'setSinkId' in audio) {
           (audio as HTMLAudioElement & { setSinkId: (id: string) => Promise<void> }).setSinkId(savedOutput).catch(() => {});
         }

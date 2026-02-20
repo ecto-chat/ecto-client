@@ -1,4 +1,4 @@
-const STORAGE_KEY = 'ecto-notification-settings';
+import { preferenceManager } from './preference-manager.js';
 
 interface NotificationPrefs {
   enabled: boolean;
@@ -15,16 +15,8 @@ const DEFAULT_PREFS: NotificationPrefs = {
 };
 
 function getPrefs(): NotificationPrefs {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw) as Partial<NotificationPrefs>;
-      return { ...DEFAULT_PREFS, ...parsed };
-    }
-  } catch {
-    // Ignore parse errors
-  }
-  return { ...DEFAULT_PREFS };
+  const stored = preferenceManager.getUser<Partial<NotificationPrefs>>('notification-settings', {});
+  return { ...DEFAULT_PREFS, ...stored };
 }
 
 // Global click handler — registered from React with access to the router

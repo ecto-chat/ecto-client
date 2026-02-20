@@ -1,4 +1,4 @@
-const STORAGE_KEY = 'ecto-notification-settings';
+import { preferenceManager } from '../services/preference-manager.js';
 
 export type SoundType = 'message' | 'mention' | 'dm';
 
@@ -9,13 +9,7 @@ interface NotificationPrefs {
 }
 
 function getPrefs(): NotificationPrefs {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw) as NotificationPrefs;
-  } catch {
-    // ignore
-  }
-  return { enabled: true, soundEnabled: true };
+  return preferenceManager.getUser<NotificationPrefs>('notification-settings', { enabled: true, soundEnabled: true });
 }
 
 let audioContext: AudioContext | null = null;

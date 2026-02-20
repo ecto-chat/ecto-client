@@ -2,6 +2,8 @@ import { create } from 'zustand';
 import type { VoiceState } from 'ecto-shared';
 import type { types as mediasoupTypes } from 'mediasoup-client';
 
+import { preferenceManager } from '../services/preference-manager.js';
+
 type VoiceStatus = 'disconnected' | 'connecting' | 'connected';
 
 interface VoiceStore {
@@ -64,8 +66,8 @@ export const useVoiceStore = create<VoiceStore>()((set, get) => ({
   voiceStatus: 'disconnected',
   selfMuted: false,
   selfDeafened: false,
-  pttEnabled: localStorage.getItem('ecto-ptt-enabled') === 'true',
-  pttKey: localStorage.getItem('ecto-ptt-key') ?? ' ',
+  pttEnabled: preferenceManager.getDevice('ptt-enabled', false),
+  pttKey: preferenceManager.getDevice('ptt-key', ' '),
   pttActive: false,
   speaking: new Set(),
   audioLevels: new Map(),
@@ -81,11 +83,11 @@ export const useVoiceStore = create<VoiceStore>()((set, get) => ({
   pendingTransfer: null,
 
   setPttEnabled: (enabled) => {
-    localStorage.setItem('ecto-ptt-enabled', String(enabled));
+    preferenceManager.setDevice('ptt-enabled', enabled);
     set({ pttEnabled: enabled });
   },
   setPttKey: (key) => {
-    localStorage.setItem('ecto-ptt-key', key);
+    preferenceManager.setDevice('ptt-key', key);
     set({ pttKey: key });
   },
   setPttActive: (active) => set({ pttActive: active }),

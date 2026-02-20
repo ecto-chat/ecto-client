@@ -1,5 +1,7 @@
 import type { types as mediasoupTypes } from 'mediasoup-client';
 
+import { preferenceManager } from '../services/preference-manager.js';
+
 export type VideoQuality = 'low' | 'medium' | 'high' | 'source';
 export type ScreenQuality = 'low' | 'medium' | 'high' | 'source';
 
@@ -53,19 +55,19 @@ export const SCREEN_PRESETS: Record<ScreenQuality, {
 };
 
 export function getVideoQuality(): VideoQuality {
-  return (localStorage.getItem('ecto-video-quality') as VideoQuality) || 'medium';
+  return preferenceManager.getDevice<VideoQuality>('video-quality', 'medium');
 }
 
 export function getScreenQuality(): ScreenQuality {
-  return (localStorage.getItem('ecto-screen-quality') as ScreenQuality) || 'high';
+  return preferenceManager.getDevice<ScreenQuality>('screen-quality', 'high');
 }
 
 export function setVideoQuality(quality: VideoQuality): void {
-  localStorage.setItem('ecto-video-quality', quality);
+  preferenceManager.setDevice('video-quality', quality);
 }
 
 export function setScreenQuality(quality: ScreenQuality): void {
-  localStorage.setItem('ecto-screen-quality', quality);
+  preferenceManager.setDevice('screen-quality', quality);
 }
 
 export const QUALITY_OPTIONS: { value: VideoQuality; label: string }[] = [

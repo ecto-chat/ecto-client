@@ -7,6 +7,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     get: (key: string) => ipcRenderer.invoke('secure-store:get', key),
     set: (key: string, value: string) => ipcRenderer.invoke('secure-store:set', key, value),
     delete: (key: string) => ipcRenderer.invoke('secure-store:delete', key),
+    deleteByPrefix: (prefix: string) => ipcRenderer.invoke('secure-store:delete-by-prefix', prefix),
   },
 
   notifications: {

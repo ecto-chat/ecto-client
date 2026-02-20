@@ -9,6 +9,8 @@ import { useAuthStore } from '@/stores/auth';
 
 import { useVoice } from '@/hooks/useVoice';
 
+import { preferenceManager } from '@/services/preference-manager';
+
 import { cn } from '@/lib/cn';
 
 function getAudioElements(userId: string, source: 'mic' | 'screen-audio'): HTMLAudioElement[] {
@@ -30,10 +32,9 @@ type VolumeSliderProps = {
 };
 
 function VolumeSlider({ userId, source, className }: VolumeSliderProps) {
-  const storageKey = `ecto-volume:${source}:${userId}`;
+  const volumeKey = `volume.${source}.${userId}`;
   const [volume, setVolume] = useState(() => {
-    const saved = localStorage.getItem(storageKey);
-    return saved !== null ? parseFloat(saved) : 1;
+    return preferenceManager.getUser(volumeKey, 1);
   });
   const [preMuteVolume, setPreMuteVolume] = useState(1);
   const myUserId = useAuthStore((s) => s.user?.id);
@@ -50,9 +51,9 @@ function VolumeSlider({ userId, source, className }: VolumeSliderProps) {
         el.muted = v === 0;
       }
       setVolume(v);
-      localStorage.setItem(storageKey, String(v));
+      preferenceManager.setUser(volumeKey, v);
     },
-    [userId, source, storageKey],
+    [userId, source, volumeKey],
   );
 
   const handleMuteToggle = useCallback(

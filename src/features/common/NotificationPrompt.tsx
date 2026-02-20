@@ -5,8 +5,7 @@ import { Bell } from 'lucide-react';
 import { Button } from '@/ui';
 
 import { requestNotificationPermission } from '@/services/notification-service';
-
-const DISMISSED_KEY = 'ecto-notification-prompt-dismissed';
+import { preferenceManager } from '@/services/preference-manager';
 
 export function NotificationPrompt() {
   const [visible, setVisible] = useState(false);
@@ -15,7 +14,7 @@ export function NotificationPrompt() {
     if (window.electronAPI) return;
     if (!('Notification' in window)) return;
     if (Notification.permission !== 'default') return;
-    if (localStorage.getItem(DISMISSED_KEY)) return;
+    if (preferenceManager.getDevice('notification-prompt-dismissed', null) !== null) return;
     setVisible(true);
   }, []);
 
@@ -27,7 +26,7 @@ export function NotificationPrompt() {
   };
 
   const handleDismiss = () => {
-    localStorage.setItem(DISMISSED_KEY, '1');
+    preferenceManager.setDevice('notification-prompt-dismissed', '1');
     setVisible(false);
   };
 

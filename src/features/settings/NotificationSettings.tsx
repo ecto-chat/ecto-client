@@ -5,11 +5,10 @@ import { Play } from 'lucide-react';
 import { Switch, Select, Button, IconButton } from '@/ui';
 
 import { requestNotificationPermission } from '@/services/notification-service';
+import { preferenceManager } from '@/services/preference-manager';
 
 import { playSoundVariant, SOUND_LIBRARY } from '@/lib/notification-sounds';
 import type { SoundType } from '@/lib/notification-sounds';
-
-const STORAGE_KEY = 'ecto-notification-settings';
 
 type NotificationPrefs = {
   enabled: boolean;
@@ -30,18 +29,8 @@ const DEFAULT_PREFS: NotificationPrefs = {
 };
 
 function loadPrefs(): NotificationPrefs {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw) as Partial<NotificationPrefs>;
-      return { ...DEFAULT_PREFS, ...parsed, selectedSounds: { ...DEFAULT_PREFS.selectedSounds, ...parsed.selectedSounds } };
-    }
-  } catch { /* ignore */ }
-  return { ...DEFAULT_PREFS };
-}
-
-function savePrefs(prefs: NotificationPrefs) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
+  const stored = preferenceManager.getUser<Partial<NotificationPrefs>>('notification-settings', {});
+  return { ...DEFAULT_PREFS, ...stored, selectedSounds: { ...DEFAULT_PREFS.selectedSounds, ...stored.selectedSounds } };
 }
 
 const SOUND_EVENT_TYPES: { type: SoundType; label: string }[] = [
@@ -60,7 +49,7 @@ export function NotificationSettings() {
     return Notification.permission;
   });
 
-  useEffect(() => { savePrefs(prefs); }, [prefs]);
+  useEffect(() => { preferenceManager.setUser('notification-settings', prefs); }, [prefs]);
 
   const update = useCallback((key: keyof NotificationPrefs, value: boolean) => {
     setPrefs((prev) => ({ ...prev, [key]: value }));

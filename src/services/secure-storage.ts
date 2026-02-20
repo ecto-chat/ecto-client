@@ -9,6 +9,7 @@ declare const window: {
       get(key: string): Promise<string | null>;
       set(key: string, value: string): Promise<void>;
       delete(key: string): Promise<void>;
+      deleteByPrefix(prefix: string): Promise<void>;
     };
   };
   localStorage: Storage;
@@ -35,6 +36,23 @@ export const secureStorage = {
       await window.electronAPI.secureStore.delete(key);
     } else {
       localStorage.removeItem(key);
+    }
+  },
+
+  async deleteByPrefix(prefix: string): Promise<void> {
+    if (window.electronAPI?.secureStore) {
+      await window.electronAPI.secureStore.deleteByPrefix(prefix);
+    } else {
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key?.startsWith(prefix)) {
+          keysToRemove.push(key);
+        }
+      }
+      for (const k of keysToRemove) {
+        localStorage.removeItem(k);
+      }
     }
   },
 };

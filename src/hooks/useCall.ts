@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback } from 'react';
 import { Device } from 'mediasoup-client';
 import { useCallStore } from '../stores/call.js';
 import { useVoiceStore } from '../stores/voice.js';
@@ -6,6 +6,7 @@ import { useAuthStore } from '../stores/auth.js';
 import { usePresenceStore } from '../stores/presence.js';
 import { useFriendStore } from '../stores/friend.js';
 import { connectionManager } from '../services/connection-manager.js';
+import { preferenceManager } from '../services/preference-manager.js';
 import {
   CAMERA_PRESETS,
   SCREEN_PRESETS,
@@ -170,7 +171,7 @@ async function processCallEvent(event: string, data: unknown): Promise<void> {
 
         // Auto-produce audio (gracefully handle missing devices)
         try {
-          const savedAudioDevice = localStorage.getItem('ecto-audio-device');
+          const savedAudioDevice = preferenceManager.getDevice('audio-input', '');
           const stream = await navigator.mediaDevices.getUserMedia({
             audio: savedAudioDevice ? { deviceId: { ideal: savedAudioDevice } } : true,
           });
@@ -195,7 +196,7 @@ async function processCallEvent(event: string, data: unknown): Promise<void> {
         // Auto-produce video if the call was initiated with video
         if (useCallStore.getState().mediaTypes.includes('video')) {
           try {
-            const savedVideoDevice = localStorage.getItem('ecto-video-device');
+            const savedVideoDevice = preferenceManager.getDevice('video-input', '');
             const preset = CAMERA_PRESETS[getVideoQuality()];
             const stream = await navigator.mediaDevices.getUserMedia({
               video: {
@@ -311,7 +312,7 @@ async function processCallEvent(event: string, data: unknown): Promise<void> {
             audio.srcObject = audioStream;
             audio.autoplay = true;
             audio.dataset['callAudio'] = 'true';
-            const savedOutput = localStorage.getItem('ecto-audio-output');
+            const savedOutput = preferenceManager.getDevice('audio-output', '');
             if (savedOutput && 'setSinkId' in audio) {
               (audio as HTMLAudioElement & { setSinkId: (id: string) => Promise<void> }).setSinkId(savedOutput).catch(() => {});
             }
@@ -660,7 +661,7 @@ export function useCall() {
     } else if (sendTransport && centralWs) {
       // Start video
       try {
-        const savedVideoDevice = localStorage.getItem('ecto-video-device');
+        const savedVideoDevice = preferenceManager.getDevice('video-input', '');
         const preset = CAMERA_PRESETS[getVideoQuality()];
         const stream = await navigator.mediaDevices.getUserMedia({
           video: {
@@ -838,7 +839,7 @@ export function useCall() {
   }, []);
 
   const switchAudioOutput = useCallback(async (deviceId: string) => {
-    localStorage.setItem('ecto-audio-output', deviceId);
+    preferenceManager.setDevice('audio-output', deviceId);
     const elements: (HTMLAudioElement | HTMLVideoElement)[] = [];
     if (callAudioElement) elements.push(callAudioElement);
     const extras = document.querySelectorAll<HTMLAudioElement>('audio[data-call-audio]');

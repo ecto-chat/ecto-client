@@ -8,6 +8,8 @@ import {
   DropdownMenuLabel,
 } from '@/ui';
 
+import { preferenceManager } from '@/services/preference-manager';
+
 type DeviceSelectorProps = {
   kind: 'audioinput' | 'videoinput' | 'audiooutput';
   onSelect: (deviceId: string) => void;
@@ -19,16 +21,16 @@ const LABELS: Record<DeviceSelectorProps['kind'], { heading: string; fallback: s
   videoinput: { heading: 'Video Input', fallback: 'Camera' },
 };
 
-const STORAGE_KEYS: Record<DeviceSelectorProps['kind'], string> = {
-  audioinput: 'ecto-audio-device',
-  audiooutput: 'ecto-audio-output',
-  videoinput: 'ecto-video-device',
+const PREF_KEYS: Record<DeviceSelectorProps['kind'], string> = {
+  audioinput: 'audio-input',
+  audiooutput: 'audio-output',
+  videoinput: 'video-input',
 };
 
 export function DeviceSelector({ kind, onSelect }: DeviceSelectorProps) {
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
-  const storageKey = STORAGE_KEYS[kind];
-  const selectedId = localStorage.getItem(storageKey);
+  const prefKey = PREF_KEYS[kind];
+  const selectedId = preferenceManager.getDevice(prefKey, '');
   const { heading, fallback } = LABELS[kind];
 
   useEffect(() => {
@@ -38,7 +40,7 @@ export function DeviceSelector({ kind, onSelect }: DeviceSelectorProps) {
   }, [kind]);
 
   const handleSelect = (deviceId: string) => {
-    localStorage.setItem(storageKey, deviceId);
+    preferenceManager.setDevice(prefKey, deviceId);
     onSelect(deviceId);
   };
 

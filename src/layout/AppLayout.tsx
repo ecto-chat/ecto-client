@@ -11,7 +11,7 @@ import { ServerFallback } from '../layout/ServerFallback';
 
 // features
 import { ServerSettings, SetupWizard, ChannelSettingsModal } from '@/features/admin';
-import { CentralSignInModal } from '@/features/auth';
+import { CentralSignInModal, AddAccountModal } from '@/features/auth';
 import { IncomingCallOverlay, ActiveCallOverlay, CallBanner } from '@/features/call';
 import { ChannelView, ImageLightbox } from '@/features/chat';
 import { NotificationPrompt, NotificationToast } from '@/features/common';
@@ -154,6 +154,7 @@ export function AppLayout() {
       <LeaveServerModal />
       <UserProfileModal />
       <CentralSignInModal />
+      <AddAccountModal />
       <ServerSettings />
       <ChannelSettingsModal />
       <UserSettingsModal />
