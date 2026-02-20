@@ -6,6 +6,7 @@ import { useAuthStore } from '@/stores/auth';
 import { useUiStore } from '@/stores/ui';
 import { useMemberStore } from '@/stores/member';
 import { useChannelStore } from '@/stores/channel';
+import { useRoleStore } from '@/stores/role';
 
 import { renderMarkdown } from '@/lib/markdown';
 import { cn } from '@/lib/cn';
@@ -43,6 +44,7 @@ export const MessageItem = memo(function MessageItem({
   const isOwn = message.author?.id === currentUserId;
   const serverMembers = useMemberStore((s) => activeServerId ? s.members.get(activeServerId) : undefined);
   const serverChannels = useChannelStore((s) => activeServerId ? s.channels.get(activeServerId) : undefined);
+  const serverRoles = useRoleStore((s) => activeServerId ? s.roles.get(activeServerId) : undefined);
 
   const mentionResolver = useMemo(() => {
     const members = new Map<string, string>();
@@ -57,8 +59,14 @@ export const MessageItem = memo(function MessageItem({
         channels.set(channelId, ch.name);
       }
     }
-    return { members, channels };
-  }, [serverMembers, serverChannels]);
+    const roles = new Map<string, { name: string; color: string | null }>();
+    if (serverRoles) {
+      for (const [roleId, r] of serverRoles) {
+        roles.set(roleId, { name: r.name, color: r.color });
+      }
+    }
+    return { members, channels, roles, mentionEveryone: message.mention_everyone };
+  }, [serverMembers, serverChannels, serverRoles, message.mention_everyone]);
 
   const handleAuthorClick = () => {
     if (!message.author?.id) return;

@@ -104,11 +104,15 @@ function escapeHtml(text: string): string {
     .replace(/"/g, '&quot;');
 }
 
-interface MentionResolver {
+export interface MentionResolver {
   /** Map of userId → display name for user mentions */
   members?: Map<string, string>;
   /** Map of channelId → channel name for channel mentions */
   channels?: Map<string, string>;
+  /** Map of roleId → { name, color } for role mentions */
+  roles?: Map<string, { name: string; color: string | null }>;
+  /** Whether @everyone/@here should render as highlighted (sender had permission) */
+  mentionEveryone?: boolean;
 }
 
 /** Chat-safe DOMPurify tag list (no raw HTML layout elements). */
@@ -232,11 +236,24 @@ export function renderMarkdown(content: string, resolver?: MentionResolver, opti
     },
   );
 
-  // Role mentions: <@&roleId>
+  // Role mentions: <@&roleId> — resolve name and color from roles map
   result = result.replace(
     /&lt;@&amp;([a-f0-9-]+)&gt;/g,
-    '<span class="mention" data-type="role" data-id="$1">@role</span>',
+    (_match, id: string) => {
+      const role = resolver?.roles?.get(id);
+      const name = role?.name ?? 'role';
+      const style = role?.color ? ` style="color:${escapeHtml(role.color)};background:${escapeHtml(role.color)}20"` : '';
+      return `<span class="mention" data-type="role" data-id="${id}"${style}>@${escapeHtml(name)}</span>`;
+    },
   );
+
+  // @everyone / @here — highlight only if the message flags indicate the sender had permission
+  if (resolver?.mentionEveryone) {
+    result = result.replace(
+      /(?<!\w)@(everyone|here)(?!\w)/g,
+      '<span class="mention" data-type="everyone">@$1</span>',
+    );
+  }
 
   // Channel mentions: <#channelId>
   result = result.replace(
