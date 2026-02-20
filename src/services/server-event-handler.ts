@@ -285,6 +285,21 @@ export function handleMainEvent(serverId: string, event: string, data: unknown, 
       useServerDmStore.getState().setTyping(d.conversation_id as string);
       break;
 
+    // Server deletion
+    case 'server.delete':
+      // Server was deleted — disconnect and clean up
+      connectionManager.disconnectFromServer(serverId);
+      useServerStore.getState().removeServer(serverId);
+      if (useUiStore.getState().activeServerId === serverId) {
+        useUiStore.getState().setActiveServer(null);
+      }
+      break;
+
+    // Shared folder update
+    case 'shared_folder.update':
+      useHubFilesStore.getState().updateSharedFolder(d.id as string, d as Partial<SharedFolder>);
+      break;
+
     // Voice signaling events are handled by the voice service
     case 'voice.router_capabilities':
     case 'voice.transport_created':
@@ -297,6 +312,12 @@ export function handleMainEvent(serverId: string, event: string, data: unknown, 
     case 'voice.transferred':
     case 'voice.error':
       // These are dispatched to voice event listeners
+      break;
+
+    default:
+      if (import.meta.env.DEV) {
+        console.debug(`[ws] Unhandled server event: ${event}`, data);
+      }
       break;
   }
 }

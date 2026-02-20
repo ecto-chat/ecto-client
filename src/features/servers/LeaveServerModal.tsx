@@ -25,7 +25,9 @@ export function LeaveServerModal() {
       const server = useServerStore.getState().servers.get(modalData.serverId);
       const centralTrpc = connectionManager.getCentralTrpc();
       if (centralTrpc && server?.server_address) {
-        centralTrpc.servers.remove.mutate({ server_address: server.server_address }).catch(() => {});
+        centralTrpc.servers.remove.mutate({ server_address: server.server_address }).catch((err: unknown) => {
+          console.warn('[central] Failed to sync server removal:', err);
+        });
       }
 
       connectionManager.disconnectFromServer(modalData.serverId);

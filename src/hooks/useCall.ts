@@ -46,7 +46,9 @@ export function handleCallWsEvent(event: string, data: unknown): void {
     pendingCallProduceReject = null;
   }
 
-  callEventQueue = callEventQueue.then(() => processCallEvent(event, data)).catch(() => {});
+  callEventQueue = callEventQueue.then(() => processCallEvent(event, data)).catch((err) => {
+    console.error('[call] Event processing error:', event, err);
+  });
 }
 
 async function processCallEvent(event: string, data: unknown): Promise<void> {

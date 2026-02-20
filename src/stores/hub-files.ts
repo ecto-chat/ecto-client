@@ -21,6 +21,7 @@ interface HubFilesStore {
   addSharedFile: (file: SharedFile) => void;
   removeSharedFile: (fileId: string) => void;
   addSharedFolder: (folder: SharedFolder) => void;
+  updateSharedFolder: (folderId: string, updates: Partial<SharedFolder>) => void;
   removeSharedFolder: (folderId: string) => void;
   setQuota: (quota: SharedStorageQuota) => void;
   navigateToFolder: (folderId: string | null, folderName: string) => void;
@@ -76,6 +77,10 @@ export const useHubFilesStore = create<HubFilesStore>()((set) => ({
       if (s.sharedFolders.some((f) => f.id === folder.id)) return s;
       return { sharedFolders: [...s.sharedFolders, folder] };
     }),
+  updateSharedFolder: (folderId, updates) =>
+    set((s) => ({
+      sharedFolders: s.sharedFolders.map((f) => (f.id === folderId ? { ...f, ...updates } : f)),
+    })),
   removeSharedFolder: (folderId) =>
     set((s) => ({ sharedFolders: s.sharedFolders.filter((f) => f.id !== folderId) })),
   setQuota: (quota) => set({ quota }),

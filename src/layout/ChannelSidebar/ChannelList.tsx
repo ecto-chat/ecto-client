@@ -275,7 +275,9 @@ export function ChannelList({
         const reordered = arrayMove(catList, oldIdx, newIdx);
         const payload = reordered.map((c, i) => ({ category_id: c.id, position: i }));
         for (const p of payload) useChannelStore.getState().updateCategory(serverId, { id: p.category_id, position: p.position });
-        connectionManager.getServerTrpc(serverId)?.categories.reorder.mutate({ categories: payload }).catch(() => {});
+        connectionManager.getServerTrpc(serverId)?.categories.reorder.mutate({ categories: payload }).catch((err: unknown) => {
+          console.warn('[reorder] Category reorder failed:', err);
+        });
       }
       return;
     }
@@ -317,7 +319,9 @@ export function ChannelList({
               category_id: p.category_id,
             });
           }
-          connectionManager.getServerTrpc(serverId)?.channels.reorder.mutate({ channels: payload }).catch(() => {});
+          connectionManager.getServerTrpc(serverId)?.channels.reorder.mutate({ channels: payload }).catch((err: unknown) => {
+            console.warn('[reorder] Channel reorder failed:', err);
+          });
           return current;
         });
       });

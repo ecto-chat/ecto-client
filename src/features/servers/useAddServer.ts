@@ -69,7 +69,9 @@ export function useAddServer() {
     if (isCentral && token) {
       const id = await connectionManager.connectToServer(addr, addr, token);
       const ct = connectionManager.getCentralTrpc();
-      if (ct) await ct.servers.add.mutate({ server_address: addr }).catch(() => {});
+      if (ct) await ct.servers.add.mutate({ server_address: addr }).catch((err: unknown) => {
+        console.warn('[central] Failed to sync server addition:', err);
+      });
       const name = await queryServerName(id, addr);
       addToServerStore(id, addr, name, null);
       resetAndClose();

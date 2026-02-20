@@ -94,9 +94,11 @@ export function useInitializeCentral() {
           useUiStore.getState().setActiveServer(realIds[0]!);
           connectionManager.switchServer(realIds[0]!).catch(() => {});
         }
-      } catch {
-        // Central unreachable
+      } catch (err) {
+        console.warn('[central] Failed to initialize servers:', err);
       }
-    }).catch(() => {});
+    }).catch((err) => {
+      console.warn('[central] Connection initialization failed:', err);
+    });
   }, [centralAuthState]);
 }

@@ -53,7 +53,9 @@ export const ServerIcon = memo(function ServerIcon({
     const chs = useChannelStore.getState().channels.get(serverId);
     if (chs) useReadStateStore.getState().markAllRead([...chs.keys()]);
     useNotifyStore.getState().clearNotifications(serverId);
-    connectionManager.getServerTrpc(serverId)?.read_state.markAllRead.mutate().catch(() => {});
+    connectionManager.getServerTrpc(serverId)?.read_state.markAllRead.mutate().catch((err: unknown) => {
+      console.warn('[read-state] Mark all read failed:', err);
+    });
   }, [serverId]);
 
   const toggleMute = useCallback(() => {
@@ -69,7 +71,9 @@ export const ServerIcon = memo(function ServerIcon({
   const removeServer = useCallback(() => {
     const central = connectionManager.getCentralTrpc();
     if (central && server.server_address)
-      central.servers.remove.mutate({ server_address: server.server_address }).catch(() => {});
+      central.servers.remove.mutate({ server_address: server.server_address }).catch((err: unknown) => {
+        console.warn('[central] Failed to sync server removal:', err);
+      });
     connectionManager.disconnectFromServer(serverId);
     connectionManager.removeStoredServerSession(serverId).catch(() => {});
     connectionManager.stopServerRetry(server.server_address ?? serverId);

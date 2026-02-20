@@ -31,7 +31,9 @@ export function TransferOwnership({ serverId, onError, onSuccess }: TransferOwne
           .filter((m) => m.user_id !== myUserId)
           .map((m) => ({ user_id: m.user_id, username: m.username, display_name: m.display_name ?? null })),
       );
-    }).catch(() => {});
+    }).catch((err: unknown) => {
+      console.warn('[admin] Failed to load members:', err);
+    });
   }, [serverId, myUserId]);
 
   const handleTransfer = async (e: FormEvent) => {

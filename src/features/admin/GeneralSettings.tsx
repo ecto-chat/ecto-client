@@ -57,7 +57,9 @@ export function GeneralSettings({ serverId }: GeneralSettingsProps) {
       setServer(result.server);
       setName(result.server.name);
       setDescription(result.server.description ?? '');
-    }).catch(() => {});
+    }).catch((err: unknown) => {
+      console.warn('[admin] Failed to load server info:', err);
+    });
     trpc.serverConfig.get.query().then((cfg) => {
       setConfig({
         max_upload_size_bytes: cfg.max_upload_size_bytes,
@@ -67,7 +69,9 @@ export function GeneralSettings({ serverId }: GeneralSettingsProps) {
         allow_member_dms: cfg.allow_member_dms,
         show_system_messages: cfg.show_system_messages,
       });
-    }).catch(() => {});
+    }).catch((err: unknown) => {
+      console.warn('[admin] Failed to load server config:', err);
+    });
   }, [serverId]);
 
   const handleSave = async (e: FormEvent) => {

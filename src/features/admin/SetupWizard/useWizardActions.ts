@@ -94,7 +94,9 @@ export function useWizardActions(serverId: string | null, onClose: () => void) {
   const handleFinish = useCallback(() => {
     if (serverId) {
       const trpc = connectionManager.getServerTrpc(serverId);
-      if (trpc) { trpc.serverConfig.completeSetup.mutate().catch(() => {}); }
+      if (trpc) { trpc.serverConfig.completeSetup.mutate().catch((err: unknown) => {
+        console.warn('[setup] Failed to complete setup:', err);
+      }); }
       const meta = useServerStore.getState().serverMeta.get(serverId);
       if (meta) {
         useServerStore.getState().setServerMeta(serverId, { ...meta, setup_completed: true });

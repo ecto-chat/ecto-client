@@ -27,6 +27,10 @@ export function handleCentralEvent(event: string, data: unknown) {
       useFriendStore.getState().removeFriend(d.user_id as string);
       break;
 
+    case 'friend.request_removed':
+      useFriendStore.getState().removeRequest(d.friendship_id as string);
+      break;
+
     case 'friend.presence':
     case 'friend.online':
       usePresenceStore.getState().setPresence(
