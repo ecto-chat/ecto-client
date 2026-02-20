@@ -18,6 +18,7 @@ import { useUiStore } from '../stores/ui.js';
 import { useServerStore } from '../stores/server.js';
 import { useRoleStore } from '../stores/role.js';
 import { useCallStore } from '../stores/call.js';
+import { useServerDmStore } from '../stores/server-dm.js';
 import {
   getStoredServerSessions,
   storeServerSession,
@@ -466,7 +467,7 @@ export class ConnectionManager {
 
       const readyData = ready as unknown as {
         user_id?: string;
-        server?: { setup_completed?: boolean; admin_user_id?: string | null; default_channel_id?: string | null; banner_url?: string | null };
+        server?: { setup_completed?: boolean; admin_user_id?: string | null; default_channel_id?: string | null; banner_url?: string | null; allow_member_dms?: boolean };
         channels?: Channel[];
         categories?: Category[];
         members?: Member[];
@@ -483,6 +484,7 @@ export class ConnectionManager {
           user_id: readyData.user_id ?? null,
           default_channel_id: readyData.server.default_channel_id ?? null,
           banner_url: readyData.server.banner_url ?? null,
+          allow_member_dms: readyData.server.allow_member_dms ?? false,
         });
       }
 
@@ -516,6 +518,13 @@ export class ConnectionManager {
         for (const vs of readyData.voice_states) {
           useVoiceStore.getState().addParticipant(vs);
         }
+      }
+
+      // Fetch DM unread counts if server has DMs enabled
+      if (readyData.server?.allow_member_dms && conn.trpc) {
+        conn.trpc.serverDms.list.query().then((convos) => {
+          useServerDmStore.getState().hydrateUnreads(conn.serverId, convos);
+        }).catch(() => {});
       }
 
       const { activeServerId, activeChannelId } = useUiStore.getState();

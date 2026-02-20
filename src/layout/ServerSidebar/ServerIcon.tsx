@@ -5,6 +5,7 @@ import { useNotifyStore } from '@/stores/notify';
 import { useReadStateStore } from '@/stores/read-state';
 import { useConnectionStore } from '@/stores/connection';
 import { useChannelStore } from '@/stores/channel';
+import { useServerDmStore } from '@/stores/server-dm';
 import { connectionManager } from '@/services/connection-manager';
 import { useUiStore } from '@/stores/ui';
 import { useServerStore } from '@/stores/server';
@@ -44,6 +45,7 @@ export const ServerIcon = memo(function ServerIcon({
     for (const id of chs.keys()) t += s.mentionCounts.get(id) ?? 0;
     return t;
   });
+  const dmUnreads = useServerDmStore((s) => s.serverDmUnreads.get(serverId) ?? 0);
 
   const handleClick = useCallback(() => onClick(serverId), [onClick, serverId]);
 
@@ -86,8 +88,8 @@ export const ServerIcon = memo(function ServerIcon({
             className="absolute left-0 w-1 rounded-r-full bg-primary"
             initial={false}
             animate={{
-              height: isActive ? 40 : hasUnread && !isActive ? 8 : 0,
-              opacity: isActive || (hasUnread && !isActive) ? 1 : 0,
+              height: isActive ? 40 : (hasUnread || dmUnreads > 0) && !isActive ? 8 : 0,
+              opacity: isActive || ((hasUnread || dmUnreads > 0) && !isActive) ? 1 : 0,
             }}
             transition={springSnappy}
           />
@@ -95,6 +97,11 @@ export const ServerIcon = memo(function ServerIcon({
             {mentions > 0 && (
               <div className="absolute -top-1 -left-1 z-10">
                 <Badge variant="danger" size="md" className="ring-3 ring-[var(--color-bg-secondary)]">{mentions}</Badge>
+              </div>
+            )}
+            {dmUnreads > 0 && !isMuted && (
+              <div className="absolute bottom-0 -left-1 z-10">
+                <Badge variant="default" size="md" className="ring-3 ring-[var(--color-bg-secondary)] bg-[#7c5cfc]">{dmUnreads}</Badge>
               </div>
             )}
             {isMuted && (

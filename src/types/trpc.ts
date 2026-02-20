@@ -29,6 +29,8 @@ import type {
   SharedStorageQuota,
   ChannelFileStat,
   SharedItemPermissionOverride,
+  ServerDmConversation,
+  ServerDmMessage,
 } from 'ecto-shared';
 
 // ---------- Server tRPC Router ----------
@@ -495,6 +497,50 @@ export interface ServerRouter {
     };
     completeSetup: {
       mutate: () => Promise<{ success: boolean }>;
+    };
+  };
+
+  serverDms: {
+    list: {
+      query: () => Promise<ServerDmConversation[]>;
+    };
+    history: {
+      query: (input: {
+        conversation_id: string;
+        before?: string;
+        limit?: number;
+      }) => Promise<{ messages: ServerDmMessage[]; has_more: boolean }>;
+    };
+    send: {
+      mutate: (input: {
+        recipient_id: string;
+        content: string;
+        attachment_ids?: string[];
+      }) => Promise<ServerDmMessage>;
+    };
+    edit: {
+      mutate: (input: {
+        message_id: string;
+        content: string;
+      }) => Promise<ServerDmMessage>;
+    };
+    delete: {
+      mutate: (input: {
+        message_id: string;
+      }) => Promise<{ success: boolean }>;
+    };
+    react: {
+      mutate: (input: {
+        message_id: string;
+        emoji: string;
+        action: 'add' | 'remove';
+      }) => Promise<ReactionGroup[]>;
+    };
+    markRead: {
+      mutate: (input: {
+        conversation_id: string;
+        last_read_message_id: string;
+      }) => Promise<{ success: boolean }>;
     };
   };
 }

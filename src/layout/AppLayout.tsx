@@ -19,6 +19,7 @@ import { FriendList, DMView, DMSidebar } from '@/features/friends';
 import { FloatingMediaWindow, SnappedMediaSidebar, ResizeHandle } from '@/features/media-window';
 import { AddServerModal, LeaveServerModal } from '@/features/servers';
 import { FileBrowserView } from '@/features/hub/FileBrowserView';
+import { ServerDmView } from '@/features/server-dm/ServerDmView';
 import { UserSettingsModal } from '@/features/settings';
 import { UserProfileModal } from '@/features/user';
 import { VoiceControls, VoiceBanner } from '@/features/voice';
@@ -117,6 +118,8 @@ export function AppLayout() {
           />
         ) : !isHomeMode && hubSection === 'file-browser' ? (
           <FileBrowserView />
+        ) : !isHomeMode && hubSection === 'server-dms' ? (
+          <ServerDmView />
         ) : (
           <AnimatePresence mode="wait">
             <motion.div

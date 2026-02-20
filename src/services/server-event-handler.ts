@@ -16,6 +16,7 @@ import { showOsNotification, shouldNotifyEveryone } from './notification-service
 import { connectionManager } from './connection-manager.js';
 import { pageEventListeners } from '../hooks/usePage.js';
 import { useHubFilesStore } from '../stores/hub-files.js';
+import { useServerDmStore } from '../stores/server-dm.js';
 
 export function handleMainEvent(serverId: string, event: string, data: unknown, _seq: number) {
   const d = data as Record<string, unknown>;
@@ -132,6 +133,7 @@ export function handleMainEvent(serverId: string, event: string, data: unknown, 
           const metaUpdates: Partial<typeof meta> = {};
           if (d.admin_user_id !== undefined) metaUpdates.admin_user_id = d.admin_user_id as string;
           if (d.banner_url !== undefined) metaUpdates.banner_url = d.banner_url as string | null;
+          if (d.allow_member_dms !== undefined) metaUpdates.allow_member_dms = d.allow_member_dms as boolean;
           if (Object.keys(metaUpdates).length > 0) {
             useServerStore.getState().setServerMeta(serverId, { ...meta, ...metaUpdates });
           }
@@ -204,6 +206,83 @@ export function handleMainEvent(serverId: string, event: string, data: unknown, 
     case 'shared_item.permissions_update':
       // Reload shared folder/file listings to reflect permission changes
       useHubFilesStore.getState().requestReload();
+      break;
+
+    // Server DM events
+    case 'server_dm.message': {
+      const convoId = d.conversation_id as string;
+      useServerDmStore.getState().addMessage(convoId, d as unknown as import('ecto-shared').ServerDmMessage);
+      // If this is a new conversation, ensure it exists in the list
+      if (!useServerDmStore.getState().conversations.has(convoId)) {
+        const peerId = d._conversation_peer_id as string | undefined;
+        if (peerId) {
+          const author = d.author as { id: string; username: string; display_name: string | null; avatar_url: string | null; nickname: string | null };
+          const peerIsAuthor = author.id === peerId;
+          let peerData: { user_id: string; username: string; display_name: string | null; avatar_url: string | null; nickname: string | null };
+          if (peerIsAuthor) {
+            peerData = { user_id: peerId, username: author.username, display_name: author.display_name, avatar_url: author.avatar_url, nickname: author.nickname };
+          } else {
+            // Peer is not the author (we sent the message) — look up from member store
+            const peerMember = useMemberStore.getState().members.get(serverId)?.get(peerId);
+            peerData = {
+              user_id: peerId,
+              username: peerMember?.username ?? 'Unknown',
+              display_name: peerMember?.display_name ?? null,
+              avatar_url: peerMember?.avatar_url ?? null,
+              nickname: peerMember?.nickname ?? null,
+            };
+          }
+          useServerDmStore.getState().ensureConversation({
+            id: convoId,
+            peer: peerData,
+            last_message: d as unknown as import('ecto-shared').ServerDmMessage,
+            unread_count: 0,
+          });
+        }
+      }
+      // Track unreads and play notification sound if not our own message
+      const myId = useAuthStore.getState().user?.id;
+      const authorId = (d.author as { id?: string } | undefined)?.id;
+      if (authorId && authorId !== myId) {
+        // Increment unread unless the user is actively viewing this conversation
+        const dmStore = useServerDmStore.getState();
+        const isViewingThisConvo =
+          dmStore.activeConversationId === convoId &&
+          useUiStore.getState().hubSection === 'server-dms' &&
+          useUiStore.getState().activeServerId === serverId;
+        if (!isViewingThisConvo) {
+          useServerDmStore.getState().incrementUnread(serverId, convoId);
+        }
+        playNotificationSound('message');
+      }
+      break;
+    }
+
+    case 'server_dm.update':
+      useServerDmStore.getState().updateMessage(
+        d.conversation_id as string,
+        d.id as string,
+        d as unknown as Partial<import('ecto-shared').ServerDmMessage>,
+      );
+      break;
+
+    case 'server_dm.delete':
+      useServerDmStore.getState().deleteMessage(d.conversation_id as string, d.id as string);
+      break;
+
+    case 'server_dm.reaction_update':
+      useServerDmStore.getState().updateReaction(
+        d.conversation_id as string,
+        d.message_id as string,
+        d.emoji as string,
+        d.user_id as string,
+        d.action as 'add' | 'remove',
+        d.count as number,
+      );
+      break;
+
+    case 'server_dm.typing':
+      useServerDmStore.getState().setTyping(d.conversation_id as string);
       break;
 
     // Voice signaling events are handled by the voice service

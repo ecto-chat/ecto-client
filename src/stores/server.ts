@@ -7,6 +7,7 @@ interface ServerMeta {
   user_id: string | null;
   default_channel_id: string | null;
   banner_url: string | null;
+  allow_member_dms: boolean;
 }
 
 interface ServerStore {

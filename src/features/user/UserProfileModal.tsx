@@ -14,6 +14,8 @@ import { usePresence } from '@/hooks/usePresence';
 import { useCall } from '@/hooks/useCall';
 
 import { connectionManager } from '@/services/connection-manager';
+import { useServerStore } from '@/stores/server';
+import { useServerDmStore } from '@/stores/server-dm';
 
 import type { Role, GlobalUser } from 'ecto-shared';
 
@@ -98,9 +100,43 @@ function UserProfileContent({ data, onClose }: { data: ModalData; onClose: () =>
 
   const memberRoles = roles.filter((r) => member?.roles.includes(r.id) && !r.is_default);
 
+  const allowMemberDms = useServerStore((s) =>
+    serverId ? s.serverMeta.get(serverId)?.allow_member_dms ?? false : false,
+  );
+
   const handleSendMessage = () => {
     onClose();
     navigate(`/dms/${userId}`);
+  };
+
+  const handleSendServerDm = () => {
+    onClose();
+    useUiStore.getState().setHubSection('server-dms');
+
+    // Check if conversation already exists
+    const conversations = useServerDmStore.getState().conversations;
+    for (const [, convo] of conversations) {
+      if (convo.peer.user_id === userId) {
+        useServerDmStore.getState().setActiveConversation(convo.id);
+        return;
+      }
+    }
+
+    // Create placeholder conversation
+    const tempId = `pending-${userId}`;
+    useServerDmStore.getState().ensureConversation({
+      id: tempId,
+      peer: {
+        user_id: userId,
+        username: profileSource?.username ?? 'Unknown',
+        display_name: profileSource?.display_name ?? null,
+        avatar_url: profileSource?.avatar_url ?? null,
+        nickname: member?.nickname ?? null,
+      },
+      last_message: null,
+      unread_count: 0,
+    });
+    useServerDmStore.getState().setActiveConversation(tempId);
   };
 
   return (
@@ -134,7 +170,7 @@ function UserProfileContent({ data, onClose }: { data: ModalData; onClose: () =>
         </div>
       )}
 
-      {!isSelf && !isLocal && (
+      {!isSelf && (!isLocal || allowMemberDms) && (
         <UserProfileActions
           userId={userId}
           username={profileSource?.username}
@@ -142,11 +178,14 @@ function UserProfileContent({ data, onClose }: { data: ModalData; onClose: () =>
           avatarUrl={avatarUrl}
           isFriend={isFriend}
           isBlocked={isBlocked}
+          isLocal={isLocal}
           incomingRequest={incomingRequest}
           outgoingRequest={outgoingRequest}
           isInCall={isInCall}
+          allowMemberDms={allowMemberDms}
           onClose={onClose}
           onSendMessage={handleSendMessage}
+          onSendServerDm={handleSendServerDm}
           onStartCall={startCall}
         />
       )}

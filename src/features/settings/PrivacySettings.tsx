@@ -4,6 +4,8 @@ import { Switch } from '@/ui';
 
 import { useAuthStore } from '@/stores/auth';
 import { useUiStore } from '@/stores/ui';
+import { useServerStore } from '@/stores/server';
+import { useMemberStore } from '@/stores/member';
 
 import { connectionManager } from '@/services/connection-manager';
 import { preferenceManager } from '@/services/preference-manager';
@@ -19,8 +21,16 @@ function loadPrefs(): PrivacyPrefs {
 export function PrivacySettings() {
   const user = useAuthStore((s) => s.user);
   const bypassNsfw = useUiStore((s) => s.bypassNsfwWarnings);
+  const activeServerId = useUiStore((s) => s.activeServerId);
+  const allowMemberDms = useServerStore((s) =>
+    activeServerId ? s.serverMeta.get(activeServerId)?.allow_member_dms ?? false : false,
+  );
+  const currentMember = useMemberStore((s) =>
+    activeServerId && user ? s.members.get(activeServerId)?.get(user.id) : undefined,
+  );
   const [prefs, setPrefs] = useState<PrivacyPrefs>(loadPrefs);
   const [saving, setSaving] = useState(false);
+  const [serverDmSaving, setServerDmSaving] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
@@ -70,6 +80,34 @@ export function PrivacySettings() {
         checked={bypassNsfw}
         onCheckedChange={(checked) => useUiStore.getState().setBypassNsfwWarnings(checked)}
       />
+
+      {allowMemberDms && activeServerId && currentMember && (
+        <>
+          <h3 className="text-sm font-medium text-secondary pt-2">Server Private Messages</h3>
+          <Switch
+            label="Allow members to send you private messages"
+            description="When disabled, other members on this server cannot initiate private messages with you."
+            checked={currentMember.allow_dms}
+            disabled={serverDmSaving}
+            onCheckedChange={async (checked) => {
+              setError('');
+              setSuccess('');
+              setServerDmSaving(true);
+              try {
+                const trpc = connectionManager.getServerTrpc(activeServerId);
+                if (!trpc) throw new Error('Not connected to server');
+                await trpc.members.updateDmPreference.mutate({ allow_dms: checked });
+                useMemberStore.getState().updateMember(activeServerId, currentMember.user_id, { allow_dms: checked });
+                setSuccess('Server DM preference updated.');
+              } catch (err: unknown) {
+                setError(err instanceof Error ? err.message : 'Failed to update');
+              } finally {
+                setServerDmSaving(false);
+              }
+            }}
+          />
+        </>
+      )}
 
       <div className="space-y-2">
         <h3 className="text-sm font-medium text-secondary">About Privacy</h3>

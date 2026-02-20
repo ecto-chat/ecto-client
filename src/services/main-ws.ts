@@ -199,6 +199,15 @@ export class MainWebSocket {
     this.send('typing.start', { channel_id: channelId });
   }
 
+  sendServerDmTyping(conversationId: string) {
+    const now = Date.now();
+    const key = `sdm:${conversationId}`;
+    const last = this.typingTimers.get(key) ?? 0;
+    if (now - last < 5000) return;
+    this.typingTimers.set(key, now);
+    this.send('server_dm.typing', { conversation_id: conversationId });
+  }
+
   updatePresence(status: string, customText?: string) {
     this.send('presence.update', { status, custom_text: customText });
   }

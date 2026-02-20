@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 
-import { Phone, Video, MessageCircle, UserX, UserPlus, Ban, Check, X } from 'lucide-react';
+import { Phone, Video, MessageCircle, Mail, UserX, UserPlus, Ban, Check, X } from 'lucide-react';
 
 import { Button } from '@/ui';
 
@@ -17,11 +17,14 @@ type UserProfileActionsProps = {
   avatarUrl?: string | null;
   isFriend: boolean;
   isBlocked: boolean;
+  isLocal?: boolean;
   incomingRequest?: FriendRequest;
   outgoingRequest?: FriendRequest;
   isInCall: boolean;
+  allowMemberDms?: boolean;
   onClose: () => void;
   onSendMessage: () => void;
+  onSendServerDm?: () => void;
   onStartCall: (userId: string, mediaTypes: ('audio' | 'video')[]) => void;
 };
 
@@ -33,8 +36,8 @@ function getCentralTrpc() {
 
 export function UserProfileActions({
   userId, username, discriminator, avatarUrl,
-  isFriend, isBlocked, incomingRequest, outgoingRequest, isInCall,
-  onClose, onSendMessage, onStartCall,
+  isFriend, isBlocked, isLocal, incomingRequest, outgoingRequest, isInCall,
+  allowMemberDms, onClose, onSendMessage, onSendServerDm, onStartCall,
 }: UserProfileActionsProps) {
   const [requestSent, setRequestSent] = useState(false);
   const [error, setError] = useState('');
@@ -87,7 +90,13 @@ export function UserProfileActions({
     <div className="-mx-5 -mb-5 flex flex-col gap-2 px-5 pb-5">
       {error && <p className="text-sm text-danger">{error}</p>}
 
-      {isFriend && (
+      {allowMemberDms && onSendServerDm && (
+        <Button variant="secondary" size="sm" onClick={onSendServerDm}>
+          <Mail size={14} /> Server Message
+        </Button>
+      )}
+
+      {!isLocal && isFriend && (
         <>
           <div className="flex gap-2">
             <Button variant="primary" size="sm" className="flex-1"
@@ -108,7 +117,7 @@ export function UserProfileActions({
         </>
       )}
 
-      {incomingRequest && !isFriend && !isBlocked && (
+      {!isLocal && incomingRequest && !isFriend && !isBlocked && (
         <div className="flex gap-2">
           <Button variant="primary" size="sm" className="flex-1" onClick={accept}>
             <Check size={14} /> Accept
@@ -119,13 +128,13 @@ export function UserProfileActions({
         </div>
       )}
 
-      {isBlocked && (
+      {!isLocal && isBlocked && (
         <Button variant="secondary" size="sm" onClick={unblock}>
           <Ban size={14} /> Unblock
         </Button>
       )}
 
-      {!isFriend && !incomingRequest && !isBlocked && (
+      {!isLocal && !isFriend && !incomingRequest && !isBlocked && (
         <>
           {requestSent || outgoingRequest ? (
             <Button variant="primary" size="sm" disabled>

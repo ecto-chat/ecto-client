@@ -20,6 +20,7 @@ import { useVoiceStore } from './voice.js';
 import { useCallStore } from './call.js';
 import { useUiStore } from './ui.js';
 import { useHubFilesStore } from './hub-files.js';
+import { useServerDmStore } from './server-dm.js';
 
 /**
  * Reset all Zustand entity stores to initial state.
@@ -89,6 +90,7 @@ export function resetAllStores() {
   });
 
   useHubFilesStore.getState().clear();
+  useServerDmStore.getState().clear();
 
   // Reset navigation state (preserve user preferences: theme, customCSS, sidebar, memberList)
   useUiStore.setState({
