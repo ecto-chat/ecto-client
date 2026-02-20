@@ -62,7 +62,7 @@ export class ConnectionManager {
     address: string,
     options: { username: string; password: string; inviteCode?: string },
   ): Promise<{ serverId: string } | { error: { ectoCode: number; message: string } }> {
-    const serverUrl = address.startsWith('http') ? address : `http://${address}`;
+    const serverUrl = (address.startsWith('http') ? address : `http://${address}`).replace(/\/+$/, '');
 
     try {
       const body: Record<string, string> = {
@@ -142,7 +142,7 @@ export class ConnectionManager {
 
   /** Connect to a server using a pre-obtained local server token (no server.join call) */
   async connectToServerLocal(address: string, serverToken: string): Promise<string> {
-    const serverUrl = address.startsWith('http') ? address : `http://${address}`;
+    const serverUrl = (address.startsWith('http') ? address : `http://${address}`).replace(/\/+$/, '');
 
     let serverId: string;
     try {
@@ -238,7 +238,7 @@ export class ConnectionManager {
       useConnectionStore.getState().setStatus(serverId, 'connecting');
     }
 
-    const serverUrl = address.startsWith('http') ? address : `http://${address}`;
+    const serverUrl = (address.startsWith('http') ? address : `http://${address}`).replace(/\/+$/, '');
     let realServerId = serverId;
     let serverToken = token;
     let joinRes: Response;
@@ -370,7 +370,7 @@ export class ConnectionManager {
     address: string,
     onReconnected: (realServerId: string) => void,
   ): void {
-    const serverUrl = address.startsWith('http') ? address : `http://${address}`;
+    const serverUrl = (address.startsWith('http') ? address : `http://${address}`).replace(/\/+$/, '');
     let connecting = false;
 
     this.reconnection.startServerRetry(address, async () => {

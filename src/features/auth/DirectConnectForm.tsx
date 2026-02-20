@@ -48,7 +48,7 @@ export function DirectConnectForm() {
     if (!address.trim()) return;
     setLoading(true);
     setError('');
-    const url = address.trim().startsWith('http') ? address.trim() : `http://${address.trim()}`;
+    const url = (address.trim().startsWith('http') ? address.trim() : `http://${address.trim()}`).replace(/\/+$/, '');
     setServerUrl(url);
     try {
       setServerInfo(await fetchServerInfo(url));
