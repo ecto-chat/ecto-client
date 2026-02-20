@@ -11,6 +11,7 @@ export class NotifyWebSocket {
   private ws: WebSocket | null = null;
   private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
   private heartbeatAckPending = false;
+  private visibilityHandler: (() => void) | null = null;
 
   onNotify: NotifyEventHandler | null = null;
   onDisconnect: NotifyDisconnectHandler | null = null;
@@ -93,12 +94,24 @@ export class NotifyWebSocket {
       this.heartbeatAckPending = true;
       this.send('system.heartbeat');
     }, interval);
+
+    this.visibilityHandler = () => {
+      if (this.ws?.readyState === WebSocket.OPEN) {
+        this.heartbeatAckPending = false;
+        this.send('system.heartbeat');
+      }
+    };
+    document.addEventListener('visibilitychange', this.visibilityHandler);
   }
 
   private stopHeartbeat() {
     if (this.heartbeatTimer) {
       clearInterval(this.heartbeatTimer);
       this.heartbeatTimer = null;
+    }
+    if (this.visibilityHandler) {
+      document.removeEventListener('visibilitychange', this.visibilityHandler);
+      this.visibilityHandler = null;
     }
   }
 
