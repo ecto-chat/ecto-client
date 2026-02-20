@@ -93,7 +93,6 @@ export const useServerDmStore = create<ServerDmStore>()((set) => ({
         if (!existingSet.has(msg.id)) newIds.push(msg.id);
       }
       messages.set(convoId, convoMessages);
-      newIds.reverse();
       messageOrder.set(convoId, [...newIds, ...existing]);
       return { messages, messageOrder };
     }),
