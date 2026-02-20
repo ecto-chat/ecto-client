@@ -118,12 +118,17 @@ export function useVoice() {
     }
 
     // Already connected to the same channel on this session — no-op
+    // But if still 'connecting', allow retry (e.g. after WS reconnect lost the voice handshake)
     if (curChannel === channelId && curServer === serverId) {
-      return;
-    }
-
-    // Connected to a different channel on this session — store pending transfer for UI
-    if (curChannel && !force) {
+      if (useVoiceStore.getState().voiceStatus !== 'connecting') return;
+      // Reset stale connecting state and fall through to re-join
+      speakingCleanup?.();
+      speakingCleanup = null;
+      for (const cleanup of consumerSpeakingCleanups.values()) cleanup();
+      consumerSpeakingCleanups.clear();
+      useVoiceStore.getState().cleanup();
+    } else if (curChannel && !force) {
+      // Connected to a different channel on this session — store pending transfer for UI
       useVoiceStore.getState().setPendingTransfer({
         serverId,
         channelId,

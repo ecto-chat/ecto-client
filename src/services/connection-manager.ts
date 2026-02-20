@@ -419,6 +419,13 @@ export class ConnectionManager {
     ws.onEvent = (event, data, seq) => handleMainEvent(conn.serverId, event, data, seq);
     ws.onDisconnect = (code, reason) => {
       useConnectionStore.getState().setStatus(conn.serverId, 'reconnecting');
+
+      // Clean up voice state if this server owned the active voice session
+      const voiceState = useVoiceStore.getState();
+      if (voiceState.currentServerId === conn.serverId && voiceState.currentChannelId) {
+        useVoiceStore.getState().cleanup();
+      }
+
       if (ws.isAuthFailure(code)) {
         useConnectionStore.getState().setStatus(conn.serverId, 'disconnected');
         return;
