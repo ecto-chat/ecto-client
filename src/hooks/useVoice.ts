@@ -40,6 +40,18 @@ function removeOrphanedAudioElements() {
   document.querySelectorAll('audio[data-consumer-id]').forEach((el) => el.remove());
 }
 
+/** Reset module-level voice session state. Called by connection-manager on WS disconnect. */
+export function resetVoiceSessionState() {
+  speakingCleanup?.();
+  speakingCleanup = null;
+  for (const cleanup of consumerSpeakingCleanups.values()) cleanup();
+  consumerSpeakingCleanups.clear();
+  pendingProduceResolve = null;
+  pendingProduceReject = null;
+  voiceOriginalOnEvent = null;
+  removeOrphanedAudioElements();
+}
+
 /** Start speaking detection that updates the voice store for a given user. */
 function startVoiceSpeakingDetection(stream: MediaStream, userId: string): () => void {
   return startSpeakingDetection(

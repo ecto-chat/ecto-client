@@ -9,6 +9,7 @@ import { useMemberStore } from '../stores/member.js';
 import { usePresenceStore } from '../stores/presence.js';
 import { useReadStateStore } from '../stores/read-state.js';
 import { useVoiceStore } from '../stores/voice.js';
+import { resetVoiceSessionState } from '../hooks/useVoice.js';
 import { useConnectionStore } from '../stores/connection.js';
 import { useNotifyStore } from '../stores/notify.js';
 import { useFriendStore } from '../stores/friend.js';
@@ -424,6 +425,7 @@ export class ConnectionManager {
       const voiceState = useVoiceStore.getState();
       if (voiceState.currentServerId === conn.serverId && voiceState.currentChannelId) {
         useVoiceStore.getState().cleanup();
+        resetVoiceSessionState();
       }
 
       if (ws.isAuthFailure(code)) {
