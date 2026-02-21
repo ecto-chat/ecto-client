@@ -32,6 +32,14 @@ let pendingProduceResolve: ((id: string) => void) | null = null;
 let pendingProduceReject: ((err: Error) => void) | null = null;
 const consumerSpeakingCleanups = new Map<string, () => void>();
 
+/** The original (pre-voice-wrap) ws.onEvent handler. Tracked to prevent stacking on rejoin. */
+let voiceOriginalOnEvent: ((event: string, data: unknown, seq: number) => void) | null = null;
+
+/** Remove orphaned <audio> elements from previous voice sessions. */
+function removeOrphanedAudioElements() {
+  document.querySelectorAll('audio[data-consumer-id]').forEach((el) => el.remove());
+}
+
 /** Start speaking detection that updates the voice store for a given user. */
 function startVoiceSpeakingDetection(stream: MediaStream, userId: string): () => void {
   return startSpeakingDetection(
@@ -154,7 +162,12 @@ export function useVoice() {
 
     // Voice events are queued to prevent race conditions between async handlers
     voiceEventQueue = Promise.resolve();
-    const originalOnEvent = ws.onEvent;
+    // Restore original handler before re-wrapping to prevent stacking on rejoin
+    if (voiceOriginalOnEvent) {
+      ws.onEvent = voiceOriginalOnEvent;
+    }
+    voiceOriginalOnEvent = ws.onEvent;
+    const originalOnEvent = voiceOriginalOnEvent;
     ws.onEvent = (event, data, seq) => {
       originalOnEvent?.(event, data, seq);
 
@@ -193,6 +206,12 @@ export function useVoice() {
     pendingProduceResolve = null;
     pendingProduceReject = null;
     useVoiceStore.getState().cleanup();
+    removeOrphanedAudioElements();
+    // Restore original event handler to prevent stacking on rejoin
+    if (ws && voiceOriginalOnEvent) {
+      ws.onEvent = voiceOriginalOnEvent;
+      voiceOriginalOnEvent = null;
+    }
   }, []);
 
   const toggleMute = useCallback(() => {
@@ -482,7 +501,15 @@ async function handleVoiceEvent(ws: ReturnType<typeof connectionManager.getMainW
     case 'voice.error': {
       console.error('[voice] server error:', d.code, d.message);
       speakingCleanup?.();
+      speakingCleanup = null;
+      for (const cleanup of consumerSpeakingCleanups.values()) cleanup();
+      consumerSpeakingCleanups.clear();
       useVoiceStore.getState().cleanup();
+      removeOrphanedAudioElements();
+      if (ws && voiceOriginalOnEvent) {
+        ws.onEvent = voiceOriginalOnEvent;
+        voiceOriginalOnEvent = null;
+      }
       break;
     }
 
@@ -670,6 +697,11 @@ async function handleVoiceEvent(ws: ReturnType<typeof connectionManager.getMainW
       pendingProduceResolve = null;
       pendingProduceReject = null;
       useVoiceStore.getState().cleanup();
+      removeOrphanedAudioElements();
+      if (ws && voiceOriginalOnEvent) {
+        ws.onEvent = voiceOriginalOnEvent;
+        voiceOriginalOnEvent = null;
+      }
       break;
     }
   }
