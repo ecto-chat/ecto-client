@@ -106,7 +106,6 @@ export const useVoiceStore = create<VoiceStore>()((set, get) => ({
       selfDeafened: false,
       speaking: new Set(),
       audioLevels: new Map(),
-      participants: new Map(),
       pendingTransfer: null,
     }),
 
@@ -231,7 +230,6 @@ export const useVoiceStore = create<VoiceStore>()((set, get) => ({
       selfDeafened: false,
       speaking: new Set(),
       audioLevels: new Map(),
-      participants: new Map(),
       videoStreams: new Map(),
       screenStreams: new Map(),
       producers: new Map(),
