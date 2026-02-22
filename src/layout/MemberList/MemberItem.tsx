@@ -96,7 +96,7 @@ export const MemberItem = memo(function MemberItem({ member, rolesMap }: MemberI
         >
           <Avatar
             src={member.avatar_url ?? undefined}
-            username={member.nickname ?? member.username}
+            username={member.nickname ?? member.display_name ?? member.username}
             size={32}
             status={status}
           />
@@ -105,7 +105,7 @@ export const MemberItem = memo(function MemberItem({ member, rolesMap }: MemberI
               className="block truncate text-sm font-medium text-primary"
               style={nameColor ? { color: nameColor } : undefined}
             >
-              {member.nickname ?? member.username}
+              {member.nickname ?? member.display_name ?? member.username}
             </span>
           </div>
         </div>

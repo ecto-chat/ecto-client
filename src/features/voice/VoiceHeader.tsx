@@ -19,7 +19,7 @@ export function VoiceHeader({ channelName, participantCount }: VoiceHeaderProps)
   return (
     <div
       className={cn(
-        'flex h-12 shrink-0 items-center gap-2 border-b border-border px-4',
+        'flex h-[60px] shrink-0 items-center gap-2 border-b border-border px-4',
       )}
     >
       <Volume2 size={18} className="shrink-0 text-muted" />

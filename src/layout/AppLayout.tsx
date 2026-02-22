@@ -92,67 +92,69 @@ export function AppLayout() {
   return (
     <div className="flex h-full w-full">
       <ServerSidebar />
-      {!sidebarCollapsed && !isServerOffline && (
-        <div className="flex w-[240px] min-w-[240px] flex-col border-r border-border bg-secondary">
-          {isHomeMode ? <DMSidebar /> : <ChannelSidebar />}
-          <VoiceControls />
-        </div>
-      )}
-      {isSnappedLeft && (
-        <>
-          <SnappedMediaSidebar />
-          <ResizeHandle side="left" />
-        </>
-      )}
-      <main className="flex flex-1 flex-col min-w-0 bg-primary">
-        {showVoiceBanner && <VoiceBanner />}
-        {(callState === 'active' || answeredElsewhere) && <CallBanner />}
-        {showSetupWizard ? (
-          <SetupWizard onClose={() => useUiStore.getState().closeModal()} />
-        ) : isServerOffline ? (
-          <EmptyState
-            icon={<WifiOff />}
-            title="Server is offline"
-            description="Please contact the server admin to bring it back online."
-            className="flex-1"
-          />
-        ) : !isHomeMode && hubSection === 'file-browser' ? (
-          <FileBrowserView />
-        ) : !isHomeMode && hubSection === 'server-dms' ? (
-          <ServerDmView />
-        ) : (
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={location.pathname}
-              variants={blurToClear}
-              initial="hidden"
-              animate="visible"
-              exit="exit"
-              transition={easePage}
-              className="flex flex-1 flex-col min-h-0"
-            >
-              <Routes location={location}>
-                <Route path="friends" element={<FriendList />} />
-                <Route path="dms/:userId" element={<DMView />} />
-                <Route path="servers/:serverId/channels/:channelId" element={<ChannelView />} />
-                <Route
-                  path="*"
-                  element={
-                    isHomeMode ? <FriendList /> : <ServerFallback />
-                  }
-                />
-              </Routes>
-            </motion.div>
-          </AnimatePresence>
+      <div className="flex flex-1 min-w-0 py-3 pr-3">
+        {!sidebarCollapsed && !isServerOffline && (
+          <div className="flex w-[240px] min-w-[240px] flex-col border-r border-border bg-secondary rounded-l-md overflow-hidden">
+            {isHomeMode ? <DMSidebar /> : <ChannelSidebar />}
+            <VoiceControls />
+          </div>
         )}
-      </main>
-      {isSnappedRight && (
-        <>
-          <ResizeHandle side="right" />
-          <SnappedMediaSidebar />
-        </>
-      )}
-      {!isHomeMode && !isServerOffline && memberListVisible && <MemberList />}
+        {isSnappedLeft && (
+          <>
+            <SnappedMediaSidebar />
+            <ResizeHandle side="left" />
+          </>
+        )}
+        <main className="flex flex-1 flex-col min-w-0 bg-primary">
+          {showVoiceBanner && <VoiceBanner />}
+          {(callState === 'active' || answeredElsewhere) && <CallBanner />}
+          {showSetupWizard ? (
+            <SetupWizard onClose={() => useUiStore.getState().closeModal()} />
+          ) : isServerOffline ? (
+            <EmptyState
+              icon={<WifiOff />}
+              title="Server is offline"
+              description="Please contact the server admin to bring it back online."
+              className="flex-1"
+            />
+          ) : !isHomeMode && hubSection === 'file-browser' ? (
+            <FileBrowserView />
+          ) : !isHomeMode && hubSection === 'server-dms' ? (
+            <ServerDmView />
+          ) : (
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={location.pathname}
+                variants={blurToClear}
+                initial="hidden"
+                animate="visible"
+                exit="exit"
+                transition={easePage}
+                className="flex flex-1 flex-col min-h-0"
+              >
+                <Routes location={location}>
+                  <Route path="friends" element={<FriendList />} />
+                  <Route path="dms/:userId" element={<DMView />} />
+                  <Route path="servers/:serverId/channels/:channelId" element={<ChannelView />} />
+                  <Route
+                    path="*"
+                    element={
+                      isHomeMode ? <FriendList /> : <ServerFallback />
+                    }
+                  />
+                </Routes>
+              </motion.div>
+            </AnimatePresence>
+          )}
+        </main>
+        {isSnappedRight && (
+          <>
+            <ResizeHandle side="right" />
+            <SnappedMediaSidebar />
+          </>
+        )}
+        {!isHomeMode && !isServerOffline && memberListVisible && <MemberList />}
+      </div>
       <AddServerModal />
       <LeaveServerModal />
       <UserProfileModal />

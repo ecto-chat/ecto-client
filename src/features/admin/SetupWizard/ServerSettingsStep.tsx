@@ -1,4 +1,6 @@
 import { Switch, Select } from '@/ui';
+import { useServerStore } from '@/stores/server';
+import { useUiStore } from '@/stores/ui';
 
 import { UPLOAD_SIZE_OPTIONS, type StepProps } from './wizard-types';
 
@@ -10,6 +12,9 @@ const uploadSizeSelectOptions = UPLOAD_SIZE_OPTIONS.map((opt) => ({
 }));
 
 export function ServerSettingsStep({ state, updateState }: ServerSettingsStepProps) {
+  const serverId = useUiStore((s) => s.activeServerId);
+  const isManaged = useServerStore((s) => serverId ? s.serverMeta.get(serverId)?.hosting_mode === 'managed' : false);
+
   return (
     <div className="flex flex-col gap-5">
       <div className="space-y-1">
@@ -27,12 +32,14 @@ export function ServerSettingsStep({ state, updateState }: ServerSettingsStepPro
           onCheckedChange={(checked) => updateState({ requireInvite: checked })}
         />
 
-        <Switch
-          label="Allow Local Accounts"
-          description="Allow users to create accounts directly on this server without a central Ecto account."
-          checked={state.allowLocalAccounts}
-          onCheckedChange={(checked) => updateState({ allowLocalAccounts: checked })}
-        />
+        {!isManaged && (
+          <Switch
+            label="Allow Local Accounts"
+            description="Allow users to create accounts directly on this server without a central Ecto account."
+            checked={state.allowLocalAccounts}
+            onCheckedChange={(checked) => updateState({ allowLocalAccounts: checked })}
+          />
+        )}
 
         <Switch
           label="Allow Member DMs"

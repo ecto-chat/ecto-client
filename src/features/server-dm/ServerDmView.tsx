@@ -28,7 +28,7 @@ export function ServerDmView() {
     <div className="flex flex-1 overflow-hidden">
       {/* Conversation sidebar */}
       <div className="flex w-[240px] min-w-[240px] flex-col border-r border-border bg-secondary">
-        <div className="flex h-12 items-center border-b border-border px-4 shrink-0">
+        <div className="flex h-[60px] items-center border-b border-border px-4 shrink-0">
           <h2 className="text-sm font-semibold text-primary">Private Messages</h2>
         </div>
         <ServerDmConversationList />

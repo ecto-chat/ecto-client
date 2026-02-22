@@ -33,6 +33,16 @@ import { handleMainEvent } from './server-event-handler.js';
 import { handleCentralEvent } from './central-event-handler.js';
 import { ReconnectionManager } from './reconnection-manager.js';
 
+function toServerUrl(address: string): string {
+  if (address.startsWith('http://') || address.startsWith('https://')) {
+    return address.replace(/\/+$/, '');
+  }
+  // Use HTTPS for public domains, HTTP for localhost/LAN
+  const isLocal = /^(localhost|127\.|192\.168\.|10\.|172\.(1[6-9]|2\d|3[01])\.)/.test(address);
+  const protocol = isLocal ? 'http' : 'https';
+  return `${protocol}://${address}`.replace(/\/+$/, '');
+}
+
 interface ServerConnection {
   address: string;
   token: string;
@@ -63,7 +73,7 @@ export class ConnectionManager {
     address: string,
     options: { username: string; password: string; inviteCode?: string },
   ): Promise<{ serverId: string } | { error: { ectoCode: number; message: string } }> {
-    const serverUrl = (address.startsWith('http') ? address : `http://${address}`).replace(/\/+$/, '');
+    const serverUrl = toServerUrl(address);
 
     try {
       const body: Record<string, string> = {
@@ -143,7 +153,7 @@ export class ConnectionManager {
 
   /** Connect to a server using a pre-obtained local server token (no server.join call) */
   async connectToServerLocal(address: string, serverToken: string): Promise<string> {
-    const serverUrl = (address.startsWith('http') ? address : `http://${address}`).replace(/\/+$/, '');
+    const serverUrl = toServerUrl(address);
 
     let serverId: string;
     try {
@@ -234,20 +244,22 @@ export class ConnectionManager {
 
   // Server connections
 
-  async connectToServer(serverId: string, address: string, token: string, options?: { silent?: boolean }) {
+  async connectToServer(serverId: string, address: string, token: string, options?: { silent?: boolean; inviteCode?: string }) {
     if (!options?.silent) {
       useConnectionStore.getState().setStatus(serverId, 'connecting');
     }
 
-    const serverUrl = (address.startsWith('http') ? address : `http://${address}`).replace(/\/+$/, '');
+    const serverUrl = toServerUrl(address);
     let realServerId = serverId;
     let serverToken = token;
+    const joinBody: Record<string, string> = {};
+    if (options?.inviteCode) joinBody.invite_code = options.inviteCode;
     let joinRes: Response;
     try {
       joinRes = await fetch(`${serverUrl}/trpc/server.join`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({}),
+        body: JSON.stringify(joinBody),
       });
     } catch {
       useConnectionStore.getState().setStatus(serverId, 'disconnected');
@@ -263,10 +275,13 @@ export class ConnectionManager {
     } else {
       useConnectionStore.getState().setStatus(serverId, 'disconnected');
       const errData = (await joinRes.json().catch(() => ({}))) as {
-        error?: { message?: string; data?: { ecto_error?: string } };
+        error?: { message?: string; data?: { ecto_code?: number; ecto_error?: string } };
       };
+      const ectoCode = errData.error?.data?.ecto_code ?? 0;
       const message = errData.error?.data?.ecto_error ?? errData.error?.message ?? 'Failed to join server';
-      throw new Error(message);
+      const err = new Error(message);
+      (err as Error & { ectoCode: number }).ectoCode = ectoCode;
+      throw err;
     }
 
     if (realServerId !== serverId) {
@@ -371,7 +386,7 @@ export class ConnectionManager {
     address: string,
     onReconnected: (realServerId: string) => void,
   ): void {
-    const serverUrl = (address.startsWith('http') ? address : `http://${address}`).replace(/\/+$/, '');
+    const serverUrl = toServerUrl(address);
     let connecting = false;
 
     this.reconnection.startServerRetry(address, async () => {
@@ -476,7 +491,7 @@ export class ConnectionManager {
 
       const readyData = ready as unknown as {
         user_id?: string;
-        server?: { setup_completed?: boolean; admin_user_id?: string | null; default_channel_id?: string | null; banner_url?: string | null; allow_member_dms?: boolean };
+        server?: { setup_completed?: boolean; admin_user_id?: string | null; default_channel_id?: string | null; banner_url?: string | null; allow_member_dms?: boolean; hosting_mode?: 'self-hosted' | 'managed' };
         channels?: Channel[];
         categories?: Category[];
         members?: Member[];
@@ -494,6 +509,7 @@ export class ConnectionManager {
           default_channel_id: readyData.server.default_channel_id ?? null,
           banner_url: readyData.server.banner_url ?? null,
           allow_member_dms: readyData.server.allow_member_dms ?? false,
+          hosting_mode: readyData.server.hosting_mode ?? 'self-hosted',
         });
       }
 

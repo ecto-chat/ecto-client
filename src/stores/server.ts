@@ -8,6 +8,7 @@ interface ServerMeta {
   default_channel_id: string | null;
   banner_url: string | null;
   allow_member_dms: boolean;
+  hosting_mode: 'self-hosted' | 'managed';
 }
 
 interface ServerStore {

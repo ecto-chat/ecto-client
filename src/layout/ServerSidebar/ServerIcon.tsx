@@ -1,6 +1,6 @@
 import { memo, useCallback } from 'react';
 import { motion } from 'motion/react';
-import { WifiOff, BellOff, CheckCheck, DoorOpen, Trash2 } from 'lucide-react';
+import { WifiOff, BellOff, CheckCheck, DoorOpen, Trash2, Link } from 'lucide-react';
 import { useNotifyStore } from '@/stores/notify';
 import { useReadStateStore } from '@/stores/read-state';
 import { useConnectionStore } from '@/stores/connection';
@@ -61,6 +61,12 @@ export const ServerIcon = memo(function ServerIcon({
   const toggleMute = useCallback(() => {
     useNotifyStore.getState().toggleMuteServer(serverId);
   }, [serverId]);
+
+  const copyServerLink = useCallback(() => {
+    if (server.server_address) {
+      navigator.clipboard.writeText(server.server_address).catch(() => {});
+    }
+  }, [server.server_address]);
 
   const leaveServer = useCallback(() => {
     useUiStore.getState().openModal('leave-server', {
@@ -139,6 +145,11 @@ export const ServerIcon = memo(function ServerIcon({
         <ContextMenuItem onSelect={toggleMute}>
           <BellOff size={14} className="mr-2" />{isMuted ? 'Unmute Server' : 'Mute Server'}
         </ContextMenuItem>
+        {server.server_address && (
+          <ContextMenuItem onSelect={copyServerLink}>
+            <Link size={14} className="mr-2" />Copy Server Link
+          </ContextMenuItem>
+        )}
         <ContextMenuSeparator />
         <ContextMenuItem onSelect={leaveServer}>
           <DoorOpen size={14} className="mr-2" />Leave Server

@@ -5,6 +5,7 @@ import { Button, Input, TextArea, Spinner, Switch, Select, Separator, ImageCropM
 import { cn } from '@/lib/cn';
 
 import { connectionManager } from '@/services/connection-manager';
+import { useServerStore } from '@/stores/server';
 
 import { UPLOAD_SIZE_OPTIONS, SHARED_STORAGE_OPTIONS } from './SetupWizard/wizard-types';
 
@@ -49,6 +50,7 @@ export function GeneralSettings({ serverId }: GeneralSettingsProps) {
   const [bannerCropSrc, setBannerCropSrc] = useState<string | null>(null);
   const [configError, setConfigError] = useState('');
   const [configSuccess, setConfigSuccess] = useState('');
+  const isManaged = useServerStore((s) => s.serverMeta.get(serverId)?.hosting_mode === 'managed');
 
   useEffect(() => {
     const trpc = connectionManager.getServerTrpc(serverId);
@@ -321,12 +323,14 @@ export function GeneralSettings({ serverId }: GeneralSettingsProps) {
               onCheckedChange={(checked) => setConfig({ ...config, require_invite: checked })}
             />
 
-            <Switch
-              label="Allow Local Accounts"
-              description="Allow users to create accounts directly on this server without a central Ecto account."
-              checked={config.allow_local_accounts}
-              onCheckedChange={(checked) => setConfig({ ...config, allow_local_accounts: checked })}
-            />
+            {!isManaged && (
+              <Switch
+                label="Allow Local Accounts"
+                description="Allow users to create accounts directly on this server without a central Ecto account."
+                checked={config.allow_local_accounts}
+                onCheckedChange={(checked) => setConfig({ ...config, allow_local_accounts: checked })}
+              />
+            )}
 
             <Switch
               label="Allow Member DMs"

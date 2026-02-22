@@ -242,7 +242,7 @@ export function PageView() {
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
       {/* Header */}
-      <div className="flex h-12 shrink-0 items-center gap-2 border-b border-border px-4">
+      <div className="flex h-[60px] shrink-0 items-center gap-2 border-b border-border px-4">
         <FileText size={18} className="text-muted" />
         <span className="text-sm text-primary">{channel.name}</span>
         {channel.topic && (

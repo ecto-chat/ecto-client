@@ -18,6 +18,7 @@ export function useAddServer() {
   const [stage, setStage] = useState<LocalJoinStage>('idle');
   const [preview, setPreview] = useState<ServerPreviewData | null>(null);
   const [needsPassword, setNeedsPassword] = useState(false);
+  const [needsInvite, setNeedsInvite] = useState(false);
   const [detectedUser, setDetectedUser] = useState('');
 
   const resetAndClose = useCallback(() => {
@@ -26,6 +27,7 @@ export function useAddServer() {
     setStage('idle');
     setPreview(null);
     setNeedsPassword(false);
+    setNeedsInvite(false);
     setDetectedUser('');
     useUiStore.getState().closeModal();
   }, []);
@@ -61,20 +63,32 @@ export function useAddServer() {
     }
   }, [preview, resetAndClose]);
 
-  const handleAddressSubmit = useCallback(async (addr: string) => {
+  const handleAddressSubmit = useCallback(async (rawAddr: string) => {
+    const addr = rawAddr.replace(/^https?:\/\//, '').replace(/\/+$/, '');
     setAddress(addr);
     setError('');
+    setNeedsInvite(false);
     const isCentral = useAuthStore.getState().centralAuthState === 'authenticated';
     const token = useAuthStore.getState().getToken();
     if (isCentral && token) {
-      const id = await connectionManager.connectToServer(addr, addr, token);
-      const ct = connectionManager.getCentralTrpc();
-      if (ct) await ct.servers.add.mutate({ server_address: addr }).catch((err: unknown) => {
-        console.warn('[central] Failed to sync server addition:', err);
-      });
-      const name = await queryServerName(id, addr);
-      addToServerStore(id, addr, name, null);
-      resetAndClose();
+      try {
+        const id = await connectionManager.connectToServer(addr, addr, token);
+        const ct = connectionManager.getCentralTrpc();
+        if (ct) await ct.servers.add.mutate({ server_address: addr }).catch((err: unknown) => {
+          console.warn('[central] Failed to sync server addition:', err);
+        });
+        const name = await queryServerName(id, addr);
+        addToServerStore(id, addr, name, null);
+        resetAndClose();
+      } catch (err: unknown) {
+        const ectoCode = (err as { ectoCode?: number }).ectoCode ?? 0;
+        if (ectoCode === EctoErrorCode.INVITE_INVALID) {
+          setNeedsInvite(true);
+          setError('');
+        } else {
+          setError((err as Error).message ?? 'Failed to join server');
+        }
+      }
       return;
     }
     const prev = await fetchServerPreview(addr);
@@ -96,6 +110,24 @@ export function useAddServer() {
     await attemptAutoJoin(addr, creds.username, creds.password);
   }, [attemptAutoJoin, resetAndClose]);
 
+  const handleCentralInviteSubmit = useCallback(async (inviteCode: string) => {
+    setError('');
+    const token = useAuthStore.getState().getToken();
+    if (!token) return;
+    try {
+      const id = await connectionManager.connectToServer(address, address, token, { inviteCode });
+      const ct = connectionManager.getCentralTrpc();
+      if (ct) await ct.servers.add.mutate({ server_address: address }).catch((err: unknown) => {
+        console.warn('[central] Failed to sync server addition:', err);
+      });
+      const name = await queryServerName(id, address);
+      addToServerStore(id, address, name, null);
+      resetAndClose();
+    } catch (err: unknown) {
+      setError((err as Error).message ?? 'Invalid invite code');
+    }
+  }, [address, resetAndClose]);
+
   const handleInviteSubmit = useCallback(async (inviteCode: string, password?: string) => {
     if (needsPassword && password) {
       attemptAutoJoin(address, detectedUser, password, inviteCode);
@@ -111,7 +143,7 @@ export function useAddServer() {
   }, [address, attemptAutoJoin, detectedUser]);
 
   return {
-    stage, error, preview, needsPassword, detectedUser,
-    resetAndClose, handleAddressSubmit, handleInviteSubmit, handlePasswordSubmit,
+    address, stage, error, preview, needsPassword, needsInvite, detectedUser,
+    resetAndClose, handleAddressSubmit, handleInviteSubmit, handleCentralInviteSubmit, handlePasswordSubmit,
   };
 }

@@ -716,6 +716,18 @@ export interface CentralRouter {
         server_icon?: string;
       }) => Promise<ServerListEntry>;
     };
+    create: {
+      mutate: (input: {
+        name: string;
+        icon?: string;
+        template?: string;
+      }) => Promise<{
+        serverId: string;
+        address: string;
+        shortId: string;
+        server: ServerListEntry;
+      }>;
+    };
     remove: {
       mutate: (input: { server_address: string }) => Promise<{ success: boolean }>;
     };

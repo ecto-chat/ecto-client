@@ -85,13 +85,15 @@ export function ServerSettings() {
   const meta = useServerStore((s) => (serverId ? s.serverMeta.get(serverId) : undefined));
   const isOwner = !!(meta && meta.user_id && meta.admin_user_id === meta.user_id);
 
+  const isManaged = meta?.hosting_mode === 'managed';
+
   const visibleTabs = useMemo(() => {
     let tabs = allowedTabs === 'all'
       ? ALL_TABS
       : ALL_TABS.filter((tab) => (allowedTabs as string[]).includes(tab.key));
-    if (!isOwner) tabs = tabs.filter((tab) => tab.key !== 'danger');
+    if (!isOwner || isManaged) tabs = tabs.filter((tab) => tab.key !== 'danger');
     return tabs;
-  }, [allowedTabs, isOwner]);
+  }, [allowedTabs, isOwner, isManaged]);
 
   const defaultTab = visibleTabs[0]?.key ?? 'overview';
   const [activeTab, setActiveTab] = useState<Tab>(defaultTab);

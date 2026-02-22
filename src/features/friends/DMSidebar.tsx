@@ -1,13 +1,14 @@
 import { useNavigate } from 'react-router-dom';
 
 import { motion } from 'motion/react';
-import { Users, Settings, Lock } from 'lucide-react';
+import { Users, Lock } from 'lucide-react';
 
-import { Avatar, IconButton, ScrollArea, Separator, EmptyState, Button } from '@/ui';
+import { Avatar, ScrollArea, Separator, EmptyState, Button } from '@/ui';
 import { useDmStore } from '@/stores/dm';
 import { usePresenceStore } from '@/stores/presence';
 import { useAuthStore } from '@/stores/auth';
 import { useUiStore } from '@/stores/ui';
+import { UserBar } from '@/layout/UserBar';
 
 import { cn } from '@/lib/cn';
 
@@ -18,7 +19,6 @@ export function DMSidebar() {
   const presences = usePresenceStore((s) => s.presences);
   const openConversationId = useDmStore((s) => s.openConversationId);
   const centralAuthState = useAuthStore((s) => s.centralAuthState);
-  const user = useAuthStore((s) => s.user);
   const navigate = useNavigate();
 
   const isCentral = centralAuthState === 'authenticated';
@@ -33,7 +33,7 @@ export function DMSidebar() {
 
   return (
     <div className="flex flex-col h-full bg-secondary">
-      <div className="px-4 pt-4 pb-2">
+      <div className="flex h-[60px] shrink-0 items-center px-4 border-b border-border">
         <h2 className="text-sm font-semibold text-primary">Direct Messages</h2>
       </div>
 
@@ -104,23 +104,7 @@ export function DMSidebar() {
         </div>
       )}
 
-      <div className="flex items-center gap-2 px-3 py-2 border-t border-border">
-        <Avatar src={user?.avatar_url ?? null} username={user?.username ?? '?'} size={32} />
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-primary truncate">
-            {user?.display_name ?? user?.username ?? 'User'}
-          </p>
-          <p className="text-xs text-muted">#{user?.discriminator ?? '0000'}</p>
-        </div>
-        <IconButton
-          variant="ghost"
-          size="sm"
-          tooltip="User Settings"
-          onClick={() => useUiStore.getState().openModal('user-settings')}
-        >
-          <Settings size={16} />
-        </IconButton>
-      </div>
+      <UserBar />
     </div>
   );
 }

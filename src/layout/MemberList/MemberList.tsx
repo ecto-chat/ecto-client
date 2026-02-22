@@ -81,7 +81,10 @@ export function MemberList() {
   let runningOffset = 0;
 
   return (
-    <div className="flex w-[240px] min-w-[240px] flex-col border-l border-border bg-secondary">
+    <div className="flex w-[240px] min-w-[240px] flex-col border-l border-border bg-secondary rounded-r-md overflow-hidden">
+      <div className="flex h-[60px] shrink-0 items-center px-4 border-b border-border">
+        <h2 className="text-sm font-semibold text-muted uppercase tracking-wider">Members</h2>
+      </div>
       <ScrollArea fadeEdges fadeHeight={40} className="flex-1">
         <div className="p-3">
           {sections.map((section, i) => {

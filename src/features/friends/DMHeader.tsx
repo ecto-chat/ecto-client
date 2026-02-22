@@ -26,7 +26,7 @@ export function DMHeader({
   isInCall,
 }: DMHeaderProps) {
   return (
-    <div className="flex h-12 shrink-0 items-center gap-2 border-b border-border px-4">
+    <div className="flex h-[60px] shrink-0 items-center gap-2 border-b border-border px-4">
       <Avatar src={avatarUrl} username={username} size={28} status={status} />
       <span className="text-sm font-medium text-primary">{username}</span>
 

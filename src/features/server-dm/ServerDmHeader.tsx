@@ -11,7 +11,7 @@ export function ServerDmHeader({ peerId, peerName, avatarUrl }: ServerDmHeaderPr
   const { status } = usePresence(peerId);
 
   return (
-    <div className="flex h-12 items-center gap-3 border-b border-border px-4 shrink-0">
+    <div className="flex h-[60px] items-center gap-3 border-b border-border px-4 shrink-0">
       <Avatar
         src={avatarUrl ?? undefined}
         username={peerName}
