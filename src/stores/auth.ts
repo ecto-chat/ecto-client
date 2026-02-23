@@ -61,6 +61,18 @@ function parseUserId(token: string): string | null {
 export const useAuthStore = create<AuthStore>()((set, get) => {
   let refreshTimerId: ReturnType<typeof setTimeout> | null = null;
 
+  // Cross-tab coordination: listen for refresh token updates from other tabs
+  const refreshChannel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('ecto-auth-refresh') : null;
+  if (refreshChannel) {
+    refreshChannel.onmessage = (event: MessageEvent) => {
+      const data = event.data as { access_token: string; refresh_token: string } | undefined;
+      if (data?.access_token && data?.refresh_token) {
+        set({ token: data.access_token, refreshToken_: data.refresh_token });
+        scheduleRefresh(data.access_token);
+      }
+    };
+  }
+
   function scheduleRefresh(token: string) {
     if (refreshTimerId) clearTimeout(refreshTimerId);
     try {
@@ -229,20 +241,44 @@ export const useAuthStore = create<AuthStore>()((set, get) => {
     },
 
     refreshToken: async () => {
-      const rt = get().refreshToken_ ?? (await getStoredRefreshToken());
-      if (!rt) {
-        set({ authState: 'unauthenticated' });
-        return;
-      }
-      const trpc = createCentralTrpcClient(get().centralUrl, () => null);
-      const result = await trpc.auth.refresh.mutate({ refresh_token: rt });
+      const doRefresh = async () => {
+        const rt = get().refreshToken_ ?? (await getStoredRefreshToken());
+        if (!rt) {
+          set({ authState: 'unauthenticated' });
+          return;
+        }
+        try {
+          const trpc = createCentralTrpcClient(get().centralUrl, () => null);
+          const result = await trpc.auth.refresh.mutate({ refresh_token: rt });
 
-      const userId = parseUserId(result.access_token);
-      if (userId) {
-        await storeTokens(userId, result.access_token, rt);
+          const userId = parseUserId(result.access_token);
+          if (userId) {
+            await storeTokens(userId, result.access_token, result.refresh_token);
+          }
+          scheduleRefresh(result.access_token);
+          set({ token: result.access_token, refreshToken_: result.refresh_token });
+
+          // Broadcast to other tabs so they don't refresh with the old (now-replaced) token
+          refreshChannel?.postMessage({ access_token: result.access_token, refresh_token: result.refresh_token });
+        } catch (err: unknown) {
+          // Check for refresh token reuse — force re-login
+          const tErr = err as { data?: { ecto_code?: number } };
+          if (tErr.data?.ecto_code === 1009) {
+            const userId = getActiveUserId();
+            if (userId) await clearTokensForUser(userId);
+            set({ authState: 'unauthenticated', centralAuthState: 'unauthenticated', token: null, refreshToken_: null, user: null });
+            return;
+          }
+          throw err;
+        }
+      };
+
+      // Use Web Locks to prevent multiple tabs from refreshing the same token simultaneously
+      if (typeof navigator !== 'undefined' && navigator.locks) {
+        await navigator.locks.request('ecto-token-refresh', doRefresh);
+      } else {
+        await doRefresh();
       }
-      scheduleRefresh(result.access_token);
-      set({ token: result.access_token, refreshToken_: rt });
     },
 
     setUser: (user) => set({ user }),
@@ -276,11 +312,11 @@ export const useAuthStore = create<AuthStore>()((set, get) => {
 
         const userId = parseUserId(result.access_token);
         if (userId) {
-          await storeTokens(userId, result.access_token, rt);
+          await storeTokens(userId, result.access_token, result.refresh_token);
           preferenceManager.setActiveUser(userId);
         }
         scheduleRefresh(result.access_token);
-        set({ token: result.access_token, refreshToken_: rt });
+        set({ token: result.access_token, refreshToken_: result.refresh_token });
 
         // Fetch user profile
         const userTrpc = createCentralTrpcClient(get().centralUrl, () => result.access_token);
@@ -376,7 +412,7 @@ export const useAuthStore = create<AuthStore>()((set, get) => {
 
         const trpc = createCentralTrpcClient(get().centralUrl, () => null);
         const result = await trpc.auth.refresh.mutate({ refresh_token: rt });
-        await storeTokens(targetUserId, result.access_token, rt);
+        await storeTokens(targetUserId, result.access_token, result.refresh_token);
         scheduleRefresh(result.access_token);
 
         // Fetch user profile
@@ -389,7 +425,7 @@ export const useAuthStore = create<AuthStore>()((set, get) => {
         set({
           user,
           token: result.access_token,
-          refreshToken_: rt,
+          refreshToken_: result.refresh_token,
           authState: 'authenticated',
           centralAuthState: 'authenticated',
         });

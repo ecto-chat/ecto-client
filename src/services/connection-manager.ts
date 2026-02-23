@@ -50,6 +50,7 @@ interface ServerConnection {
   mainWs: MainWebSocket | null;
   notifyWs: NotifyWebSocket | null;
   trpc: ServerTrpcClient;
+  tokenRefreshTimer: ReturnType<typeof setTimeout> | null;
 }
 
 export class ConnectionManager {
@@ -180,6 +181,7 @@ export class ConnectionManager {
       mainWs: null,
       notifyWs: null,
       trpc,
+      tokenRefreshTimer: null,
     };
 
     this.connections.set(serverId, conn);
@@ -297,6 +299,7 @@ export class ConnectionManager {
       mainWs: null,
       notifyWs: null,
       trpc,
+      tokenRefreshTimer: null,
     };
 
     this.connections.set(realServerId, conn);
@@ -358,6 +361,7 @@ export class ConnectionManager {
   disconnectFromServer(serverId: string) {
     const conn = this.connections.get(serverId);
     if (!conn) return;
+    if (conn.tokenRefreshTimer) clearTimeout(conn.tokenRefreshTimer);
     conn.mainWs?.disconnect();
     conn.notifyWs?.disconnect();
     this.connections.delete(serverId);
@@ -369,6 +373,7 @@ export class ConnectionManager {
 
   disconnectAll() {
     for (const conn of this.connections.values()) {
+      if (conn.tokenRefreshTimer) clearTimeout(conn.tokenRefreshTimer);
       conn.mainWs?.disconnect();
       conn.notifyWs?.disconnect();
     }
@@ -425,6 +430,42 @@ export class ConnectionManager {
 
   stopServerRetry(address: string): void {
     this.reconnection.stopServerRetry(address);
+  }
+
+  /** Schedule automatic server token refresh before expiry */
+  private scheduleServerTokenRefresh(conn: ServerConnection) {
+    if (conn.tokenRefreshTimer) {
+      clearTimeout(conn.tokenRefreshTimer);
+      conn.tokenRefreshTimer = null;
+    }
+    try {
+      const parts = conn.token.split('.');
+      const encoded = parts[1];
+      if (!encoded) return;
+      const payload = JSON.parse(atob(encoded)) as Record<string, unknown>;
+      const exp = payload.exp as number;
+      if (!exp) return;
+      const msUntilExpiry = exp * 1000 - Date.now();
+      // Refresh 5 minutes before expiry, minimum 10 seconds
+      const refreshIn = Math.max(msUntilExpiry - 5 * 60 * 1000, 10_000);
+      conn.tokenRefreshTimer = setTimeout(async () => {
+        try {
+          const result = await conn.trpc.server.refreshToken.mutate() as { server_token: string };
+          conn.token = result.server_token;
+          // Update stored session
+          await storeServerSession(conn.serverId, conn.address, result.server_token);
+          // Recreate trpc client with new token
+          conn.trpc = createServerTrpcClient(conn.address, () => conn.token);
+          // Schedule next refresh
+          this.scheduleServerTokenRefresh(conn);
+        } catch {
+          // Refresh failed — reconnect from scratch
+          this.disconnectFromServer(conn.serverId);
+        }
+      }, refreshIn);
+    } catch {
+      // Invalid token format — skip scheduling
+    }
   }
 
   // Private: open Main WS
@@ -488,6 +529,7 @@ export class ConnectionManager {
       conn.mainWs = ws;
       useConnectionStore.getState().setStatus(conn.serverId, 'connected');
       this.reconnection.resetAttempts(conn.serverId);
+      this.scheduleServerTokenRefresh(conn);
 
       const readyData = ready as unknown as {
         user_id?: string;

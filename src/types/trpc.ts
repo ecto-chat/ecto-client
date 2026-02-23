@@ -260,6 +260,9 @@ export interface ServerRouter {
     transferOwnership: {
       mutate: (input: { new_owner_id: string; confirmation: string }) => Promise<{ success: boolean }>;
     };
+    refreshToken: {
+      mutate: () => Promise<{ server_token: string }>;
+    };
     uploadIcon: {
       mutate: (input: { icon_url: string }) => Promise<{
         icon_url: string;
@@ -576,13 +579,16 @@ export interface CentralRouter {
       mutate: (input: { refresh_token: string }) => Promise<{ access_token: string; refresh_token: string }>;
     };
     logout: {
-      mutate: (input: { refresh_token: string }) => Promise<{ success: boolean }>;
+      mutate: (input?: { refresh_token: string }) => Promise<{ success: boolean }>;
+    };
+    logoutAll: {
+      mutate: () => Promise<{ success: boolean }>;
     };
     changePassword: {
       mutate: (input: {
         current_password: string;
         new_password: string;
-      }) => Promise<{ success: boolean }>;
+      }) => Promise<{ success: boolean; access_token?: string; refresh_token?: string }>;
     };
     deleteAccount: {
       mutate: (input: {

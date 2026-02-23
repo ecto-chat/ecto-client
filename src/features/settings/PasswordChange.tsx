@@ -3,6 +3,9 @@ import { useState, type FormEvent } from 'react';
 import { Button, Input } from '@/ui';
 
 import { connectionManager } from '@/services/connection-manager';
+import { useAuthStore } from '@/stores/auth';
+import { secureStorage } from '@/services/secure-storage';
+import { getActiveUserId } from '@/services/account-registry';
 
 export function PasswordChange() {
   const [currentPassword, setCurrentPassword] = useState('');
@@ -35,10 +38,23 @@ export function PasswordChange() {
       const trpc = connectionManager.getCentralTrpc();
       if (!trpc) throw new Error('Not connected to central');
 
-      await trpc.auth.changePassword.mutate({
+      const result = await trpc.auth.changePassword.mutate({
         current_password: currentPassword,
         new_password: newPassword,
-      });
+      }) as { success: boolean; access_token?: string; refresh_token?: string };
+
+      // Store new tokens from changePassword response
+      if (result.access_token && result.refresh_token) {
+        const userId = getActiveUserId();
+        if (userId) {
+          await secureStorage.set(`auth:${userId}:access_token`, result.access_token);
+          await secureStorage.set(`auth:${userId}:refresh_token`, result.refresh_token);
+        }
+        useAuthStore.setState({
+          token: result.access_token,
+          refreshToken_: result.refresh_token,
+        });
+      }
 
       setSuccess('Password changed successfully.');
       setCurrentPassword('');
