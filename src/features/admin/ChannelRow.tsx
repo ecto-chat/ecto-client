@@ -48,7 +48,7 @@ function ChannelRowInner({
 }) {
   if (isEditing) {
     return (
-      <div className="rounded-md bg-secondary border border-border p-3 mb-1 space-y-2">
+      <div className="rounded-md bg-secondary border-2 border-primary p-3 mb-1 space-y-2">
         <Input
           value={editName}
           onChange={(e) => onEditNameChange(e.target.value)}
@@ -68,7 +68,7 @@ function ChannelRowInner({
   }
 
   return (
-    <div className="flex items-center justify-between rounded-md bg-secondary border border-border px-3 py-1.5 mb-0.5 group">
+    <div className="flex items-center justify-between rounded-md bg-secondary border-2 border-primary px-3 py-1.5 mb-0.5 group">
       <div className="flex items-center gap-1.5">
         <span
           {...dragAttributes}

@@ -30,7 +30,7 @@ export function WizardNavigation({
   if (step === 5 || (step === 7 && hasInvite)) return null;
 
   return (
-    <div className="flex items-center justify-between pt-2 border-t border-border">
+    <div className="flex items-center justify-between pt-2 border-t-2 border-primary">
       {showBack ? (
         <Button variant="ghost" onClick={onBack} disabled={loading}>
           Back

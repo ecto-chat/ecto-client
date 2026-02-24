@@ -52,7 +52,7 @@ export function UploadDropzone({ onUpload, disabled }: UploadDropzoneProps) {
     <div
       className={cn(
         'border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors',
-        dragging ? 'border-accent bg-accent/10' : 'border-border hover:border-accent/50',
+        dragging ? 'border-accent bg-accent/10' : 'border-primary hover:border-accent/50',
         (disabled || uploading) && 'opacity-50 cursor-not-allowed',
       )}
       onDragOver={(e) => { e.preventDefault(); setDragging(true); }}

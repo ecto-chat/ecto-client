@@ -26,7 +26,7 @@ export function MessageReactions({ reactions, onReact }: MessageReactionsProps) 
             'hover:bg-hover',
             reaction.me
               ? 'border-accent bg-accent-subtle'
-              : 'border-border',
+              : 'border-primary',
           )}
           onClick={() => onReact(reaction.emoji)}
         >

@@ -48,7 +48,7 @@ export function TemplateStep({ onSelectTemplate }: TemplateStepProps) {
               whileTap={{ scale: 0.98 }}
               className={cn(
                 'flex flex-col items-center gap-2 rounded-lg p-4',
-                'bg-tertiary border border-border',
+                'bg-tertiary border-2 border-primary',
                 'hover:border-accent/40 hover:bg-hover',
                 'transition-colors duration-150 cursor-pointer text-center',
               )}
@@ -66,7 +66,7 @@ export function TemplateStep({ onSelectTemplate }: TemplateStepProps) {
           whileTap={{ scale: 0.98 }}
           className={cn(
             'flex flex-col items-center gap-2 rounded-lg p-4',
-            'bg-tertiary border border-dashed border-border',
+            'bg-tertiary border border-dashed border-primary',
             'hover:border-accent/40 hover:bg-hover',
             'transition-colors duration-150 cursor-pointer text-center',
           )}

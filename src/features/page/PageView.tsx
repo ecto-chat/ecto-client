@@ -242,7 +242,7 @@ export function PageView() {
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
       {/* Header */}
-      <div className="flex h-[60px] shrink-0 items-center gap-2 border-b border-border px-4">
+      <div className="flex h-[60px] shrink-0 items-center gap-2 border-b-2 border-primary px-4">
         <FileText size={18} className="text-muted" />
         <span className="text-sm text-primary">{channel.name}</span>
         {channel.topic && (
@@ -290,9 +290,9 @@ export function PageView() {
       {editing ? (
         <div className="flex flex-1 overflow-hidden">
           {/* Editor pane */}
-          <div className="flex flex-1 flex-col border-r border-border">
+          <div className="flex flex-1 flex-col border-r-2 border-primary">
             {/* Formatting toolbar */}
-            <div className="flex items-center gap-0.5 border-b border-border px-2 py-1">
+            <div className="flex items-center gap-0.5 border-b-2 border-primary px-2 py-1">
               <IconButton variant="ghost" size="sm" tooltip="Bold" onClick={() => insertFormatting('**', '**')}>
                 <Bold size={14} />
               </IconButton>
@@ -331,7 +331,7 @@ export function PageView() {
 
           {/* Preview pane */}
           <div className="flex flex-1 flex-col">
-            <div className="flex items-center border-b border-border px-3 py-1">
+            <div className="flex items-center border-b-2 border-primary px-3 py-1">
               <span className="text-xs font-medium text-muted">Preview</span>
             </div>
             <ScrollArea className="flex-1">
@@ -345,7 +345,7 @@ export function PageView() {
           </div>
 
           {/* Save/Cancel bar */}
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2 rounded-lg border border-border bg-secondary px-4 py-2 shadow-lg">
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2 rounded-lg border-2 border-primary bg-secondary px-4 py-2 shadow-lg">
             {saveError && (
               <div className="flex items-center gap-2">
                 <span className="text-xs text-danger max-w-xs truncate">{saveError}</span>

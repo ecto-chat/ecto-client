@@ -46,7 +46,7 @@ export function LinkPreviews({ content }: LinkPreviewProps) {
           animate={{ opacity: 1, height: 'auto' }}
           exit={{ opacity: 0, height: 0 }}
           transition={{ duration: 0.2 }}
-          className="mt-2 flex cursor-pointer overflow-hidden rounded-md border border-border bg-secondary hover:bg-hover transition-colors"
+          className="mt-2 flex cursor-pointer overflow-hidden rounded-md border-2 border-primary bg-secondary hover:bg-hover transition-colors"
           onClick={() => window.open(preview.url, '_blank')}
         >
           {preview.image && (

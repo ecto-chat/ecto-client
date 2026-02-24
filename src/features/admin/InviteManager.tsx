@@ -100,7 +100,7 @@ export function InviteManager() {
     <div className="space-y-6">
       <h2 className="text-lg font-medium text-primary">Invite Manager</h2>
 
-      <form onSubmit={handleCreate} className="rounded-lg bg-secondary border border-border p-4 space-y-3">
+      <form onSubmit={handleCreate} className="rounded-lg bg-secondary border-2 border-primary p-4 space-y-3">
         <h3 className="text-sm font-medium text-primary">Create Invite</h3>
         {createError && <p className="text-sm text-danger">{createError}</p>}
         <div className="flex gap-3 items-end">
@@ -119,7 +119,7 @@ export function InviteManager() {
           <ScrollArea className="max-h-80">
             <div className="space-y-1">
               {invites.map((invite) => (
-                <div key={invite.id} className="flex items-center justify-between rounded-md bg-secondary border border-border px-3 py-2">
+                <div key={invite.id} className="flex items-center justify-between rounded-md bg-secondary border-2 border-primary px-3 py-2">
                   <div>
                     <code className="text-sm text-primary">{invite.code}</code>
                     <div className="text-xs text-muted mt-0.5">

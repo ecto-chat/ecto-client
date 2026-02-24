@@ -34,9 +34,9 @@ export function Select({
       <SelectPrimitive.Root value={value} onValueChange={onValueChange} disabled={disabled}>
         <SelectPrimitive.Trigger
           className={cn(
-            'flex h-10 w-full items-center justify-between rounded-md bg-input border border-border',
+            'flex h-10 w-full items-center justify-between rounded-md bg-secondary border-2 border-primary',
             'px-3 text-sm text-primary placeholder:text-muted',
-            'focus:outline-none focus:ring-1 focus:ring-accent/40 focus:border-border-active',
+            'focus:outline-none focus:ring-1 focus:ring-accent/40 focus:border-primary-active',
             'transition-colors duration-150',
             'disabled:cursor-not-allowed disabled:opacity-50',
             error && 'ring-1 ring-danger/40 border-danger/40',
@@ -52,7 +52,7 @@ export function Select({
         <SelectPrimitive.Portal>
           <SelectPrimitive.Content
             className={cn(
-              'relative z-[200] min-w-[8rem] overflow-hidden rounded-lg bg-surface border border-border shadow-lg',
+              'relative z-[200] min-w-[8rem] overflow-hidden rounded-lg bg-surface border-2 border-primary shadow-lg',
               'data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95',
               'data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95',
               'data-[side=bottom]:slide-in-from-top-2 data-[side=top]:slide-in-from-bottom-2',

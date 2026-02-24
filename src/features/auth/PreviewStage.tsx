@@ -24,7 +24,7 @@ export function PreviewStage({ serverInfo, authAction, setAuthAction, onContinue
     >
       <h1 className="text-xl font-medium text-primary">Server Found</h1>
 
-      <div className="flex items-center gap-3 rounded-lg bg-tertiary p-4 border border-border">
+      <div className="flex items-center gap-3 rounded-lg bg-tertiary p-4 border-2 border-primary">
         <Avatar src={serverInfo.icon} username={serverInfo.name} size={48} />
         <div className="min-w-0 flex-1">
           <p className="text-base font-medium text-primary truncate">{serverInfo.name}</p>

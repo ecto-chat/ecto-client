@@ -105,7 +105,7 @@ function ToastCard({ toast }: { toast: ToastEntry }) {
       exit={{ opacity: 0, x: 80, scale: 0.95, transition: { duration: 0.15 } }}
       transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
       className={cn(
-        'relative overflow-hidden rounded-lg border border-border',
+        'relative overflow-hidden rounded-lg border-2 border-primary',
         'border-l-[3px]',
         config.border,
         'backdrop-blur-xl bg-secondary/95',

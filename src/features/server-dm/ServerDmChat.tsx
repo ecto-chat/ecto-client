@@ -49,7 +49,7 @@ export function ServerDmChat() {
         reactOnly
       />
 
-      <div className="shrink-0 border-t border-border">
+      <div className="shrink-0 border-t-2 border-primary">
         {isPeerTyping && (
           <div className="px-4 py-1 text-xs text-muted">
             {peerName} is typing...

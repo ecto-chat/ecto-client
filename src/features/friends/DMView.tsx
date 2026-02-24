@@ -84,7 +84,7 @@ export function DMView() {
         reactOnly
       />
 
-      <div className="shrink-0 border-t border-border">
+      <div className="shrink-0 border-t-2 border-primary">
         <DMTypingIndicator username={username} isTyping={isPeerTyping} />
         <DMMessageInput userId={userId} username={username} onSend={handleSend} />
       </div>

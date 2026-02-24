@@ -31,7 +31,7 @@ export function MessageToolbar({
 }: MessageToolbarProps) {
   return (
     <div
-      className="absolute -top-4 right-2 bg-surface border border-border rounded-lg shadow-lg p-1 flex gap-0.5 z-10 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity"
+      className="absolute -top-4 right-2 bg-surface border-2 border-primary rounded-lg shadow-lg p-1 flex gap-0.5 z-10 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity"
     >
       {QUICK_REACTIONS.map(({ emoji, label }) => (
         <Tooltip key={emoji} content={label}>

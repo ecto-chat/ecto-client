@@ -82,7 +82,7 @@ export function AuditLogTab({ serverId }: AuditLogTabProps) {
             {filtered.map((entry) => (
               <div
                 key={entry.id}
-                className="rounded-md bg-secondary border border-border px-3 py-2 text-sm"
+                className="rounded-md bg-secondary border-2 border-primary px-3 py-2 text-sm"
               >
                 <span className="text-primary">{entry.actor_name}</span>
                 <span className="text-secondary"> {entry.action.replace(/[._]/g, ' ')}</span>

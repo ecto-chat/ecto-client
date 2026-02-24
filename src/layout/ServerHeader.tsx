@@ -12,7 +12,7 @@ export function ServerHeader() {
   const { canAccessSettings } = usePermissions(activeServerId);
 
   return (
-    <div className="flex h-[60px] shrink-0 items-center justify-between px-4 border-b border-border">
+    <div className="flex h-[60px] shrink-0 items-center justify-between px-4 border-b-2 border-primary">
       <h2 className="text-base font-semibold text-primary truncate">
         {server?.server_name ?? 'Server'}
       </h2>

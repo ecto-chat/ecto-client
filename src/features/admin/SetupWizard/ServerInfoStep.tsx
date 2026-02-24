@@ -31,7 +31,7 @@ export function ServerInfoStep({ state, updateState, onIconUpload }: ServerInfoS
           variant="ghost"
           className={cn(
             'relative flex h-20 w-20 items-center justify-center rounded-full p-0',
-            'bg-tertiary border-2 border-dashed border-border',
+            'bg-tertiary border-2 border-dashed border-primary',
             'hover:border-accent/40 hover:bg-hover',
             'overflow-hidden',
           )}

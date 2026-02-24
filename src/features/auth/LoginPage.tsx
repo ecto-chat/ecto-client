@@ -67,7 +67,7 @@ export function LoginPage() {
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
-        className="w-full max-w-[420px] rounded-xl bg-secondary border border-border p-5 space-y-5"
+        className="w-full max-w-[420px] rounded-xl bg-secondary border-2 border-primary p-5 space-y-5"
       >
         <motion.div custom={0} initial="hidden" animate="visible" variants={stagger} className="text-center space-y-1">
           <h1 className="text-xl font-medium text-primary">Welcome back!</h1>

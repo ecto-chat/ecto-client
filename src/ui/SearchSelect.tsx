@@ -56,9 +56,9 @@ export function SearchSelect({
         <Popover.Trigger
           disabled={disabled}
           className={cn(
-            'flex h-10 w-full items-center justify-between rounded-md bg-input border border-border',
+            'flex h-10 w-full items-center justify-between rounded-md bg-secondary border-2 border-primary',
             'px-3 text-sm text-primary',
-            'focus:outline-none focus:ring-1 focus:ring-accent/40 focus:border-border-active',
+            'focus:outline-none focus:ring-1 focus:ring-accent/40 focus:border-primary-active',
             'transition-colors duration-150',
             'disabled:cursor-not-allowed disabled:opacity-50',
             error && 'ring-1 ring-danger/40 border-danger/40',
@@ -73,11 +73,11 @@ export function SearchSelect({
 
         <Popover.Portal>
           <Popover.Content
-            className="z-[200] w-[var(--radix-popover-trigger-width)] rounded-lg bg-surface border border-border shadow-lg overflow-hidden"
+            className="z-[200] w-[var(--radix-popover-trigger-width)] rounded-lg bg-surface border-2 border-primary shadow-lg overflow-hidden"
             sideOffset={4}
             align="start"
           >
-            <div className="flex items-center gap-2 px-3 py-2 border-b border-border">
+            <div className="flex items-center gap-2 px-3 py-2 border-b-2 border-primary">
               <Search className="size-4 text-muted shrink-0" />
               <input
                 ref={inputRef}

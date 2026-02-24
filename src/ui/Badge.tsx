@@ -6,7 +6,7 @@ const variantStyles = {
   secondary: 'bg-tertiary text-secondary',
   danger: 'bg-danger text-white',
   success: 'bg-success text-white',
-  outline: 'border border-border text-secondary bg-transparent',
+  outline: 'border-2 border-primary text-secondary bg-transparent',
 } as const;
 
 const sizeStyles = {

@@ -35,7 +35,7 @@ export function IncomingCallOverlay() {
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ type: 'spring', stiffness: 260, damping: 20 }}
-        className="flex flex-col items-center gap-5 rounded-xl border border-border bg-secondary p-8"
+        className="flex flex-col items-center gap-5 rounded-xl border-2 border-primary bg-secondary p-8"
       >
         <Avatar src={peer.avatar_url} username={peer.username} size={80} />
 

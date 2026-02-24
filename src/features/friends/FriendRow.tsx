@@ -26,13 +26,13 @@ export function FriendRow({
   isInCall,
 }: FriendRowProps) {
   return (
-    <div className="group flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-hover transition-colors cursor-pointer">
+    <div className="group flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-hover transition-colors cursor-pointer" onClick={() => onMessage(userId)}>
       <Avatar src={avatarUrl} username={username} size={40} status={status} />
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-primary truncate">{username}</p>
         <p className="text-xs text-muted capitalize">{status}</p>
       </div>
-      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
         <IconButton
           variant="ghost"
           size="sm"

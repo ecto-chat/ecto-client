@@ -45,7 +45,7 @@ export function SearchFilters({
   }, [membersMap]);
 
   return (
-    <div className="flex flex-wrap items-center gap-2 border-b border-border px-3 py-2">
+    <div className="flex flex-wrap items-center gap-2 border-b-2 border-primary px-3 py-2">
       <Select
         options={channelOptions}
         value={filterChannelId || '__all__'}

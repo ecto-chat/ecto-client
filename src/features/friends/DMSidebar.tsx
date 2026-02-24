@@ -33,7 +33,7 @@ export function DMSidebar() {
 
   return (
     <div className="flex flex-col h-full bg-secondary">
-      <div className="flex h-[60px] shrink-0 items-center px-4 border-b border-border">
+      <div className="flex h-[60px] shrink-0 items-center px-4 border-b-2 border-primary">
         <h2 className="text-sm font-semibold text-primary">Direct Messages</h2>
       </div>
 

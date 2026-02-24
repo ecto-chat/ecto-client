@@ -39,7 +39,7 @@ export function PushToTalkSettings() {
         <div className="flex items-center gap-3 pl-4">
           <span className="text-sm text-secondary">Push to Talk Key</span>
           <div className="flex items-center gap-2 flex-1">
-            <span className="flex-1 rounded-md bg-input border border-border px-3 py-1.5 text-sm text-primary text-center">
+            <span className="flex-1 rounded-md bg-secondary border-2 border-primary px-3 py-1.5 text-sm text-primary text-center">
               {recording ? 'Press a key...' : pttKeyLabel}
             </span>
             <Button variant="secondary" size="sm" onClick={handleRecordKey} disabled={recording}>

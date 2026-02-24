@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Home } from 'lucide-react';
 import { useUiStore } from '@/stores/ui';
 import { IconButton } from '@/ui/IconButton';
@@ -7,8 +7,11 @@ import { cn } from '@/lib/cn';
 
 export function HomeButton() {
   const activeServerId = useUiStore((s) => s.activeServerId);
-  const isActive = activeServerId === null;
+  const location = useLocation();
   const navigate = useNavigate();
+
+  const isActivityRoute = location.pathname.startsWith('/activity');
+  const isActive = activeServerId === null && !isActivityRoute;
 
   const handleClick = () => {
     useUiStore.getState().setActiveServer(null);

@@ -37,7 +37,7 @@ export function VoiceToolbar({ serverId, channelId, isConnectedHere }: VoiceTool
       : 'You are connected on another session. Transfer your voice connection here?';
 
   return (
-    <div className="shrink-0 border-t border-border bg-secondary px-4 py-3">
+    <div className="shrink-0 border-t-2 border-primary bg-secondary px-4 py-3">
       <ConfirmDialog
         open={!!pendingTransfer}
         onOpenChange={(open) => { if (!open) cancelTransfer(); }}

@@ -81,7 +81,7 @@ export function SearchPanel({ serverId, onNavigate, onClose }: SearchPanelProps)
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -8 }}
       transition={{ duration: 0.15 }}
-      className="flex flex-col border-b border-border bg-secondary"
+      className="flex flex-col border-b-2 border-primary bg-secondary"
     >
       <div className="flex items-center gap-2 px-3 py-2">
         <form onSubmit={handleSubmit} className="flex flex-1 gap-2">

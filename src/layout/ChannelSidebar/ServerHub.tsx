@@ -22,8 +22,8 @@ export function ServerHub() {
   );
 
   return (
-    <div className="border-b border-border py-3">
-      <h3 className="text-xs uppercase tracking-wider font-semibold text-muted mb-2">
+    <div className="border-b-2 border-primary py-3">
+      <h3 className="text-xs uppercase tracking-wider font-semibold text-muted mb-2 pl-3">
         Server Hub
       </h3>
       {canBrowse && (

@@ -30,7 +30,7 @@ export function AutocompletePopup({
       animate={{ opacity: 1, scale: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95, y: 4 }}
       transition={{ duration: 0.1, ease: [0.16, 1, 0.3, 1] }}
-      className="absolute bottom-full left-0 right-0 mb-1 bg-surface border border-border rounded-lg shadow-xl p-1 z-50"
+      className="absolute bottom-full left-0 right-0 mb-1 bg-surface border-2 border-primary rounded-lg shadow-xl p-1 z-50"
     >
       {items.map((item, i) => {
         if (autocomplete.type === '@') {

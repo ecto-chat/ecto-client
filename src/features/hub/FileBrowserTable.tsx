@@ -317,7 +317,7 @@ export function FileBrowserTable({
   return (
     <div className="w-full">
       {/* Header */}
-      <div className="grid grid-cols-[1fr_140px_100px_120px_80px] border-b border-border">
+      <div className="grid grid-cols-[1fr_140px_100px_120px_80px] border-b-2 border-primary">
         <SortHeader field="name" label={labels.name} active={sortField} dir={sortDir} onClick={toggleSort} />
         <SortHeader field="date" label={labels.date} active={sortField} dir={sortDir} onClick={toggleSort} />
         <SortHeader field="size" label={labels.size} active={sortField} dir={sortDir} onClick={toggleSort} />
@@ -348,7 +348,7 @@ export function FileBrowserTable({
       {hasMore && onLoadMore && (
         <button
           type="button"
-          className="w-full border-b border-border py-2.5 text-sm text-accent hover:bg-hover transition-colors"
+          className="w-full border-b-2 border-primary py-2.5 text-sm text-accent hover:bg-hover transition-colors"
           onClick={onLoadMore}
         >
           Load more
@@ -421,7 +421,7 @@ function FolderRowItem({
     <ContextMenu>
       <ContextMenuTrigger asChild>
         <div
-          className="group grid grid-cols-[1fr_140px_100px_120px_80px] border-b border-border hover:bg-hover transition-colors cursor-pointer"
+          className="group grid grid-cols-[1fr_140px_100px_120px_80px] border-b-2 border-primary hover:bg-hover transition-colors cursor-pointer"
           onClick={() => row.onOpen()}
         >
           {/* Name */}
@@ -507,7 +507,7 @@ function FileRowItem({
     <ContextMenu>
       <ContextMenuTrigger asChild>
         <div
-          className="group grid grid-cols-[1fr_140px_100px_120px_80px] border-b border-border hover:bg-hover transition-colors cursor-pointer"
+          className="group grid grid-cols-[1fr_140px_100px_120px_80px] border-b-2 border-primary hover:bg-hover transition-colors cursor-pointer"
           onClick={onClick}
         >
           {/* Name */}

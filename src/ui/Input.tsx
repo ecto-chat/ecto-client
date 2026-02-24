@@ -23,8 +23,8 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           <input
             ref={ref}
             className={cn(
-              'w-full rounded-md bg-input border border-border text-primary placeholder:text-muted',
-              'focus:outline-none focus:ring-1 focus:ring-accent/40 focus:border-border-active',
+              'w-full rounded-md bg-secondary border-2 border-primary text-primary placeholder:text-muted',
+              'focus:outline-none focus:ring-1 focus:ring-accent/40 focus:border-primary-active',
               'transition-colors duration-150',
               sizeClasses[inputSize],
               icon && 'pl-9',

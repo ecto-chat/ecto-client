@@ -1,5 +1,5 @@
 import { AnimatePresence } from 'motion/react';
-import { Plus, CornerDownRight, X } from 'lucide-react';
+import { Send, Paperclip, CornerDownRight, X } from 'lucide-react';
 
 import { IconButton, TextArea } from '@/ui';
 
@@ -28,6 +28,7 @@ export function MessageInput({ channelId, serverId, onSend, replyTo, onCancelRep
     handleKeyDown,
     handleInput,
     handleFileSelect,
+    handleSend,
     slowmodeDisabled,
     slowmodeRemaining,
   } = useMessageInput({ channelId, serverId, onSend, replyTo, onCancelReply });
@@ -35,7 +36,7 @@ export function MessageInput({ channelId, serverId, onSend, replyTo, onCancelRep
   return (
     <div className="relative">
       {replyTo && (
-        <div className="flex items-center gap-2 px-3 py-1.5 bg-tertiary border-b border-border text-sm text-secondary">
+        <div className="flex items-center gap-2 px-3 py-1.5 bg-tertiary border-b-2 border-primary text-sm text-secondary">
           <CornerDownRight size={14} className="text-muted" />
           <span>
             Replying to <span className="font-medium text-primary">{replyTo.author}</span>
@@ -65,35 +66,44 @@ export function MessageInput({ channelId, serverId, onSend, replyTo, onCancelRep
         </AnimatePresence>
       </div>
 
-      <div className="flex items-end gap-2 p-3">
-        <IconButton
-          variant="ghost"
-          size="sm"
-          onClick={() => fileInputRef.current?.click()}
-          disabled={uploading}
-          tooltip="Attach file"
-        >
-          <Plus size={18} />
-        </IconButton>
-        <input
-          ref={fileInputRef}
-          type="file"
-          multiple
-          className="hidden"
-          onChange={handleFileSelect}
-        />
-        <div className="flex-1 min-w-0">
+      <div className="p-3">
+        <div className="relative">
           <TextArea
             ref={textareaRef}
-            className="min-h-[36px] max-h-[200px]"
             value={content}
             onChange={handleChange}
             onKeyDown={handleKeyDown}
             onInput={handleInput}
             placeholder={slowmodeDisabled ? `Slowmode: ${slowmodeRemaining}s` : 'Message #channel'}
             maxRows={10}
-            disabled={slowmodeDisabled}
+            disabled={slowmodeDisabled || uploading}
+            className="pr-22"
           />
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            className="hidden"
+            onChange={handleFileSelect}
+          />
+          <div className="absolute right-2 bottom-1.5 flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+              className="text-muted hover:text-primary disabled:opacity-30 transition-colors p-1"
+            >
+              <Paperclip size={18} />
+            </button>
+            <button
+              type="button"
+              disabled={!content.trim() || slowmodeDisabled}
+              onClick={handleSend}
+              className="text-muted hover:text-primary disabled:opacity-30 transition-colors p-1"
+            >
+              <Send size={18} />
+            </button>
+          </div>
         </div>
       </div>
     </div>

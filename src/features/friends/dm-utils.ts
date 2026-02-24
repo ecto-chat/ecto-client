@@ -5,7 +5,7 @@ import { useAuthStore } from '@/stores/auth';
 
 import { connectionManager } from '@/services/connection-manager';
 
-import type { DirectMessage, Message, ReactionGroup } from 'ecto-shared';
+import type { Attachment, DirectMessage, Message, ReactionGroup } from 'ecto-shared';
 
 /** Adapt a DirectMessage to the Message shape used by MessageList/MessageItem. */
 export function dmToMessage(dm: DirectMessage): Message {
@@ -29,7 +29,7 @@ export function dmToMessage(dm: DirectMessage): Message {
 }
 
 /** Send a DM with optimistic insert and reconciliation. */
-export async function sendDmMessage(userId: string, text: string): Promise<void> {
+export async function sendDmMessage(userId: string, text: string, attachments?: Attachment[]): Promise<void> {
   const centralTrpc = connectionManager.getCentralTrpc();
   if (!centralTrpc) return;
 
@@ -41,7 +41,7 @@ export async function sendDmMessage(userId: string, text: string): Promise<void>
       sender_id: user.id,
       recipient_id: userId,
       content: text.trim(),
-      attachments: [],
+      attachments: attachments ?? [],
       reactions: [],
       pinned: false,
       pinned_at: null,
@@ -59,7 +59,11 @@ export async function sendDmMessage(userId: string, text: string): Promise<void>
   }
 
   try {
-    const real = await centralTrpc.dms.send.mutate({ recipient_id: userId, content: text.trim() });
+    const real = await centralTrpc.dms.send.mutate({
+      recipient_id: userId,
+      content: text.trim() || undefined,
+      attachments: attachments && attachments.length > 0 ? attachments : undefined,
+    });
     if (user) {
       useDmStore.setState((s) => {
         const userMsgs = s.messages.get(userId);

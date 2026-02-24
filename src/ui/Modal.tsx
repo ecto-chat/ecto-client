@@ -42,7 +42,7 @@ export function Modal({ open, onOpenChange, title, description, children, width 
               <motion.div
                 className={cn(
                   'fixed left-1/2 top-1/2 z-[100] w-[calc(100%-2rem)]',
-                  'bg-secondary border border-border rounded-xl shadow-2xl',
+                  'bg-secondary border-2 border-primary rounded-xl shadow-2xl',
                   'focus:outline-none',
                   widthClasses[width],
                   className,
@@ -53,7 +53,7 @@ export function Modal({ open, onOpenChange, title, description, children, width 
                 transition={{ type: 'spring', stiffness: 260, damping: 20 }}
               >
                 {title ? (
-                  <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+                  <div className="flex items-center justify-between px-5 py-4 border-b-2 border-primary">
                     <div>
                       <Dialog.Title className="text-lg font-medium text-primary">{title}</Dialog.Title>
                       {description && <Dialog.Description className="text-sm text-muted mt-0.5">{description}</Dialog.Description>}

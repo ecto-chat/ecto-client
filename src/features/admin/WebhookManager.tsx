@@ -94,7 +94,7 @@ export function WebhookManager({ serverId }: { serverId: string }) {
       {error && <p className="text-sm text-danger">{error}</p>}
 
       {showCreate && (
-        <div className="rounded-lg bg-secondary border border-border p-4 space-y-3">
+        <div className="rounded-lg bg-secondary border-2 border-primary p-4 space-y-3">
           <Input label="Name" value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Webhook name" maxLength={80} />
           <Select label="Channel" options={[{ value: '', label: 'Select a channel...' }, ...channelOptions]} value={newChannelId} onValueChange={setNewChannelId} />
           <Button size="sm" loading={creating} disabled={!newName.trim() || !newChannelId} onClick={handleCreate}>Create</Button>
@@ -108,7 +108,7 @@ export function WebhookManager({ serverId }: { serverId: string }) {
       <ScrollArea className="max-h-96">
         <div className="space-y-2">
           {webhooks.map((webhook) => (
-            <div key={webhook.id} className="rounded-lg bg-secondary border border-border p-3 space-y-2">
+            <div key={webhook.id} className="rounded-lg bg-secondary border-2 border-primary p-3 space-y-2">
               <div className="flex items-center justify-between">
                 <div>
                   <span className="text-sm text-primary">{webhook.name}</span>

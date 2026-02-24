@@ -122,7 +122,7 @@ export function ChannelView() {
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
       {/* Channel header */}
-      <div className="flex h-[60px] shrink-0 items-center gap-2 border-b border-border px-4">
+      <div className="flex h-[60px] shrink-0 items-center gap-2 border-b-2 border-primary px-4">
         <Hash size={18} className="text-muted" />
         <span className="text-sm text-primary">{channel.name}</span>
         {channel.topic && (
@@ -162,7 +162,7 @@ export function ChannelView() {
         onMarkRead={markRead}
       />
 
-      <div className="shrink-0 border-t border-border">
+      <div className="shrink-0 border-t-2 border-primary">
         <TypingIndicator channelId={channelId} typingUsers={typingUsers} />
         <MessageInput channelId={channelId} onSend={sendMessage} serverId={sid} />
       </div>

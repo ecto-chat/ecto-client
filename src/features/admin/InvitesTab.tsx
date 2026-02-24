@@ -82,7 +82,7 @@ export function InvitesTab({ serverId }: InvitesTabProps) {
           {invites.map((invite) => (
             <div
               key={invite.id}
-              className="flex items-center justify-between rounded-md bg-secondary border border-border px-3 py-2"
+              className="flex items-center justify-between rounded-md bg-secondary border-2 border-primary px-3 py-2"
             >
               <div className="flex items-center gap-3 text-sm">
                 <code className="text-primary">{invite.code}</code>

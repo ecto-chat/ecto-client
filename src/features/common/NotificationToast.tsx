@@ -37,7 +37,7 @@ function ToastItem({ toast }: { toast: Toast }) {
       exit={{ opacity: 0, x: 80, scale: 0.95, transition: { duration: 0.15 } }}
       transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
       onClick={handleClick}
-      className="pointer-events-auto relative flex items-center gap-3 overflow-hidden rounded-lg border border-border border-l-[3px] border-l-accent backdrop-blur-xl bg-secondary/95 shadow-[0_8px_32px_rgba(0,0,0,0.4)] px-4 py-3 max-w-sm cursor-pointer hover:bg-tertiary/95 transition-colors"
+      className="pointer-events-auto relative flex items-center gap-3 overflow-hidden rounded-lg border-2 border-primary border-l-[3px] border-l-accent backdrop-blur-xl bg-secondary/95 shadow-[0_8px_32px_rgba(0,0,0,0.4)] px-4 py-3 max-w-sm cursor-pointer hover:bg-tertiary/95 transition-colors"
     >
       <Avatar src={toast.avatarUrl} username={toast.authorName} size={32} />
       <div className="flex flex-col gap-0.5 min-w-0">

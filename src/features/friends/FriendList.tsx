@@ -72,7 +72,7 @@ function FriendListInner() {
 
   return (
     <div className="flex flex-1 flex-col h-full overflow-hidden">
-      <div className="flex h-[60px] shrink-0 items-center px-4 border-b border-border">
+      <div className="flex h-[60px] shrink-0 items-center px-4 border-b-2 border-primary">
         <h2 className="text-base font-semibold text-primary">Friends</h2>
       </div>
       <Tabs defaultValue="online" className="flex flex-1 flex-col overflow-hidden px-4">

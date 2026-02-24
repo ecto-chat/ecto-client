@@ -60,8 +60,8 @@ export const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(
           value={value}
           onChange={handleChange}
           className={cn(
-            'w-full rounded-md bg-input border border-border text-sm text-primary placeholder:text-muted',
-            'focus:outline-none focus:ring-1 focus:ring-accent/40 focus:border-border-active',
+            'w-full rounded-md bg-secondary border-2 border-primary text-sm text-primary placeholder:text-muted',
+            'focus:outline-none focus:ring-1 focus:ring-accent/40 focus:border-primary-active',
             'transition-colors duration-150 resize-none py-2.5 px-3',
             error && 'ring-1 ring-danger/40 border-danger/40',
             className,

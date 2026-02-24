@@ -11,7 +11,7 @@ type ServerPreviewCardProps = {
 
 export function ServerPreviewCard({ name, iconUrl, memberCount, onlineCount }: ServerPreviewCardProps) {
   return (
-    <div className="flex items-center gap-3 rounded-lg bg-tertiary border border-border p-3 mb-4">
+    <div className="flex items-center gap-3 rounded-lg bg-tertiary border-2 border-primary p-3 mb-4">
       <Avatar src={iconUrl} username={name} size={48} />
       <div className="flex flex-col gap-0.5">
         <span className="text-sm text-primary">{name}</span>

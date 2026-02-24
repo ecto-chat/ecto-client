@@ -101,6 +101,9 @@
 @utility text-muted { color: var(--color-text-muted); }
 @utility text-inverse { color: var(--color-text-inverse); }
 
+/* ── Border color utilities ── */
+@utility border-primary { border-color: var(--color-bg-primary); }
+
 /* ── Base styles (must be in @layer base so Tailwind utilities can override them) ── */
 @layer base {
   *,

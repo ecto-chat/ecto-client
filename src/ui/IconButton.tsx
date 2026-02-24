@@ -79,7 +79,7 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(
             sideOffset={4}
             className={cn(
               'rounded-md px-2.5 py-1.5',
-              'bg-surface border border-border',
+              'bg-surface border-2 border-primary',
               'text-xs font-medium text-primary',
               'shadow-xl',
               'animate-in fade-in-0 duration-100 data-[side=top]:slide-in-from-bottom-0.5 data-[side=bottom]:slide-in-from-top-0.5 data-[side=left]:slide-in-from-right-0.5 data-[side=right]:slide-in-from-left-0.5',

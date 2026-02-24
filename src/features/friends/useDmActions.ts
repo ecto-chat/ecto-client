@@ -4,6 +4,8 @@ import { useDmStore } from '@/stores/dm';
 
 import { connectionManager } from '@/services/connection-manager';
 
+import type { Attachment } from 'ecto-shared';
+
 import { sendDmMessage, toggleReaction } from './dm-utils';
 
 export function useDmActions(
@@ -11,9 +13,10 @@ export function useDmActions(
   currentUserId: string | undefined,
   setHasMore: (v: boolean) => void,
 ) {
-  const handleSend = useCallback(async (text: string) => {
-    if (!userId || !text.trim()) return;
-    await sendDmMessage(userId, text);
+  const handleSend = useCallback(async (text: string, attachments?: Attachment[]) => {
+    if (!userId) return;
+    if (!text.trim() && (!attachments || attachments.length === 0)) return;
+    await sendDmMessage(userId, text, attachments);
   }, [userId]);
 
   const handleLoadMore = useCallback(async () => {

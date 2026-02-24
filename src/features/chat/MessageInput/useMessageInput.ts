@@ -1,7 +1,6 @@
 import { useState, useRef, useCallback, useEffect, type KeyboardEvent } from 'react';
 
 import { Permissions } from 'ecto-shared';
-
 import { connectionManager } from '@/services/connection-manager';
 import { useChannelStore } from '@/stores/channel';
 import { useUiStore } from '@/stores/ui';
@@ -140,6 +139,7 @@ export function useMessageInput({ channelId, serverId, onSend, replyTo, onCancel
     handleKeyDown,
     handleInput,
     handleFileSelect,
+    handleSend,
     slowmodeDisabled,
     slowmodeRemaining,
   };

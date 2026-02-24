@@ -48,7 +48,7 @@ export function VoiceControls() {
   const cameraProducerActive = useVoiceStore.getState().producers.has('video');
 
   return (
-    <div className="flex items-center justify-between gap-3 px-3 py-2 bg-secondary border-t border-border">
+    <div className="flex items-center justify-between gap-3 px-3 py-2 bg-secondary border-t-2 border-primary">
       <div className="flex flex-col min-w-0">
         <span
           className={cn(

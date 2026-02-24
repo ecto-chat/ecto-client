@@ -29,7 +29,7 @@ export function SnappedHeader({ title, startedAt }: SnappedHeaderProps) {
   const timeStr = startedAt ? `${m}:${s.toString().padStart(2, '0')}` : null;
 
   return (
-    <div className="flex items-center gap-2 px-3 py-2 border-b border-border">
+    <div className="flex items-center gap-2 px-3 py-2 border-b-2 border-primary">
       <span className="text-sm font-medium text-primary truncate flex-1">{title}</span>
       {timeStr && (
         <span className="text-xs text-muted">{timeStr}</span>

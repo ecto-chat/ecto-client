@@ -86,7 +86,7 @@ export function RoleEditor({ serverId }: { serverId: string }) {
 
   return (
     <div className="flex gap-4 min-h-[25rem] max-h-[65vh]">
-      <div className="min-w-44 border-r border-border pr-3">
+      <div className="min-w-44 border-r-2 border-primary pr-3">
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-medium text-primary">Roles</h3>
           <Tooltip content="Create Role">

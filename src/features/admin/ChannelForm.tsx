@@ -55,7 +55,7 @@ export function CreateChannelForm({ serverId, categories, onDone }: CreateChanne
   };
 
   return (
-    <form onSubmit={handleSubmit} className="rounded-md bg-secondary border border-border p-3 mb-4 space-y-2">
+    <form onSubmit={handleSubmit} className="rounded-md bg-secondary border-2 border-primary p-3 mb-4 space-y-2">
       {error && <p className="text-sm text-danger">{error}</p>}
       <div className="flex gap-2">
         <div className="flex-1">
@@ -114,7 +114,7 @@ export function CreateCategoryForm({ serverId, onDone }: CreateCategoryFormProps
   };
 
   return (
-    <form onSubmit={handleSubmit} className="rounded-md bg-secondary border border-border p-3 mb-4 space-y-2">
+    <form onSubmit={handleSubmit} className="rounded-md bg-secondary border-2 border-primary p-3 mb-4 space-y-2">
       {error && <p className="text-sm text-danger">{error}</p>}
       <div className="flex gap-2">
         <div className="flex-1">

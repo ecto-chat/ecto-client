@@ -109,7 +109,7 @@ export function AuditLog() {
         <ScrollArea className="max-h-[28rem]">
           <div className="space-y-1">
             {entries.map((entry) => (
-              <div key={entry.id} className="rounded-md bg-secondary border border-border px-3 py-2 space-y-0.5">
+              <div key={entry.id} className="rounded-md bg-secondary border-2 border-primary px-3 py-2 space-y-0.5">
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-accent">{formatActionLabel(entry.action)}</span>
                   <span className="text-xs text-muted">{formatTimestamp(entry.created_at)}</span>

@@ -113,7 +113,7 @@ export function ServerSettings() {
   return (
     <Modal open={open} onOpenChange={handleOpenChange} title="Server Settings" width="full">
       <div className="flex gap-6">
-        <nav className="min-w-40 border-r border-border pr-4">
+        <nav className="min-w-40 border-r-2 border-primary pr-4">
           <ScrollArea className="max-h-[30rem]">
             {visibleTabs.map((tab) => (
               <Button

@@ -58,7 +58,7 @@ export function BannerUpload({ currentSrc, previewSrc, onFileReady, onRemove, on
       <div className="space-y-2">
         <label className="text-sm font-medium text-secondary">Banner</label>
         <div
-          className="relative w-full overflow-hidden rounded-lg border border-border"
+          className="relative w-full overflow-hidden rounded-lg border-2 border-primary"
           style={{ aspectRatio: '5 / 1' }}
         >
           {displaySrc ? (

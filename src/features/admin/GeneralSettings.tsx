@@ -260,7 +260,7 @@ export function GeneralSettings({ serverId }: GeneralSettingsProps) {
         <div className="space-y-2">
           <label className="text-sm font-medium text-secondary">Server Banner</label>
           <div
-            className="relative w-full overflow-hidden rounded-lg border border-border"
+            className="relative w-full overflow-hidden rounded-lg border-2 border-primary"
             style={{ aspectRatio: '5 / 1' }}
           >
             {server.banner_url ? (

@@ -80,7 +80,7 @@ export function MemberManager({ serverId }: MemberManagerProps) {
             const isEditingRoles = editingRoles === member.user_id;
 
             return (
-              <div key={member.user_id} className="flex items-center gap-3 rounded-md bg-secondary border border-border px-3 py-2">
+              <div key={member.user_id} className="flex items-center gap-3 rounded-md bg-secondary border-2 border-primary px-3 py-2">
                 <Avatar src={member.avatar_url} username={member.display_name ?? member.username} size={36} />
 
                 <div className="flex-1 min-w-0">
