@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { MessageList } from '@/features/chat';
 import { useServerDmStore } from '@/stores/server-dm';
 import { ServerDmHeader } from './ServerDmHeader';
@@ -21,6 +22,8 @@ export function ServerDmChat() {
     handleDelete,
     handleReact,
   } = useServerDmMessages(activeConvoId);
+
+  const [replyTo, setReplyTo] = useState<{ id: string; author: string; content: string } | null>(null);
 
   if (!activeConvoId || !convo) {
     return <ServerDmEmptyState />;
@@ -46,6 +49,11 @@ export function ServerDmChat() {
         onPin={async () => {}}
         onUnpin={async () => {}}
         onMarkRead={async () => {}}
+        onReply={(msg) => setReplyTo({
+          id: msg.id,
+          author: msg.author?.display_name ?? msg.author?.username ?? 'Unknown',
+          content: msg.content ?? '',
+        })}
         reactOnly
       />
 
@@ -59,6 +67,8 @@ export function ServerDmChat() {
           conversationId={activeConvoId}
           peerName={peerName}
           onSend={handleSend}
+          replyTo={replyTo}
+          onCancelReply={() => setReplyTo(null)}
         />
       </div>
     </div>

@@ -15,7 +15,7 @@ export function useServerDmActions(
     return connectionManager.getServerTrpc(serverId);
   }, []);
 
-  const handleSend = useCallback(async (text: string) => {
+  const handleSend = useCallback(async (text: string, replyTo?: string) => {
     if (!conversationId || !text.trim()) return;
     const trpc = getServerTrpc();
     if (!trpc) return;
@@ -27,6 +27,7 @@ export function useServerDmActions(
     const result = await trpc.serverDms.send.mutate({
       recipient_id: convo.peer.user_id,
       content: text.trim(),
+      reply_to: replyTo,
     });
 
     // If this was a pending conversation, switch to the real one

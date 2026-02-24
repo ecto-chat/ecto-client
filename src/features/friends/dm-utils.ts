@@ -15,7 +15,7 @@ export function dmToMessage(dm: DirectMessage): Message {
     author: dm.sender,
     content: dm.content,
     type: 0,
-    reply_to: null,
+    reply_to: dm.reply_to ?? null,
     pinned: dm.pinned ?? false,
     mention_everyone: false,
     mention_roles: [],
@@ -29,7 +29,7 @@ export function dmToMessage(dm: DirectMessage): Message {
 }
 
 /** Send a DM with optimistic insert and reconciliation. */
-export async function sendDmMessage(userId: string, text: string, attachments?: Attachment[]): Promise<void> {
+export async function sendDmMessage(userId: string, text: string, attachments?: Attachment[], replyTo?: string): Promise<void> {
   const centralTrpc = connectionManager.getCentralTrpc();
   if (!centralTrpc) return;
 
@@ -41,6 +41,7 @@ export async function sendDmMessage(userId: string, text: string, attachments?: 
       sender_id: user.id,
       recipient_id: userId,
       content: text.trim(),
+      reply_to: replyTo ?? null,
       attachments: attachments ?? [],
       reactions: [],
       pinned: false,
@@ -63,6 +64,7 @@ export async function sendDmMessage(userId: string, text: string, attachments?: 
       recipient_id: userId,
       content: text.trim() || undefined,
       attachments: attachments && attachments.length > 0 ? attachments : undefined,
+      reply_to: replyTo,
     });
     if (user) {
       useDmStore.setState((s) => {

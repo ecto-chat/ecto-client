@@ -16,13 +16,14 @@ type MessageListProps = {
   onPin: (messageId: string) => Promise<void>;
   onUnpin: (messageId: string) => Promise<void>;
   onMarkRead: (messageId: string) => Promise<void>;
+  onReply?: (message: Message) => void;
   readOnly?: boolean;
   reactOnly?: boolean;
 };
 
 export function MessageList({
   messages, hasMore, onLoadMore, onEdit, onDelete, onReact,
-  onPin, onUnpin, onMarkRead, readOnly, reactOnly,
+  onPin, onUnpin, onMarkRead, onReply, readOnly, reactOnly,
 }: MessageListProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const topSentinelRef = useRef<HTMLDivElement>(null);
@@ -157,6 +158,7 @@ export function MessageList({
               reactOnly={reactOnly}
               grouped={isGrouped}
               onJumpToMessage={jumpToMessage}
+              onReply={onReply ? () => onReply(msg) : undefined}
             />
           </div>
         );

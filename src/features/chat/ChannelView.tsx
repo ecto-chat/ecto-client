@@ -31,6 +31,7 @@ export function ChannelView() {
   const { openChannel, closeChannel } = useChannels(sid);
   const [searchOpen, setSearchOpen] = useState(false);
   const [pinsOpen, setPinsOpen] = useState(false);
+  const [replyTo, setReplyTo] = useState<{ id: string; author: string; content: string } | null>(null);
   const navigate = useNavigate();
 
   const handleSearchNavigate = useCallback((targetChannelId: string, _messageId: string) => {
@@ -160,11 +161,16 @@ export function ChannelView() {
         onPin={pinMessage}
         onUnpin={unpinMessage}
         onMarkRead={markRead}
+        onReply={(msg) => setReplyTo({
+          id: msg.id,
+          author: msg.author?.display_name ?? msg.author?.username ?? 'Unknown',
+          content: msg.content ?? '',
+        })}
       />
 
       <div className="shrink-0 border-t-2 border-primary">
         <TypingIndicator channelId={channelId} typingUsers={typingUsers} />
-        <MessageInput channelId={channelId} onSend={sendMessage} serverId={sid} />
+        <MessageInput channelId={channelId} onSend={sendMessage} serverId={sid} replyTo={replyTo} onCancelReply={() => setReplyTo(null)} />
       </div>
 
       <PinnedMessages channelId={channelId} open={pinsOpen} onClose={() => setPinsOpen(false)} />

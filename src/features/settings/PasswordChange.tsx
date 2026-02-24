@@ -8,12 +8,24 @@ import { secureStorage } from '@/services/secure-storage';
 import { getActiveUserId } from '@/services/account-registry';
 
 export function PasswordChange() {
+  const user = useAuthStore((s) => s.user);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+
+  if (user && !user.has_password) {
+    return (
+      <div className="space-y-6">
+        <h2 className="text-lg font-medium text-primary">Change Password</h2>
+        <p className="text-sm text-muted">
+          Your account is linked to Google. Password login is not available.
+        </p>
+      </div>
+    );
+  }
 
   const validate = (): string | null => {
     if (newPassword.length < 8) return 'New password must be at least 8 characters.';

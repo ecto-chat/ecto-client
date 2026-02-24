@@ -1,8 +1,8 @@
 import { useState, useRef, useCallback, type KeyboardEvent } from 'react';
 
-import { Send, Paperclip } from 'lucide-react';
+import { Send, Paperclip, CornerDownRight, X } from 'lucide-react';
 
-import { TextArea } from '@/ui';
+import { TextArea, IconButton } from '@/ui';
 
 import { connectionManager } from '@/services/connection-manager';
 import { useAuthStore } from '@/stores/auth';
@@ -13,10 +13,12 @@ import type { Attachment } from 'ecto-shared';
 type DMMessageInputProps = {
   userId: string;
   username: string;
-  onSend: (content: string, attachments?: Attachment[]) => Promise<void>;
+  onSend: (content: string, attachments?: Attachment[], replyTo?: string) => Promise<void>;
+  replyTo?: { id: string; author: string; content: string } | null;
+  onCancelReply?: () => void;
 };
 
-export function DMMessageInput({ userId, username, onSend }: DMMessageInputProps) {
+export function DMMessageInput({ userId, username, onSend, replyTo, onCancelReply }: DMMessageInputProps) {
   const [content, setContent] = useState('');
   const [uploading, setUploading] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -25,9 +27,10 @@ export function DMMessageInput({ userId, username, onSend }: DMMessageInputProps
   const handleSend = useCallback(() => {
     const text = content.trim();
     if (!text) return;
-    onSend(text);
+    onSend(text, undefined, replyTo?.id);
     setContent('');
-  }, [content, onSend]);
+    onCancelReply?.();
+  }, [content, onSend, replyTo, onCancelReply]);
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -75,6 +78,24 @@ export function DMMessageInput({ userId, username, onSend }: DMMessageInputProps
   }, [content, onSend]);
 
   return (
+    <div className="relative">
+      {replyTo && (
+        <div className="flex items-center gap-2 px-3 py-1.5 bg-tertiary border-b-2 border-primary text-sm text-secondary">
+          <CornerDownRight size={14} className="text-muted" />
+          <span>
+            Replying to <span className="font-medium text-primary">{replyTo.author}</span>
+          </span>
+          <IconButton
+            variant="ghost"
+            size="sm"
+            onClick={onCancelReply}
+            className="ml-auto"
+            tooltip="Cancel reply"
+          >
+            <X size={14} />
+          </IconButton>
+        </div>
+      )}
     <div className="p-3">
       <div className="relative">
         <TextArea
@@ -113,6 +134,7 @@ export function DMMessageInput({ userId, username, onSend }: DMMessageInputProps
           </button>
         </div>
       </div>
+    </div>
     </div>
   );
 }

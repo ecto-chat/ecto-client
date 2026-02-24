@@ -22,6 +22,7 @@ export function DMView() {
   const { status } = usePresence(userId ?? '');
   const { startCall, isInCall } = useCall();
   const [pinsOpen, setPinsOpen] = useState(false);
+  const [replyTo, setReplyTo] = useState<{ id: string; author: string; content: string } | null>(null);
 
   const {
     messages,
@@ -81,12 +82,17 @@ export function DMView() {
         onPin={handlePin}
         onUnpin={handleUnpin}
         onMarkRead={async () => {}}
+        onReply={(msg) => setReplyTo({
+          id: msg.id,
+          author: msg.author?.display_name ?? msg.author?.username ?? 'Unknown',
+          content: msg.content ?? '',
+        })}
         reactOnly
       />
 
       <div className="shrink-0 border-t-2 border-primary">
         <DMTypingIndicator username={username} isTyping={isPeerTyping} />
-        <DMMessageInput userId={userId} username={username} onSend={handleSend} />
+        <DMMessageInput userId={userId} username={username} onSend={handleSend} replyTo={replyTo} onCancelReply={() => setReplyTo(null)} />
       </div>
 
       <DMPinnedMessages userId={userId} open={pinsOpen} onClose={() => setPinsOpen(false)} />

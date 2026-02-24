@@ -14,6 +14,8 @@ function formatDescription(item: ActivityItem): string {
       return `${name} sent you a message`;
     case 'server_dm':
       return `${name} sent you a message`;
+    case 'reply':
+      return `${name} replied to your message${item.source.channel_name ? ` in #${item.source.channel_name}` : ''}`;
     default:
       return `${name} activity`;
   }

@@ -1,4 +1,4 @@
-import { SmilePlus, Pin, PinOff, Pencil, Trash2 } from 'lucide-react';
+import { SmilePlus, Pin, PinOff, Pencil, Trash2, Reply } from 'lucide-react';
 
 import { IconButton, Tooltip } from '@/ui';
 
@@ -15,6 +15,7 @@ type MessageToolbarProps = {
   isOwn: boolean;
   reactOnly?: boolean;
   onReact: (emoji: string) => void;
+  onReply?: () => void;
   onPin: () => void;
   onEdit: () => void;
   onDelete: () => void;
@@ -25,6 +26,7 @@ export function MessageToolbar({
   isOwn,
   reactOnly,
   onReact,
+  onReply,
   onPin,
   onEdit,
   onDelete,
@@ -45,6 +47,13 @@ export function MessageToolbar({
           <SmilePlus size={16} />
         </IconButton>
       </Tooltip>
+      {onReply && (
+        <Tooltip content="Reply">
+          <IconButton variant="ghost" size="sm" onClick={onReply}>
+            <Reply size={16} />
+          </IconButton>
+        </Tooltip>
+      )}
       {!reactOnly && (
         <Tooltip content={isPinned ? 'Unpin' : 'Pin'}>
           <IconButton variant="ghost" size="sm" onClick={onPin}>

@@ -1,6 +1,14 @@
 import { useState, useMemo, memo } from 'react';
 
+import { Reply, Copy, Pin, PinOff, Pencil, Trash2 } from 'lucide-react';
 import { Avatar } from '@/ui';
+import {
+  ContextMenu,
+  ContextMenuTrigger,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+} from '@/ui/ContextMenu';
 
 import { useAuthStore } from '@/stores/auth';
 import { useUiStore } from '@/stores/ui';
@@ -33,10 +41,11 @@ type MessageItemProps = {
   /** Whether this message is grouped with the previous (same author, consecutive). Hides avatar/header. */
   grouped?: boolean;
   onJumpToMessage?: (messageId: string) => void;
+  onReply?: () => void;
 };
 
 export const MessageItem = memo(function MessageItem({
-  message, onEdit, onDelete, onReact, onPin, readOnly, reactOnly, grouped, onJumpToMessage,
+  message, onEdit, onDelete, onReact, onPin, readOnly, reactOnly, grouped, onJumpToMessage, onReply,
 }: MessageItemProps) {
   const [editing, setEditing] = useState(false);
   const currentUserId = useAuthStore((s) => s.user?.id);
@@ -150,70 +159,137 @@ export const MessageItem = memo(function MessageItem({
 
   const authorName = message.author?.display_name ?? message.author?.username ?? 'Unknown';
 
-  return (
-    <div
-      className="relative flex gap-3 py-1 px-4 group hover:bg-[rgba(30,42,74,0.5)]"
-    >
-      {grouped ? (
-        <div className="w-[40px] shrink-0" />
-      ) : (
-        <div onClick={handleAuthorClick} className="shrink-0 cursor-pointer">
-          <Avatar src={message.author?.avatar_url} username={message.author?.username ?? 'Unknown'} size={40} />
-        </div>
-      )}
-
-      <div className="min-w-0 flex-1">
-        {!grouped && (
-          <MessageHeader
-            authorName={authorName}
-            isBot={!!message.webhook_id}
-            timestamp={timestamp}
-            isEdited={!!message.edited_at}
-            isPinned={message.pinned}
-            onAuthorClick={handleAuthorClick}
-          />
-        )}
-        {message.reply_to && <ReplyReference replyTo={message.reply_to} />}
-        {editing ? (
-          <MessageEditForm
-            initialContent={message.content ?? ''}
-            onSave={(content) => { onEdit(message.id, content); setEditing(false); }}
-            onCancel={() => setEditing(false)}
-          />
+  if (readOnly) {
+    return (
+      <div className="relative flex gap-3 py-1 px-4 group hover:bg-[rgba(30,42,74,0.5)]">
+        {grouped ? (
+          <div className="w-[40px] shrink-0" />
         ) : (
-          <>
-            <div
-              className="text-base font-normal text-primary message-markdown"
-              dangerouslySetInnerHTML={{ __html: renderMarkdown(message.content ?? '', mentionResolver) }}
-              onClick={(e) => {
-                const el = e.target as HTMLElement;
-                if (el.classList.contains('spoiler')) el.classList.toggle('revealed');
-                if (el.classList.contains('mention') && el.dataset.type === 'user' && el.dataset.id) {
-                  useUiStore.getState().openModal('user-profile', { userId: el.dataset.id, serverId: activeServerId ?? undefined });
-                }
-                if (el.classList.contains('inline-image') && el instanceof HTMLImageElement) {
-                  useUiStore.getState().openModal('image-lightbox', { src: el.src, alt: el.alt });
-                }
-              }}
+          <div onClick={handleAuthorClick} className="shrink-0 cursor-pointer">
+            <Avatar src={message.author?.avatar_url} username={message.author?.username ?? 'Unknown'} size={40} />
+          </div>
+        )}
+        <div className="min-w-0 flex-1">
+          {!grouped && (
+            <MessageHeader authorName={authorName} isBot={!!message.webhook_id} timestamp={timestamp} isEdited={!!message.edited_at} isPinned={message.pinned} onAuthorClick={handleAuthorClick} />
+          )}
+          {message.reply_to && <ReplyReference replyTo={message.reply_to} onJump={onJumpToMessage} />}
+          {editing ? (
+            <MessageEditForm initialContent={message.content ?? ''} onSave={(content) => { onEdit(message.id, content); setEditing(false); }} onCancel={() => setEditing(false)} />
+          ) : (
+            <>
+              <div className="text-base font-normal text-primary message-markdown" dangerouslySetInnerHTML={{ __html: renderMarkdown(message.content ?? '', mentionResolver) }} onClick={(e) => { const el = e.target as HTMLElement; if (el.classList.contains('spoiler')) el.classList.toggle('revealed'); if (el.classList.contains('mention') && el.dataset.type === 'user' && el.dataset.id) { useUiStore.getState().openModal('user-profile', { userId: el.dataset.id, serverId: activeServerId ?? undefined }); } if (el.classList.contains('inline-image') && el instanceof HTMLImageElement) { useUiStore.getState().openModal('image-lightbox', { src: el.src, alt: el.alt }); } }} />
+              {message.content && <LinkPreviews content={message.content} />}
+            </>
+          )}
+          <MessageAttachments attachments={message.attachments ?? []} />
+          <MessageReactions reactions={message.reactions ?? []} onReact={(emoji) => onReact(message.id, emoji)} />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <ContextMenu>
+      <ContextMenuTrigger asChild>
+        <div
+          className="relative flex gap-3 py-1 px-4 group hover:bg-[rgba(30,42,74,0.5)]"
+        >
+          {grouped ? (
+            <div className="w-[40px] shrink-0" />
+          ) : (
+            <div onClick={handleAuthorClick} className="shrink-0 cursor-pointer">
+              <Avatar src={message.author?.avatar_url} username={message.author?.username ?? 'Unknown'} size={40} />
+            </div>
+          )}
+
+          <div className="min-w-0 flex-1">
+            {!grouped && (
+              <MessageHeader
+                authorName={authorName}
+                isBot={!!message.webhook_id}
+                timestamp={timestamp}
+                isEdited={!!message.edited_at}
+                isPinned={message.pinned}
+                onAuthorClick={handleAuthorClick}
+              />
+            )}
+            {message.reply_to && <ReplyReference replyTo={message.reply_to} onJump={onJumpToMessage} />}
+            {editing ? (
+              <MessageEditForm
+                initialContent={message.content ?? ''}
+                onSave={(content) => { onEdit(message.id, content); setEditing(false); }}
+                onCancel={() => setEditing(false)}
+              />
+            ) : (
+              <>
+                <div
+                  className="text-base font-normal text-primary message-markdown"
+                  dangerouslySetInnerHTML={{ __html: renderMarkdown(message.content ?? '', mentionResolver) }}
+                  onClick={(e) => {
+                    const el = e.target as HTMLElement;
+                    if (el.classList.contains('spoiler')) el.classList.toggle('revealed');
+                    if (el.classList.contains('mention') && el.dataset.type === 'user' && el.dataset.id) {
+                      useUiStore.getState().openModal('user-profile', { userId: el.dataset.id, serverId: activeServerId ?? undefined });
+                    }
+                    if (el.classList.contains('inline-image') && el instanceof HTMLImageElement) {
+                      useUiStore.getState().openModal('image-lightbox', { src: el.src, alt: el.alt });
+                    }
+                  }}
+                />
+                {message.content && <LinkPreviews content={message.content} />}
+              </>
+            )}
+            <MessageAttachments attachments={message.attachments ?? []} />
+            <MessageReactions reactions={message.reactions ?? []} onReact={(emoji) => onReact(message.id, emoji)} />
+          </div>
+
+          {!editing && (
+            <MessageToolbar
+              isPinned={message.pinned}
+              isOwn={isOwn}
+              reactOnly={reactOnly}
+              onReact={(emoji) => onReact(message.id, emoji)}
+              onReply={onReply}
+              onPin={() => onPin(message.id)}
+              onEdit={() => setEditing(true)}
+              onDelete={() => onDelete(message.id)}
             />
-            {message.content && <LinkPreviews content={message.content} />}
+          )}
+        </div>
+      </ContextMenuTrigger>
+      <ContextMenuContent>
+        <ContextMenuItem onSelect={() => onReply?.()}>
+          <Reply size={14} className="mr-2" />
+          Reply
+        </ContextMenuItem>
+        <ContextMenuItem onSelect={() => navigator.clipboard.writeText(message.content ?? '')}>
+          <Copy size={14} className="mr-2" />
+          Copy Text
+        </ContextMenuItem>
+        {!reactOnly && (
+          <>
+            <ContextMenuSeparator />
+            <ContextMenuItem onSelect={() => onPin(message.id)}>
+              {message.pinned ? <PinOff size={14} className="mr-2" /> : <Pin size={14} className="mr-2" />}
+              {message.pinned ? 'Unpin' : 'Pin'}
+            </ContextMenuItem>
           </>
         )}
-        <MessageAttachments attachments={message.attachments ?? []} />
-        <MessageReactions reactions={message.reactions ?? []} onReact={(emoji) => onReact(message.id, emoji)} />
-      </div>
-
-      {!editing && !readOnly && (
-        <MessageToolbar
-          isPinned={message.pinned}
-          isOwn={isOwn}
-          reactOnly={reactOnly}
-          onReact={(emoji) => onReact(message.id, emoji)}
-          onPin={() => onPin(message.id)}
-          onEdit={() => setEditing(true)}
-          onDelete={() => onDelete(message.id)}
-        />
-      )}
-    </div>
+        {isOwn && (
+          <>
+            <ContextMenuSeparator />
+            <ContextMenuItem onSelect={() => setEditing(true)}>
+              <Pencil size={14} className="mr-2" />
+              Edit
+            </ContextMenuItem>
+            <ContextMenuItem danger onSelect={() => onDelete(message.id)}>
+              <Trash2 size={14} className="mr-2" />
+              Delete
+            </ContextMenuItem>
+          </>
+        )}
+      </ContextMenuContent>
+    </ContextMenu>
   );
 });

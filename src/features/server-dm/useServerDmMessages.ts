@@ -14,7 +14,7 @@ function serverDmToMessage(dm: ServerDmMessage): Message {
     author: dm.author,
     content: dm.content,
     type: 0,
-    reply_to: null,
+    reply_to: dm.reply_to ?? null,
     pinned: false,
     mention_everyone: false,
     mention_roles: [],

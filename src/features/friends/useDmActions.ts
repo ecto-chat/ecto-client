@@ -13,10 +13,10 @@ export function useDmActions(
   currentUserId: string | undefined,
   setHasMore: (v: boolean) => void,
 ) {
-  const handleSend = useCallback(async (text: string, attachments?: Attachment[]) => {
+  const handleSend = useCallback(async (text: string, attachments?: Attachment[], replyTo?: string) => {
     if (!userId) return;
     if (!text.trim() && (!attachments || attachments.length === 0)) return;
-    await sendDmMessage(userId, text, attachments);
+    await sendDmMessage(userId, text, attachments, replyTo);
   }, [userId]);
 
   const handleLoadMore = useCallback(async () => {

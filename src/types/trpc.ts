@@ -520,6 +520,7 @@ export interface ServerRouter {
         recipient_id: string;
         content: string;
         attachment_ids?: string[];
+        reply_to?: string;
       }) => Promise<ServerDmMessage>;
     };
     edit: {
@@ -689,6 +690,7 @@ export interface CentralRouter {
         recipient_id: string;
         content?: string;
         attachments?: Attachment[];
+        reply_to?: string;
       }) => Promise<DirectMessage>;
     };
     history: {

@@ -40,7 +40,7 @@ export function App() {
     <MotionConfig reducedMotion="user">
       <TooltipPrimitive.Provider delayDuration={300}>
       {isElectron && <ElectronTitleBar />}
-      <div style={isElectron ? { paddingTop: 36 } : undefined}>
+      <div className="h-full w-full" style={isElectron ? { paddingTop: 36 } : undefined}>
       <Router>
         <Routes>
           <Route path="/landing" element={<LandingPage />} />
