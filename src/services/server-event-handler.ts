@@ -17,6 +17,7 @@ import { connectionManager } from './connection-manager.js';
 import { pageEventListeners } from '../hooks/usePage.js';
 import { useHubFilesStore } from '../stores/hub-files.js';
 import { useServerDmStore } from '../stores/server-dm.js';
+import { useActivityStore } from '../stores/activity.js';
 
 export function handleMainEvent(serverId: string, event: string, data: unknown, _seq: number) {
   const d = data as Record<string, unknown>;
@@ -299,6 +300,19 @@ export function handleMainEvent(serverId: string, event: string, data: unknown, 
     case 'shared_folder.update':
       useHubFilesStore.getState().updateSharedFolder(d.id as string, d as Partial<SharedFolder>);
       break;
+
+    case 'activity.create': {
+      const item = d as unknown as import('ecto-shared').ActivityItem;
+      // Tag with server_name from store if missing
+      if (!item.source.server_name) {
+        const server = useServerStore.getState().servers.get(serverId);
+        if (server?.server_name) {
+          item.source.server_name = server.server_name;
+        }
+      }
+      useActivityStore.getState().addItem(item);
+      break;
+    }
 
     // Voice signaling events are handled by the voice service
     case 'voice.router_capabilities':

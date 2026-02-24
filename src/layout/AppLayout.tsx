@@ -15,6 +15,7 @@ import { CentralSignInModal, AddAccountModal } from '@/features/auth';
 import { IncomingCallOverlay, ActiveCallOverlay, CallBanner } from '@/features/call';
 import { ChannelView, ImageLightbox } from '@/features/chat';
 import { NotificationPrompt, NotificationToast } from '@/features/common';
+import { ActivityPanel, ActivityView } from '@/features/activity';
 import { FriendList, DMView, DMSidebar } from '@/features/friends';
 import { FloatingMediaWindow, SnappedMediaSidebar, ResizeHandle } from '@/features/media-window';
 import { AddServerModal, LeaveServerModal } from '@/features/servers';
@@ -76,9 +77,10 @@ export function AppLayout() {
     });
   }, [navigate]);
 
+  const isActivityRoute = location.pathname.startsWith('/activity');
   const isHomeRoute =
     location.pathname.startsWith('/dms') || location.pathname.startsWith('/friends');
-  const isHomeMode = isHomeRoute || activeServerId === null;
+  const isHomeMode = isHomeRoute || isActivityRoute || activeServerId === null;
   const activeServerStatus = useConnectionStore((s) =>
     activeServerId ? s.connections.get(activeServerId) : undefined,
   );
@@ -89,13 +91,20 @@ export function AppLayout() {
   const isSnappedLeft = mediaViewMode === 'snapped-left';
   const isSnappedRight = mediaViewMode === 'snapped-right';
 
+  // Choose sidebar content based on route
+  const sidebarContent = isActivityRoute
+    ? <ActivityPanel />
+    : isHomeMode
+      ? <DMSidebar />
+      : <ChannelSidebar />;
+
   return (
     <div className="flex h-full w-full">
       <ServerSidebar />
       <div className="flex flex-1 min-w-0 py-3 pr-3">
         {!sidebarCollapsed && !isServerOffline && (
-          <div className="flex w-[240px] min-w-[240px] flex-col border-r border-border bg-secondary rounded-l-md overflow-hidden">
-            {isHomeMode ? <DMSidebar /> : <ChannelSidebar />}
+          <div className="flex w-[240px] min-w-[240px] flex-col border-2 border-primary bg-secondary rounded-md overflow-hidden">
+            {sidebarContent}
             <VoiceControls />
           </div>
         )}
@@ -133,6 +142,7 @@ export function AppLayout() {
                 className="flex flex-1 flex-col min-h-0"
               >
                 <Routes location={location}>
+                  <Route path="activity" element={<ActivityView />} />
                   <Route path="friends" element={<FriendList />} />
                   <Route path="dms/:userId" element={<DMView />} />
                   <Route path="servers/:serverId/channels/:channelId" element={<ChannelView />} />

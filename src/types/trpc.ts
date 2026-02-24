@@ -31,6 +31,7 @@ import type {
   SharedItemPermissionOverride,
   ServerDmConversation,
   ServerDmMessage,
+  ActivityListResponse,
 } from 'ecto-shared';
 
 // ---------- Server tRPC Router ----------
@@ -546,6 +547,21 @@ export interface ServerRouter {
       }) => Promise<{ success: boolean }>;
     };
   };
+
+  activity: {
+    list: {
+      query: (input: { before?: string; limit?: number; type?: string }) => Promise<ActivityListResponse>;
+    };
+    markRead: {
+      mutate: (input: { activity_ids: string[] }) => Promise<{ success: boolean }>;
+    };
+    markAllRead: {
+      mutate: () => Promise<{ success: boolean }>;
+    };
+    unreadCount: {
+      query: () => Promise<{ count: number }>;
+    };
+  };
 }
 
 // ---------- Central tRPC Router ----------
@@ -671,8 +687,8 @@ export interface CentralRouter {
     send: {
       mutate: (input: {
         recipient_id: string;
-        content: string;
-        attachment_ids?: string[];
+        content?: string;
+        attachments?: Attachment[];
       }) => Promise<DirectMessage>;
     };
     history: {
@@ -754,6 +770,21 @@ export interface CentralRouter {
     };
     delete: {
       mutate: (input: { call_record_id: string }) => Promise<{ success: boolean }>;
+    };
+  };
+
+  activity: {
+    list: {
+      query: (input: { before?: string; limit?: number; type?: string }) => Promise<ActivityListResponse>;
+    };
+    markRead: {
+      mutate: (input: { activity_ids: string[] }) => Promise<{ success: boolean }>;
+    };
+    markAllRead: {
+      mutate: () => Promise<{ success: boolean }>;
+    };
+    unreadCount: {
+      query: () => Promise<{ count: number }>;
     };
   };
 }

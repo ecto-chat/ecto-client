@@ -9,6 +9,8 @@ export interface CentralReadyData {
   pending_dms: unknown[];
   dm_read_states: unknown[];
   active_call: { call_id: string; peer: unknown; media_types: ('audio' | 'video')[] } | null;
+  activity_unread_notifications?: number;
+  activity_unread_server_dms?: number;
 }
 
 export class CentralWebSocket {

@@ -6,6 +6,7 @@ import { useAuthStore } from '../stores/auth.js';
 import { handleCallWsEvent } from '../hooks/useCall.js';
 import { playNotificationSound } from '../lib/notification-sounds.js';
 import { useToastStore } from '../stores/toast.js';
+import { useActivityStore } from '../stores/activity.js';
 
 export function handleCentralEvent(event: string, data: unknown) {
   const d = data as Record<string, unknown>;
@@ -130,6 +131,12 @@ export function handleCentralEvent(event: string, data: unknown) {
     case 'user.update':
       useAuthStore.getState().setUser(d as unknown as import('ecto-shared').GlobalUser);
       break;
+
+    case 'activity.create': {
+      const item = d as unknown as import('ecto-shared').ActivityItem;
+      useActivityStore.getState().addItem(item);
+      break;
+    }
 
     default:
       // Route call.* events to call handler

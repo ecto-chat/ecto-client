@@ -20,6 +20,7 @@ import { useServerStore } from '../stores/server.js';
 import { useRoleStore } from '../stores/role.js';
 import { useCallStore } from '../stores/call.js';
 import { useServerDmStore } from '../stores/server-dm.js';
+import { useActivityStore } from '../stores/activity.js';
 import {
   getStoredServerSessions,
   storeServerSession,
@@ -234,6 +235,17 @@ export class ConnectionManager {
       useCallStore.getState().setOutgoingCall(ac.call_id, ac.peer, ac.media_types);
       useCallStore.getState().setAnsweredElsewhere();
     }
+
+    if (ready.activity_unread_notifications != null || ready.activity_unread_server_dms != null) {
+      useActivityStore.getState().setUnreadCounts(
+        ready.activity_unread_notifications ?? 0,
+        ready.activity_unread_server_dms ?? 0,
+      );
+    }
+    // Lazy-fetch initial activity items from central
+    this.centralTrpc!.activity.list.query({ limit: 30 }).then((res) => {
+      useActivityStore.getState().addItems(res.items, 'central', res.has_more);
+    }).catch(() => {});
   }
 
   getCentralTrpc(): CentralTrpcClient | null {
@@ -541,6 +553,8 @@ export class ConnectionManager {
         read_states?: ReadState[];
         presences?: { user_id: string; status: PresenceStatus; custom_text?: string }[];
         voice_states?: VoiceState[];
+        activity_unread_notifications?: number;
+        activity_unread_server_dms?: number;
       };
 
       if (readyData.server) {
@@ -594,6 +608,19 @@ export class ConnectionManager {
         }).catch((err: unknown) => {
           console.warn('[server-dm] Failed to fetch DM list:', err);
         });
+      }
+
+      // Activity feed hydration
+      if (readyData.activity_unread_notifications != null || readyData.activity_unread_server_dms != null) {
+        useActivityStore.getState().setUnreadCounts(
+          readyData.activity_unread_notifications ?? 0,
+          readyData.activity_unread_server_dms ?? 0,
+        );
+      }
+      if (conn.trpc) {
+        conn.trpc.activity.list.query({ limit: 30 }).then((res) => {
+          useActivityStore.getState().addItems(res.items, conn.serverId, res.has_more);
+        }).catch(() => {});
       }
 
       const { activeServerId, activeChannelId } = useUiStore.getState();
