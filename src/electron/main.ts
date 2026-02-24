@@ -13,12 +13,21 @@ function createWindow() {
     minHeight: 500,
     title: 'Ecto',
     backgroundColor: '#1a1a2e',
+    autoHideMenuBar: true,
+    titleBarStyle: 'hidden',
+    titleBarOverlay: {
+      color: '#1a1a2e',
+      symbolColor: '#ffffff',
+      height: 36,
+    },
     webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
+      preload: path.join(__dirname, '../preload/preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
     },
   });
+
+  mainWindow.setMenuBarVisibility(false);
 
   if (process.env['VITE_DEV_SERVER_URL']) {
     mainWindow.loadURL(process.env['VITE_DEV_SERVER_URL']);

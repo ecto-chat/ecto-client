@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "description": "Ecto desktop and web client",
   "type": "module",
+  "main": "out/main/main.js",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
@@ -69,7 +70,7 @@
     "@vitejs/plugin-react": "^4.0.0",
     "electron": "^40.0.0",
     "electron-builder": "^25.0.0",
-    "electron-vite": "^3.0.0",
+    "electron-vite": "^5.0.0",
     "eslint": "^9.0.0",
     "eslint-plugin-react-hooks": "^5.0.0",
     "eslint-plugin-react-refresh": "^0.4.0",
