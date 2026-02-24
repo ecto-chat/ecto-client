@@ -20,9 +20,11 @@ const SCREEN_QUALITY_OPTIONS = [
   { value: 'source', label: 'Source (1080p60)' },
 ];
 
+const DEFAULT_DEVICE = 'default';
+
 function toOptions(devices: MediaDeviceInfo[], fallbackPrefix: string) {
   return [
-    { value: '', label: 'Default' },
+    { value: DEFAULT_DEVICE, label: 'Default' },
     ...devices.map((d) => ({ value: d.deviceId, label: d.label || `${fallbackPrefix} ${d.deviceId.slice(0, 8)}` })),
   ];
 }
@@ -32,9 +34,9 @@ export function AudioVideoSettings() {
   const [audioOutputs, setAudioOutputs] = useState<MediaDeviceInfo[]>([]);
   const [videoInputs, setVideoInputs] = useState<MediaDeviceInfo[]>([]);
 
-  const [selectedAudioInput, setSelectedAudioInput] = useState(() => preferenceManager.getDevice('audio-input', ''));
-  const [selectedAudioOutput, setSelectedAudioOutput] = useState(() => preferenceManager.getDevice('audio-output', ''));
-  const [selectedVideoInput, setSelectedVideoInput] = useState(() => preferenceManager.getDevice('video-input', ''));
+  const [selectedAudioInput, setSelectedAudioInput] = useState(() => preferenceManager.getDevice('audio-input', '') || DEFAULT_DEVICE);
+  const [selectedAudioOutput, setSelectedAudioOutput] = useState(() => preferenceManager.getDevice('audio-output', '') || DEFAULT_DEVICE);
+  const [selectedVideoInput, setSelectedVideoInput] = useState(() => preferenceManager.getDevice('video-input', '') || DEFAULT_DEVICE);
   const [videoQuality, setVideoQuality] = useState(() => preferenceManager.getDevice('video-quality', 'medium'));
   const [screenQuality, setScreenQuality] = useState(() => preferenceManager.getDevice('screen-quality', 'high'));
 
@@ -54,7 +56,7 @@ export function AudioVideoSettings() {
 
   const persist = (key: string, value: string, setter: (v: string) => void) => {
     setter(value);
-    preferenceManager.setDevice(key, value);
+    preferenceManager.setDevice(key, value === DEFAULT_DEVICE ? '' : value);
   };
 
   return (

@@ -86,6 +86,19 @@
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+/* ── Modal fullscreen on short viewports ── */
+@media (max-height: 720px) {
+  .modal-panel {
+    inset: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+    max-height: none !important;
+    border-radius: 0 !important;
+    border: none !important;
+    transform: none !important;
+  }
+}
+
 /* ── Background utilities (custom — can't live in @theme due to prefix collision) ── */
 @utility bg-primary { background-color: var(--color-bg-primary); }
 @utility bg-secondary { background-color: var(--color-bg-secondary); }

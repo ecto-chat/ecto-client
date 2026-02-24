@@ -188,7 +188,7 @@ function PermissionsPanel({
           />
 
           {selectedRoleId && (
-            <ScrollArea className="max-h-[60vh]">
+            <ScrollArea>
               <div className="space-y-6 pr-2">
                 {permCategories.map((cat) => (
                   <div key={cat.label}>

@@ -58,7 +58,7 @@ export function UserSettingsModal() {
 
   return (
     <Modal open={open} onOpenChange={handleOpenChange} title="User Settings" width="full">
-      <Tabs defaultValue="account" className="flex gap-6 min-h-[480px]">
+      <Tabs defaultValue="account" className="flex gap-6 min-h-0">
         <TabsList className="flex-col w-48 shrink-0 bg-transparent p-0 gap-0.5">
           {visibleTabs.map((tab) => {
             const Icon = tab.icon;

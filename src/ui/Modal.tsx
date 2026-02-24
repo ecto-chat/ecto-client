@@ -41,7 +41,8 @@ export function Modal({ open, onOpenChange, title, description, children, width 
             <Dialog.Content asChild {...(!description && { 'aria-describedby': undefined })}>
               <motion.div
                 className={cn(
-                  'fixed left-1/2 top-1/2 z-[100] w-[calc(100%-2rem)]',
+                  'modal-panel fixed left-1/2 top-1/2 z-[100] w-[calc(100%-2rem)]',
+                  'max-h-[50vh] flex flex-col',
                   'bg-secondary border-2 border-primary rounded-xl shadow-2xl',
                   'focus:outline-none',
                   widthClasses[width],
@@ -53,7 +54,7 @@ export function Modal({ open, onOpenChange, title, description, children, width 
                 transition={{ type: 'spring', stiffness: 260, damping: 20 }}
               >
                 {title ? (
-                  <div className="flex items-center justify-between px-5 py-4 border-b-2 border-primary">
+                  <div className="sticky top-0 z-10 flex items-center justify-between px-5 py-4 border-b-2 border-primary bg-secondary rounded-t-xl shrink-0">
                     <div>
                       <Dialog.Title className="text-lg font-medium text-primary">{title}</Dialog.Title>
                       {description && <Dialog.Description className="text-sm text-muted mt-0.5">{description}</Dialog.Description>}
@@ -67,7 +68,7 @@ export function Modal({ open, onOpenChange, title, description, children, width 
                 ) : (
                   <VisuallyHidden><Dialog.Title>Dialog</Dialog.Title></VisuallyHidden>
                 )}
-                <div className="p-5">{children}</div>
+                <div className="overflow-y-auto p-5 min-h-0">{children}</div>
               </motion.div>
             </Dialog.Content>
           </Dialog.Portal>
