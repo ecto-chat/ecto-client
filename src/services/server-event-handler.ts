@@ -89,9 +89,12 @@ export function handleMainEvent(serverId: string, event: string, data: unknown, 
       useChannelStore.getState().removeChannel(serverId, d.id as string);
       break;
 
-    case 'channel.reorder':
-      useChannelStore.getState().setChannels(serverId, d as unknown as Channel[]);
+    case 'channel.reorder': {
+      const reorderChannels = d as unknown as Channel[];
+      if (reorderChannels.length > 0 && (reorderChannels[0] as unknown as Record<string, unknown>).server_id !== serverId) break;
+      useChannelStore.getState().setChannels(serverId, reorderChannels);
       break;
+    }
 
     case 'category.create':
       useChannelStore.getState().addCategory(serverId, d as unknown as Category);
