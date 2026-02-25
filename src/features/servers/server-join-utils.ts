@@ -53,7 +53,8 @@ export function addToServerStore(serverId: string, addr: string, name: string, i
 }
 
 export async function fetchServerPreview(addr: string): Promise<ServerPreviewData> {
-  const serverUrl = (addr.startsWith('http') ? addr : `http://${addr}`).replace(/\/+$/, '');
+  const protocol = typeof window !== 'undefined' && window.location.protocol === 'https:' ? 'https' : 'http';
+  const serverUrl = (addr.startsWith('http') ? addr : `${protocol}://${addr}`).replace(/\/+$/, '');
   const res = await fetch(`${serverUrl}/trpc/server.info`, {
     method: 'GET',
     headers: { 'Content-Type': 'application/json' },
