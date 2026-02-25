@@ -104,7 +104,7 @@ export function ParticipantGridLayout({
       return (
         <div className="grid h-full grid-cols-2 grid-rows-2 gap-4 p-4">
           {layout.slots.map((slot) => (
-            <div key={slot.id}>
+            <div key={slot.id} className="aspect-video">
               {renderSlot(slot)}
             </div>
           ))}

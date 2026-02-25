@@ -126,7 +126,6 @@ export function VoiceParticipantGrid({ participants, serverId }: VoiceParticipan
         isPinned={pinnedUserId === slot.id}
         slotId={slot.id}
         variant={resolvedVariant}
-        index={0}
       />
     );
   };
