@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Button, TextArea } from '@/ui';
 
 import { useUiStore } from '@/stores/ui';
+import { applyCustomCSS } from '@/lib/custom-css';
 
 export function AppearanceSettings() {
   const customCSS = useUiStore((s) => s.customCSS);
@@ -13,10 +14,7 @@ export function AppearanceSettings() {
 
   const handleApplyCSS = () => {
     setCustomCSS(cssInput);
-
-    if (window.electronAPI?.theme?.injectCSS) {
-      window.electronAPI.theme.injectCSS(cssInput);
-    }
+    applyCustomCSS(cssInput);
 
     setApplied(true);
     setTimeout(() => setApplied(false), 2000);
@@ -25,10 +23,7 @@ export function AppearanceSettings() {
   const handleResetCSS = () => {
     setCssInput('');
     setCustomCSS('');
-
-    if (window.electronAPI?.theme?.injectCSS) {
-      window.electronAPI.theme.injectCSS('');
-    }
+    applyCustomCSS('');
   };
 
   return (
