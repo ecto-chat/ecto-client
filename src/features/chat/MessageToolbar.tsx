@@ -13,6 +13,7 @@ const QUICK_REACTIONS = [
 type MessageToolbarProps = {
   isPinned: boolean;
   isOwn: boolean;
+  canDelete?: boolean;
   reactOnly?: boolean;
   onReact: (emoji: string) => void;
   onReply?: () => void;
@@ -24,6 +25,7 @@ type MessageToolbarProps = {
 export function MessageToolbar({
   isPinned,
   isOwn,
+  canDelete,
   reactOnly,
   onReact,
   onReply,
@@ -68,7 +70,7 @@ export function MessageToolbar({
           </IconButton>
         </Tooltip>
       )}
-      {isOwn && (
+      {(canDelete ?? isOwn) && (
         <Tooltip content="Delete">
           <IconButton variant="danger" size="sm" onClick={onDelete}>
             <Trash2 size={16} />

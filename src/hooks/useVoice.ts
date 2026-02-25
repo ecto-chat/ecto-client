@@ -241,9 +241,25 @@ export function useVoice() {
 
   const toggleDeafen = useCallback(() => {
     useVoiceStore.getState().toggleDeafen();
-    const { selfMuted: muted, selfDeafened: deaf, currentServerId: sid } = useVoiceStore.getState();
+    const { selfMuted: muted, selfDeafened: deaf, currentServerId: sid, consumers, consumerMeta } = useVoiceStore.getState();
     const ws = sid ? connectionManager.getMainWs(sid) : null;
     ws?.voiceMute(muted, deaf);
+
+    // Pause/resume all audio consumers when toggling deafen
+    for (const [consumerId, consumer] of consumers) {
+      const meta = consumerMeta.get(consumerId);
+      if (meta?.source === 'audio') {
+        if (deaf) consumer.pause();
+        else consumer.resume();
+      }
+    }
+
+    // Also pause/resume audio producer (deafen implies mute)
+    const audioProducer = useVoiceStore.getState().producers.get('audio');
+    if (audioProducer) {
+      if (muted) audioProducer.pause();
+      else audioProducer.resume();
+    }
   }, []);
 
   const switchAudioDevice = useCallback(async (deviceId: string) => {

@@ -52,7 +52,15 @@ export function handleCentralEvent(event: string, data: unknown) {
       const peerId = msg.sender_id === myId ? msg.recipient_id : msg.sender_id;
       useDmStore.getState().addMessage(peerId, msg);
       // Ensure sidebar conversation exists/is updated
-      useDmStore.getState().ensureConversation(peerId, msg);
+      // For outgoing DMs, sender is us — look up peer info from friends store
+      let peerInfo: { username: string; display_name: string | null; avatar_url: string | null } | undefined;
+      if (msg.sender_id === myId) {
+        const friend = useFriendStore.getState().friends.get(peerId);
+        if (friend) {
+          peerInfo = { username: friend.username, display_name: friend.display_name, avatar_url: friend.avatar_url };
+        }
+      }
+      useDmStore.getState().ensureConversation(peerId, msg, peerInfo);
       // Play DM notification sound and show toast for incoming messages
       if (msg.sender_id !== myId) {
         playNotificationSound('dm');

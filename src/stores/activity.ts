@@ -76,9 +76,9 @@ export const useActivityStore = create<ActivityStore>()((set) => ({
     })),
 
   setUnreadCounts: (notifications, serverDms) =>
-    set((state) => ({
-      unreadNotifications: state.unreadNotifications + notifications,
-      unreadServerDms: state.unreadServerDms + serverDms,
+    set(() => ({
+      unreadNotifications: notifications,
+      unreadServerDms: serverDms,
     })),
 
   clear: () =>

@@ -135,6 +135,7 @@ export function handleMainEvent(serverId: string, event: string, data: unknown, 
           if (d.admin_user_id !== undefined) metaUpdates.admin_user_id = d.admin_user_id as string;
           if (d.banner_url !== undefined) metaUpdates.banner_url = d.banner_url as string | null;
           if (d.allow_member_dms !== undefined) metaUpdates.allow_member_dms = d.allow_member_dms as boolean;
+          if (d.default_channel_id !== undefined) metaUpdates.default_channel_id = d.default_channel_id as string | null;
           if (Object.keys(metaUpdates).length > 0) {
             useServerStore.getState().setServerMeta(serverId, { ...meta, ...metaUpdates });
           }

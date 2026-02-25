@@ -194,6 +194,10 @@ export const useVoiceStore = create<VoiceStore>()((set, get) => ({
 
   setConsumer: (consumerId, consumer, meta) =>
     set((state) => {
+      // If deafened and this is an audio consumer, pause it immediately
+      if (state.selfDeafened && meta?.source === 'audio') {
+        consumer.pause();
+      }
       const consumers = new Map(state.consumers);
       consumers.set(consumerId, consumer);
       const consumerMeta = new Map(state.consumerMeta);

@@ -19,7 +19,7 @@ interface DmStore {
   deleteMessage: (peerId: string, messageId: string) => void;
   updateMessage: (peerId: string, messageId: string, updates: Partial<DirectMessage>) => void;
   updateReactions: (peerId: string, messageId: string, reactions: ReactionGroup[]) => void;
-  ensureConversation: (userId: string, message: DirectMessage) => void;
+  ensureConversation: (userId: string, message: DirectMessage, peerInfo?: { username: string; display_name: string | null; avatar_url: string | null }) => void;
   updateConversation: (userId: string, updates: Partial<DMConversation>) => void;
 }
 
@@ -144,7 +144,7 @@ export const useDmStore = create<DmStore>()((set) => ({
       return { messages };
     }),
 
-  ensureConversation: (userId, message) =>
+  ensureConversation: (userId, message, peerInfo) =>
     set((state) => {
       const conversations = new Map(state.conversations);
       const existing = conversations.get(userId);
@@ -154,14 +154,14 @@ export const useDmStore = create<DmStore>()((set) => ({
           conversations.set(userId, { ...existing, last_message: message });
         }
       } else {
-        // Create a new conversation entry from the message sender info
-        const sender = message.sender;
+        // Use explicit peer info if provided, otherwise fall back to sender info
+        const peer = peerInfo ?? message.sender;
         conversations.set(userId, {
           user_id: userId,
-          username: sender.username,
+          username: peer.username,
           discriminator: '',
-          display_name: sender.display_name,
-          avatar_url: sender.avatar_url,
+          display_name: peer.display_name,
+          avatar_url: peer.avatar_url,
           last_message: message,
           unread_count: 0,
         });

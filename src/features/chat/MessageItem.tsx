@@ -15,12 +15,13 @@ import { useUiStore } from '@/stores/ui';
 import { useMemberStore } from '@/stores/member';
 import { useChannelStore } from '@/stores/channel';
 import { useRoleStore } from '@/stores/role';
+import { usePermissions } from '@/hooks/usePermissions';
 
 import { renderMarkdown } from '@/lib/markdown';
 import { cn } from '@/lib/cn';
 import { extractServerAddresses } from '@/lib/server-address';
 
-import { MessageType } from 'ecto-shared';
+import { MessageType, Permissions } from 'ecto-shared';
 import type { Message } from 'ecto-shared';
 
 import { MessageHeader } from './MessageHeader';
@@ -53,6 +54,9 @@ export const MessageItem = memo(function MessageItem({
   const currentUserId = useAuthStore((s) => s.user?.id);
   const activeServerId = useUiStore((s) => s.activeServerId);
   const isOwn = message.author?.id === currentUserId;
+  const { effectivePermissions, isAdmin } = usePermissions(activeServerId);
+  const canManageMessages = isAdmin || (effectivePermissions & Permissions.MANAGE_MESSAGES) !== 0;
+  const canDelete = isOwn || canManageMessages;
   const serverMembers = useMemberStore((s) => activeServerId ? s.members.get(activeServerId) : undefined);
   const serverChannels = useChannelStore((s) => activeServerId ? s.channels.get(activeServerId) : undefined);
   const serverRoles = useRoleStore((s) => activeServerId ? s.roles.get(activeServerId) : undefined);
@@ -257,6 +261,7 @@ export const MessageItem = memo(function MessageItem({
             <MessageToolbar
               isPinned={message.pinned}
               isOwn={isOwn}
+              canDelete={canDelete}
               reactOnly={reactOnly}
               onReact={(emoji) => onReact(message.id, emoji)}
               onReply={onReply}
@@ -285,13 +290,15 @@ export const MessageItem = memo(function MessageItem({
             </ContextMenuItem>
           </>
         )}
-        {isOwn && (
+        {(isOwn || canDelete) && (
           <>
             <ContextMenuSeparator />
-            <ContextMenuItem onSelect={() => setEditing(true)}>
-              <Pencil size={14} className="mr-2" />
-              Edit
-            </ContextMenuItem>
+            {isOwn && (
+              <ContextMenuItem onSelect={() => setEditing(true)}>
+                <Pencil size={14} className="mr-2" />
+                Edit
+              </ContextMenuItem>
+            )}
             <ContextMenuItem danger onSelect={() => onDelete(message.id)}>
               <Trash2 size={14} className="mr-2" />
               Delete
