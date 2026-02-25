@@ -23,7 +23,9 @@ RUN pnpm install
 COPY ecto-client/src ./src
 COPY ecto-client/index.html ecto-client/vite.config.ts ecto-client/tsconfig.json ecto-client/tsconfig.node.json ./
 ARG VITE_CENTRAL_URL=http://localhost:4000
+ARG VITE_KLIPY_APP_KEY=
 ENV VITE_CENTRAL_URL=$VITE_CENTRAL_URL
+ENV VITE_KLIPY_APP_KEY=$VITE_KLIPY_APP_KEY
 RUN pnpm build
 
 # Stage 3: Serve with nginx

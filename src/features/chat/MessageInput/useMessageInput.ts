@@ -128,6 +128,7 @@ export function useMessageInput({ channelId, serverId, onSend, replyTo, onCancel
 
   return {
     content,
+    setContent,
     uploading,
     autocomplete,
     selectedIndex,

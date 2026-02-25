@@ -1,11 +1,13 @@
 import { useState, useRef, useCallback, type KeyboardEvent } from 'react';
 
-import { Send, Paperclip, CornerDownRight, X } from 'lucide-react';
+import { Send, Paperclip, Smile, CornerDownRight, X } from 'lucide-react';
 
 import { TextArea, IconButton } from '@/ui';
 
 import { connectionManager } from '@/services/connection-manager';
 import { useAuthStore } from '@/stores/auth';
+
+import { EmojiGifPicker } from '../chat/EmojiGifPicker';
 
 import type { Attachment } from 'ecto-shared';
 
@@ -21,8 +23,10 @@ type DMMessageInputProps = {
 export function DMMessageInput({ userId, username, onSend, replyTo, onCancelReply }: DMMessageInputProps) {
   const [content, setContent] = useState('');
   const [uploading, setUploading] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const smileButtonRef = useRef<HTMLButtonElement>(null);
 
   const handleSend = useCallback(() => {
     const text = content.trim();
@@ -77,6 +81,37 @@ export function DMMessageInput({ userId, username, onSend, replyTo, onCancelRepl
     }
   }, [content, onSend]);
 
+  const handleEmojiInsert = useCallback(
+    (emoji: string) => {
+      const textarea = textareaRef.current;
+      if (!textarea) {
+        setContent((prev) => prev + emoji);
+        return;
+      }
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const before = content.slice(0, start);
+      const after = content.slice(end);
+      setContent(before + emoji + after);
+      requestAnimationFrame(() => {
+        const pos = start + emoji.length;
+        textarea.selectionStart = pos;
+        textarea.selectionEnd = pos;
+        textarea.focus();
+      });
+    },
+    [content],
+  );
+
+  const handleGifSend = useCallback(
+    (url: string) => {
+      onSend(url, undefined, replyTo?.id);
+      onCancelReply?.();
+      setPickerOpen(false);
+    },
+    [onSend, replyTo, onCancelReply],
+  );
+
   return (
     <div className="relative">
       {replyTo && (
@@ -96,6 +131,17 @@ export function DMMessageInput({ userId, username, onSend, replyTo, onCancelRepl
           </IconButton>
         </div>
       )}
+
+      {pickerOpen && (
+        <EmojiGifPicker
+          mode="both"
+          onEmojiSelect={handleEmojiInsert}
+          onGifSelect={handleGifSend}
+          onClose={() => setPickerOpen(false)}
+          anchorRef={smileButtonRef}
+        />
+      )}
+
     <div className="p-3">
       <div className="relative">
         <TextArea
@@ -123,6 +169,14 @@ export function DMMessageInput({ userId, username, onSend, replyTo, onCancelRepl
             className="text-muted hover:text-primary disabled:opacity-30 transition-colors p-1"
           >
             <Paperclip size={18} />
+          </button>
+          <button
+            ref={smileButtonRef}
+            type="button"
+            onClick={() => setPickerOpen((v) => !v)}
+            className="text-muted hover:text-primary transition-colors p-1"
+          >
+            <Smile size={18} />
           </button>
           <button
             type="button"

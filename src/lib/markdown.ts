@@ -278,5 +278,11 @@ export function renderMarkdown(content: string, resolver?: MentionResolver, opti
       `<div class="video-embed" style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;max-width:100%;border-radius:8px;margin:8px 0"><iframe src="https://player.vimeo.com/video/${escapeHtml(videoId)}" style="position:absolute;top:0;left:0;width:100%;height:100%" frameborder="0" allow="autoplay;fullscreen;picture-in-picture" allowfullscreen title="Vimeo video"></iframe></div>`,
   );
 
+  // Image URL auto-embed: standalone links to image files → inline <img>
+  result = result.replace(
+    /<a href="(https:\/\/[^"]+\.(?:gif|png|jpe?g|webp))"[^>]*>\1<\/a>/gi,
+    '<img src="$1" class="inline-image" loading="lazy" />',
+  );
+
   return result;
 }

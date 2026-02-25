@@ -1,6 +1,9 @@
+import { useState, useRef } from 'react';
 import { SmilePlus, Pin, PinOff, Pencil, Trash2, Reply } from 'lucide-react';
 
 import { IconButton, Tooltip } from '@/ui';
+
+import { EmojiGifPicker } from './EmojiGifPicker';
 
 const QUICK_REACTIONS = [
   { emoji: '\u{1F44D}', label: 'Thumbs Up' },
@@ -33,6 +36,9 @@ export function MessageToolbar({
   onEdit,
   onDelete,
 }: MessageToolbarProps) {
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const addReactionRef = useRef<HTMLButtonElement>(null);
+
   return (
     <div
       className="absolute -top-4 right-2 bg-surface border-2 border-primary rounded-lg shadow-lg p-1 flex gap-0.5 z-10 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity"
@@ -45,10 +51,26 @@ export function MessageToolbar({
         </Tooltip>
       ))}
       <Tooltip content="Add Reaction">
-        <IconButton variant="ghost" size="sm">
+        <IconButton
+          ref={addReactionRef}
+          variant="ghost"
+          size="sm"
+          onClick={() => setPickerOpen((v) => !v)}
+        >
           <SmilePlus size={16} />
         </IconButton>
       </Tooltip>
+      {pickerOpen && (
+        <EmojiGifPicker
+          mode="emoji-only"
+          onEmojiSelect={(emoji) => {
+            onReact(emoji);
+            setPickerOpen(false);
+          }}
+          onClose={() => setPickerOpen(false)}
+          anchorRef={addReactionRef}
+        />
+      )}
       {onReply && (
         <Tooltip content="Reply">
           <IconButton variant="ghost" size="sm" onClick={onReply}>

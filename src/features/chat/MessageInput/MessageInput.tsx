@@ -1,9 +1,11 @@
+import { useState, useRef, useCallback } from 'react';
 import { AnimatePresence } from 'motion/react';
-import { Send, Paperclip, CornerDownRight, X } from 'lucide-react';
+import { Send, Paperclip, Smile, CornerDownRight, X } from 'lucide-react';
 
 import { IconButton, TextArea } from '@/ui';
 
 import { AutocompletePopup } from '../AutocompletePopup';
+import { EmojiGifPicker } from '../EmojiGifPicker';
 import { useMessageInput } from './useMessageInput';
 
 type MessageInputProps = {
@@ -17,6 +19,7 @@ type MessageInputProps = {
 export function MessageInput({ channelId, serverId, onSend, replyTo, onCancelReply }: MessageInputProps) {
   const {
     content,
+    setContent,
     uploading,
     autocomplete,
     selectedIndex,
@@ -32,6 +35,42 @@ export function MessageInput({ channelId, serverId, onSend, replyTo, onCancelRep
     slowmodeDisabled,
     slowmodeRemaining,
   } = useMessageInput({ channelId, serverId, onSend, replyTo, onCancelReply });
+
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const smileButtonRef = useRef<HTMLButtonElement>(null);
+
+  const handleEmojiInsert = useCallback(
+    (emoji: string) => {
+      const textarea = textareaRef.current;
+      if (!textarea) {
+        setContent((prev) => prev + emoji);
+        return;
+      }
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const before = content.slice(0, start);
+      const after = content.slice(end);
+      const newContent = before + emoji + after;
+      setContent(newContent);
+      // Restore cursor position after emoji
+      requestAnimationFrame(() => {
+        const pos = start + emoji.length;
+        textarea.selectionStart = pos;
+        textarea.selectionEnd = pos;
+        textarea.focus();
+      });
+    },
+    [content, setContent, textareaRef],
+  );
+
+  const handleGifSend = useCallback(
+    (url: string) => {
+      onSend(url, replyTo?.id);
+      onCancelReply?.();
+      setPickerOpen(false);
+    },
+    [onSend, replyTo, onCancelReply],
+  );
 
   return (
     <div className="relative">
@@ -66,6 +105,16 @@ export function MessageInput({ channelId, serverId, onSend, replyTo, onCancelRep
         </AnimatePresence>
       </div>
 
+      {pickerOpen && (
+        <EmojiGifPicker
+          mode="both"
+          onEmojiSelect={handleEmojiInsert}
+          onGifSelect={handleGifSend}
+          onClose={() => setPickerOpen(false)}
+          anchorRef={smileButtonRef}
+        />
+      )}
+
       <div className="p-3">
         <div className="relative">
           <TextArea
@@ -94,6 +143,14 @@ export function MessageInput({ channelId, serverId, onSend, replyTo, onCancelRep
               className="text-muted hover:text-primary disabled:opacity-30 transition-colors p-1"
             >
               <Paperclip size={18} />
+            </button>
+            <button
+              ref={smileButtonRef}
+              type="button"
+              onClick={() => setPickerOpen((v) => !v)}
+              className="text-muted hover:text-primary transition-colors p-1"
+            >
+              <Smile size={18} />
             </button>
             <button
               type="button"
