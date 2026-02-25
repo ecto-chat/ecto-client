@@ -63,7 +63,7 @@ export async function fetchServerPreview(addr: string): Promise<ServerPreviewDat
   const data = (await res.json()) as {
     result: {
       data: {
-        server: { id: string; name: string; icon_url?: string | null };
+        server: { id: string; name: string; icon_url?: string | null; banner_url?: string | null };
         member_count: number;
         online_count: number;
         require_invite: boolean;
@@ -75,6 +75,7 @@ export async function fetchServerPreview(addr: string): Promise<ServerPreviewDat
   return {
     name: info.server.name,
     icon_url: info.server.icon_url ?? null,
+    banner_url: info.server.banner_url ?? null,
     member_count: info.member_count,
     online_count: info.online_count,
     require_invite: info.require_invite,

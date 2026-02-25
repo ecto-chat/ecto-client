@@ -7,6 +7,7 @@ export type LocalJoinStage =
 export type ServerPreviewData = {
   name: string;
   icon_url: string | null;
+  banner_url: string | null;
   member_count: number;
   online_count: number;
   require_invite: boolean;
