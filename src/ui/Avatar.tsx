@@ -54,7 +54,7 @@ export function Avatar({
         <img
           src={src}
           alt={username}
-          className="rounded-full object-cover"
+          className="block rounded-full object-cover"
           style={{ width: size, height: size }}
           draggable={false}
         />

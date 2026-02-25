@@ -122,7 +122,7 @@ export function ParticipantGridLayout({
 
           {/* Thumbnail strip */}
           {thumbnailSlots.length > 0 && (
-            <div className="flex h-[140px] shrink-0 gap-3 overflow-x-auto">
+            <div className="flex h-[140px] shrink-0 items-center gap-3 overflow-x-auto py-1">
               {thumbnailSlots.map((slot) => renderSlot(slot))}
             </div>
           )}
