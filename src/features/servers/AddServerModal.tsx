@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { LogIn } from 'lucide-react';
 
@@ -17,6 +17,7 @@ type Tab = 'join' | 'create';
 
 export function AddServerModal() {
   const open = useUiStore((s) => s.activeModal === 'add-server');
+  const modalData = useUiStore((s) => s.modalData) as { initialAddress?: string } | null;
   const centralAuth = useAuthStore((s) => s.centralAuthState);
   const [tab, setTab] = useState<Tab>('join');
 
@@ -24,6 +25,13 @@ export function AddServerModal() {
     address, stage, error, preview, needsPassword, needsInvite, detectedUser,
     resetAndClose, handleAddressSubmit, handleInviteSubmit, handleCentralInviteSubmit, handlePasswordSubmit,
   } = useAddServer();
+
+  // Auto-submit when opened with an initial address from server link embed
+  useEffect(() => {
+    if (open && modalData?.initialAddress) {
+      handleAddressSubmit(modalData.initialAddress);
+    }
+  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleClose = () => {
     resetAndClose();

@@ -18,6 +18,7 @@ import { useRoleStore } from '@/stores/role';
 
 import { renderMarkdown } from '@/lib/markdown';
 import { cn } from '@/lib/cn';
+import { extractServerAddresses } from '@/lib/server-address';
 
 import { MessageType } from 'ecto-shared';
 import type { Message } from 'ecto-shared';
@@ -29,6 +30,7 @@ import { MessageAttachments } from './MessageAttachments';
 import { MessageReactions } from './MessageReactions';
 import { MessageToolbar } from './MessageToolbar';
 import { LinkPreviews } from './LinkPreview';
+import { ServerLinkEmbeds } from './ServerLinkEmbed';
 
 type MessageItemProps = {
   message: Message;
@@ -76,6 +78,11 @@ export const MessageItem = memo(function MessageItem({
     }
     return { members, channels, roles, mentionEveryone: message.mention_everyone };
   }, [serverMembers, serverChannels, serverRoles, message.mention_everyone]);
+
+  const ectoAddresses = useMemo(
+    () => (message.content ? extractServerAddresses(message.content) : []),
+    [message.content],
+  );
 
   const handleAuthorClick = () => {
     if (!message.author?.id) return;
@@ -179,7 +186,8 @@ export const MessageItem = memo(function MessageItem({
           ) : (
             <>
               <div className="text-base font-normal text-primary message-markdown" dangerouslySetInnerHTML={{ __html: renderMarkdown(message.content ?? '', mentionResolver) }} onClick={(e) => { const el = e.target as HTMLElement; if (el.classList.contains('spoiler')) el.classList.toggle('revealed'); if (el.classList.contains('mention') && el.dataset.type === 'user' && el.dataset.id) { useUiStore.getState().openModal('user-profile', { userId: el.dataset.id, serverId: activeServerId ?? undefined }); } if (el.classList.contains('inline-image') && el instanceof HTMLImageElement) { useUiStore.getState().openModal('image-lightbox', { src: el.src, alt: el.alt }); } }} />
-              {message.content && <LinkPreviews content={message.content} />}
+              {message.content && ectoAddresses.length > 0 && <ServerLinkEmbeds content={message.content} />}
+              {message.content && <LinkPreviews content={message.content} excludeUrls={ectoAddresses} />}
             </>
           )}
           <MessageAttachments attachments={message.attachments ?? []} />
@@ -237,7 +245,8 @@ export const MessageItem = memo(function MessageItem({
                     }
                   }}
                 />
-                {message.content && <LinkPreviews content={message.content} />}
+                {message.content && ectoAddresses.length > 0 && <ServerLinkEmbeds content={message.content} />}
+                {message.content && <LinkPreviews content={message.content} excludeUrls={ectoAddresses} />}
               </>
             )}
             <MessageAttachments attachments={message.attachments ?? []} />

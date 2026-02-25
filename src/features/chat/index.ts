@@ -13,5 +13,6 @@ export { SearchPanel } from './SearchPanel';
 export { SearchFilters } from './SearchFilters';
 export { PinnedMessages } from './PinnedMessages';
 export { LinkPreviews } from './LinkPreview';
+export { ServerLinkEmbeds } from './ServerLinkEmbed';
 export { ImageLightbox } from './ImageLightbox';
 export { NsfwWarning } from './NsfwWarning';

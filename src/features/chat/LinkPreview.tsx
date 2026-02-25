@@ -9,14 +9,18 @@ import { extractUrls, fetchLinkPreview, type LinkPreviewData } from '@/lib/link-
 
 type LinkPreviewProps = {
   content: string;
+  excludeUrls?: string[];
 };
 
-export function LinkPreviews({ content }: LinkPreviewProps) {
+export function LinkPreviews({ content, excludeUrls }: LinkPreviewProps) {
   const [previews, setPreviews] = useState<LinkPreviewData[]>([]);
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    const urls = extractUrls(content);
+    let urls = extractUrls(content);
+    if (excludeUrls && excludeUrls.length > 0) {
+      urls = urls.filter((url) => !excludeUrls.some((addr) => url.includes(addr)));
+    }
     if (urls.length === 0) {
       setPreviews([]);
       return;
