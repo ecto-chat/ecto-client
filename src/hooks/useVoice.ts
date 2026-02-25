@@ -506,6 +506,9 @@ export function useVoice() {
 
 async function handleVoiceEvent(ws: ReturnType<typeof connectionManager.getMainWs>, event: string, data: unknown) {
   if (!ws) return;
+  if (event.startsWith('voice.')) {
+    console.log('[voice:debug] event:', event);
+  }
   const d = data as Record<string, unknown>;
   const store = useVoiceStore.getState();
 
@@ -526,47 +529,60 @@ async function handleVoiceEvent(ws: ReturnType<typeof connectionManager.getMainW
     }
 
     case 'voice.router_capabilities': {
+      console.log('[voice:debug] router_capabilities received, loading device...');
       useVoiceStore.getState().setVoiceStatus('connected');
       const device = new Device();
       await device.load({ routerRtpCapabilities: d.rtpCapabilities as Parameters<typeof device.load>[0]['routerRtpCapabilities'] });
       useVoiceStore.getState().setDevice(device);
+      console.log('[voice:debug] device loaded, sending capabilities');
       // Send device capabilities so server can create consumers with correct codec params
       ws.voiceCapabilities(device.rtpCapabilities);
       break;
     }
 
     case 'voice.transport_created': {
+      console.log('[voice:debug] transport_created received');
       const device = useVoiceStore.getState().device;
-      if (!device) break;
+      if (!device) { console.warn('[voice:debug] no device loaded, skipping transport_created'); break; }
 
       const sendParams = d.send as Record<string, unknown>;
       const recvParams = d.recv as Record<string, unknown>;
 
       if (sendParams) {
+        console.log('[voice:debug] creating send transport, ICE candidates:', (sendParams as { iceCandidates?: unknown }).iceCandidates);
         const sendTransport = device.createSendTransport(sendParams as Parameters<typeof device.createSendTransport>[0]);
         sendTransport.on('connect', ({ dtlsParameters }, callback) => {
+          console.log('[voice:debug] send transport connect event');
           ws.voiceConnectTransport(sendTransport.id, dtlsParameters);
           callback();
         });
+        sendTransport.on('connectionstatechange', (state) => {
+          console.log('[voice:debug] send transport state:', state);
+        });
         sendTransport.on('produce', async ({ kind, rtpParameters, appData }, callback) => {
+          console.log('[voice:debug] send transport produce event, kind:', kind, 'source:', appData?.source);
           const idPromise = new Promise<string>((resolve, reject) => {
             pendingProduceResolve = resolve;
             pendingProduceReject = reject;
           });
           ws.voiceProduce(sendTransport.id, kind as 'audio' | 'video', rtpParameters, appData?.source as string | undefined);
           const id = await idPromise;
+          console.log('[voice:debug] producer created, id:', id);
           callback({ id });
         });
         useVoiceStore.getState().setSendTransport(sendTransport);
 
         try {
           const savedAudioDevice = preferenceManager.getDevice('audio-input', '');
+          console.log('[voice:debug] requesting mic, savedDevice:', savedAudioDevice || '(default)');
           const stream = await navigator.mediaDevices.getUserMedia({
             audio: savedAudioDevice ? { deviceId: { ideal: savedAudioDevice } } : true,
           });
           const audioTrack = stream.getAudioTracks()[0]!;
+          console.log('[voice:debug] got mic track, id:', audioTrack.id, 'enabled:', audioTrack.enabled, 'muted:', audioTrack.muted, 'readyState:', audioTrack.readyState);
           try {
             const producer = await sendTransport.produce({ track: audioTrack, appData: { source: 'mic' } });
+            console.log('[voice:debug] audio producer created, id:', producer.id, 'paused:', producer.paused);
             useVoiceStore.getState().setProducer('audio', producer);
             const localUserId = getLocalUserId();
             if (localUserId) speakingCleanup = startVoiceSpeakingDetection(stream, localUserId);
@@ -579,10 +595,15 @@ async function handleVoiceEvent(ws: ReturnType<typeof connectionManager.getMainW
       }
 
       if (recvParams) {
+        console.log('[voice:debug] creating recv transport, ICE candidates:', (recvParams as { iceCandidates?: unknown }).iceCandidates);
         const recvTransport = device.createRecvTransport(recvParams as Parameters<typeof device.createRecvTransport>[0]);
         recvTransport.on('connect', ({ dtlsParameters }, callback) => {
+          console.log('[voice:debug] recv transport connect event');
           ws.voiceConnectTransport(recvTransport.id, dtlsParameters);
           callback();
+        });
+        recvTransport.on('connectionstatechange', (state) => {
+          console.log('[voice:debug] recv transport state:', state);
         });
         useVoiceStore.getState().setRecvTransport(recvTransport);
       }
@@ -590,14 +611,17 @@ async function handleVoiceEvent(ws: ReturnType<typeof connectionManager.getMainW
     }
 
     case 'voice.new_consumer': {
+      console.log('[voice:debug] new_consumer:', { kind: d.kind, source: d.source, userId: d.user_id, consumerId: d.consumer_id, producerId: d.producer_id });
       const recvTransport = useVoiceStore.getState().recvTransport;
-      if (!recvTransport) break;
+      if (!recvTransport) { console.warn('[voice:debug] no recv transport, skipping consumer'); break; }
+      console.log('[voice:debug] recv transport state:', recvTransport.connectionState);
       const consumer = await recvTransport.consume({
         id: d.consumer_id as string,
         producerId: d.producer_id as string,
         kind: d.kind as 'audio' | 'video',
         rtpParameters: d.rtpParameters as Parameters<typeof recvTransport.consume>[0]['rtpParameters'],
       });
+      console.log('[voice:debug] consumer created, id:', consumer.id, 'kind:', consumer.kind, 'paused:', consumer.paused, 'track.readyState:', consumer.track.readyState, 'track.enabled:', consumer.track.enabled, 'track.muted:', consumer.track.muted);
       const consumerSource = (d.source as string) ?? (consumer.kind === 'audio' ? 'mic' : 'camera');
       useVoiceStore.getState().setConsumer(consumer.id, consumer, {
         userId: d.user_id as string,
@@ -608,10 +632,13 @@ async function handleVoiceEvent(ws: ReturnType<typeof connectionManager.getMainW
       // server-side keyframe isn't dropped during ICE/DTLS handshake
       const recvT = useVoiceStore.getState().recvTransport!;
       if (recvT.connectionState === 'connected') {
+        console.log('[voice:debug] recv transport already connected, sending consumer resume for:', consumer.id);
         ws.voiceConsumerResume(consumer.id);
       } else {
+        console.log('[voice:debug] recv transport not connected (state:', recvT.connectionState, '), waiting for connected state to resume consumer:', consumer.id);
         const onState = (state: string) => {
           if (state === 'connected') {
+            console.log('[voice:debug] recv transport connected, sending consumer resume for:', consumer.id);
             ws.voiceConsumerResume(consumer.id);
             recvT.removeListener('connectionstatechange', onState);
           }
@@ -628,9 +655,26 @@ async function handleVoiceEvent(ws: ReturnType<typeof connectionManager.getMainW
         // Apply saved audio output device
         const savedOutput = preferenceManager.getDevice('audio-output', '');
         if (savedOutput && 'setSinkId' in audio) {
-          (audio as HTMLAudioElement & { setSinkId: (id: string) => Promise<void> }).setSinkId(savedOutput).catch(() => {});
+          console.log('[voice:debug] setting audio output device:', savedOutput);
+          (audio as HTMLAudioElement & { setSinkId: (id: string) => Promise<void> }).setSinkId(savedOutput).catch((err) => {
+            console.warn('[voice:debug] setSinkId failed:', err);
+          });
         }
         document.body.appendChild(audio);
+        console.log('[voice:debug] audio element appended to DOM for consumer:', consumer.id, 'paused:', audio.paused, 'muted:', audio.muted, 'volume:', audio.volume, 'readyState:', audio.readyState);
+
+        // Monitor audio element state
+        audio.addEventListener('play', () => console.log('[voice:debug] audio element play event, consumer:', consumer.id));
+        audio.addEventListener('pause', () => console.log('[voice:debug] audio element pause event, consumer:', consumer.id));
+        audio.addEventListener('error', (e) => console.error('[voice:debug] audio element error, consumer:', consumer.id, e));
+        audio.addEventListener('stalled', () => console.warn('[voice:debug] audio element stalled, consumer:', consumer.id));
+        audio.addEventListener('waiting', () => console.log('[voice:debug] audio element waiting, consumer:', consumer.id));
+
+        // Monitor consumer track state
+        consumer.track.addEventListener('ended', () => console.warn('[voice:debug] consumer audio track ended:', consumer.id));
+        consumer.track.addEventListener('mute', () => console.warn('[voice:debug] consumer audio track muted:', consumer.id));
+        consumer.track.addEventListener('unmute', () => console.log('[voice:debug] consumer audio track unmuted:', consumer.id));
+
         // Start speaking detection for remote user (skip screen audio)
         const remoteUserId = d.user_id as string;
         if (remoteUserId && consumerSource !== 'screen-audio') {
@@ -644,11 +688,13 @@ async function handleVoiceEvent(ws: ReturnType<typeof connectionManager.getMainW
         } else {
           useVoiceStore.getState().setVideoStream(userId, new MediaStream([consumer.track]));
         }
+        console.log('[voice:debug] video consumer set, source:', d.source ?? 'camera', 'userId:', userId, 'track.readyState:', consumer.track.readyState);
       }
       break;
     }
 
     case 'voice.producer_closed': {
+      console.log('[voice:debug] producer_closed:', { producerId: d.producer_id ?? d.producerId, userId: d.user_id });
       const producerId = d.producer_id as string ?? d.producerId as string;
       const entry = [...store.consumers.entries()].find(
         ([, c]) => c.producerId === producerId,
