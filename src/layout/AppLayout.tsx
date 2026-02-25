@@ -18,7 +18,7 @@ import { NotificationPrompt, NotificationToast } from '@/features/common';
 import { ActivityPanel, ActivityView } from '@/features/activity';
 import { FriendList, DMView, DMSidebar } from '@/features/friends';
 import { FloatingMediaWindow, SnappedMediaSidebar, ResizeHandle } from '@/features/media-window';
-import { AddServerModal, LeaveServerModal } from '@/features/servers';
+import { AddServerModal, LeaveServerModal, ServerJoinModal } from '@/features/servers';
 import { FileBrowserView } from '@/features/hub/FileBrowserView';
 import { ServerDmView } from '@/features/server-dm/ServerDmView';
 import { UserSettingsModal } from '@/features/settings';
@@ -36,6 +36,7 @@ import { useInitializeLocal } from '@/hooks/useInitializeLocal';
 import { connectionManager } from '@/services/connection-manager';
 import { setNotificationClickHandler } from '@/services/notification-service';
 import { startIdleDetection, stopIdleDetection } from '@/services/idle-detector';
+import { consumePendingJoin } from '@/hooks/useJoinParams';
 import { EmptyState } from '@/ui/EmptyState';
 import { ToastContainer } from '@/ui/Toast';
 import { blurToClear, easePage } from '@/lib/animations';
@@ -58,6 +59,14 @@ export function AppLayout() {
   useNotifications();
   useInitializeCentral();
   useInitializeLocal();
+
+  // Check for pending join from URL params (e.g. server browser redirect)
+  useEffect(() => {
+    const pending = consumePendingJoin();
+    if (pending) {
+      useUiStore.getState().openModal('server-join', pending);
+    }
+  }, []);
 
   useEffect(() => {
     startIdleDetection();
@@ -167,6 +176,7 @@ export function AppLayout() {
       </div>
       <AddServerModal />
       <LeaveServerModal />
+      <ServerJoinModal />
       <UserProfileModal />
       <CentralSignInModal />
       <AddAccountModal />

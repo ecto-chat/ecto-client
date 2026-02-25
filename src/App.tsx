@@ -8,6 +8,7 @@ import * as TooltipPrimitive from '@radix-ui/react-tooltip';
 import { LoginPage, RegisterPage, LandingPage, DirectConnectForm } from '@/features/auth';
 import { AuthGuard } from '@/features/common';
 import { AppLayout } from '@/layout/AppLayout';
+import { useJoinParams } from '@/hooks/useJoinParams';
 
 function ElectronTitleBar() {
   return (
@@ -36,6 +37,8 @@ function ElectronTitleBar() {
 }
 
 export function App() {
+  useJoinParams();
+
   return (
     <MotionConfig reducedMotion="user">
       <TooltipPrimitive.Provider delayDuration={300}>
