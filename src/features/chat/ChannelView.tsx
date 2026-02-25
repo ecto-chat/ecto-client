@@ -113,7 +113,7 @@ export function ChannelView() {
   }
 
   if (channel.type === 'page') {
-    return <PageView />;
+    return <PageView serverId={sid} channelId={channelId ?? ''} />;
   }
 
   if (channel.type === 'voice') {

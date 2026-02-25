@@ -1,22 +1,20 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { PageContent } from 'ecto-shared';
 import { connectionManager } from '@/services/connection-manager';
-import { useUiStore } from '@/stores/ui';
 
-export function usePage(channelId: string) {
+export function usePage(channelId: string, serverId: string) {
   const [page, setPage] = useState<PageContent | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const activeServerId = useUiStore((s) => s.activeServerId);
   const pageRef = useRef(page);
   pageRef.current = page;
 
   const fetch = useCallback(async () => {
-    if (!activeServerId || !channelId) return;
+    if (!serverId || !channelId) return;
     setLoading(true);
     setError(null);
     try {
-      const trpc = connectionManager.getServerTrpc(activeServerId);
+      const trpc = connectionManager.getServerTrpc(serverId);
       if (!trpc) throw new Error('Not connected');
       const result = await trpc.pages.getContent.query({ channel_id: channelId });
       setPage(result);
@@ -25,7 +23,7 @@ export function usePage(channelId: string) {
     } finally {
       setLoading(false);
     }
-  }, [activeServerId, channelId]);
+  }, [serverId, channelId]);
 
   useEffect(() => {
     fetch();

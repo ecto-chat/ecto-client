@@ -12,20 +12,15 @@ import { useMemberStore } from '@/stores/member';
 import { usePermissions } from '@/hooks/usePermissions';
 import { usePage } from '@/hooks/usePage';
 import { renderMarkdown } from '@/lib/markdown';
-import { cn } from '@/lib/cn';
 import { connectionManager } from '@/services/connection-manager';
 
 import { PageHistory } from './PageHistory';
 
-export function PageView() {
-  const activeServerId = useUiStore((s) => s.activeServerId);
-  const activeChannelId = useUiStore((s) => s.activeChannelId);
-  const channel = useChannelStore((s) =>
-    activeServerId ? s.channels.get(activeServerId)?.get(activeChannelId ?? '') : undefined,
-  );
+export function PageView({ serverId, channelId }: { serverId: string; channelId: string }) {
+  const channel = useChannelStore((s) => s.channels.get(serverId)?.get(channelId));
 
-  const { page, loading, error, refetch } = usePage(activeChannelId ?? '');
-  const { isAdmin, effectivePermissions } = usePermissions(activeServerId);
+  const { page, loading, error, refetch } = usePage(channelId, serverId);
+  const { isAdmin, effectivePermissions } = usePermissions(serverId);
   const canEdit = isAdmin || (effectivePermissions & Permissions.EDIT_PAGES) !== 0;
 
   const [editing, setEditing] = useState(false);
@@ -38,10 +33,10 @@ export function PageView() {
 
   // Build mention resolver for markdown rendering
   const members = useMemberStore((s) =>
-    activeServerId ? s.members.get(activeServerId) : undefined,
+    serverId ? s.members.get(serverId) : undefined,
   );
   const channels = useChannelStore((s) =>
-    activeServerId ? s.channels.get(activeServerId) : undefined,
+    serverId ? s.channels.get(serverId) : undefined,
   );
 
   const navigate = useNavigate();
@@ -51,12 +46,12 @@ export function PageView() {
     const target = (e.target as HTMLElement).closest<HTMLElement>('[data-channel], .mention[data-type="channel"]');
     if (!target) return;
     const channelId = target.dataset.channel ?? target.dataset.id;
-    if (channelId && activeServerId) {
+    if (channelId && serverId) {
       e.preventDefault();
       useUiStore.getState().setActiveChannel(channelId);
-      navigate(`/servers/${activeServerId}/channels/${channelId}`);
+      navigate(`/servers/${serverId}/channels/${channelId}`);
     }
-  }, [activeServerId, navigate]);
+  }, [serverId, navigate]);
 
   const mentionResolver = useMemo(() => {
     const memberMap = new Map<string, string>();
@@ -103,14 +98,14 @@ export function PageView() {
   }, []);
 
   const handleSave = useCallback(async () => {
-    if (!activeServerId || !activeChannelId || !page) return;
+    if (!serverId || !channelId || !page) return;
     setSaving(true);
     setSaveError(null);
     try {
-      const trpc = connectionManager.getServerTrpc(activeServerId);
+      const trpc = connectionManager.getServerTrpc(serverId);
       if (!trpc) throw new Error('Not connected');
       await trpc.pages.updateContent.mutate({
-        channel_id: activeChannelId,
+        channel_id: channelId,
         content: draft,
         version: page.version,
       });
@@ -125,19 +120,19 @@ export function PageView() {
     } finally {
       setSaving(false);
     }
-  }, [activeServerId, activeChannelId, page, draft]);
+  }, [serverId, channelId, page, draft]);
 
   const handleOverwrite = useCallback(async () => {
-    if (!activeServerId || !activeChannelId) return;
+    if (!serverId || !channelId) return;
     setSaving(true);
     setSaveError(null);
     try {
-      const trpc = connectionManager.getServerTrpc(activeServerId);
+      const trpc = connectionManager.getServerTrpc(serverId);
       if (!trpc) throw new Error('Not connected');
       // Refetch to get current version, then overwrite
-      const current = await trpc.pages.getContent.query({ channel_id: activeChannelId });
+      const current = await trpc.pages.getContent.query({ channel_id: channelId });
       await trpc.pages.updateContent.mutate({
-        channel_id: activeChannelId,
+        channel_id: channelId,
         content: draft,
         version: current.version,
       });
@@ -147,21 +142,21 @@ export function PageView() {
     } finally {
       setSaving(false);
     }
-  }, [activeServerId, activeChannelId, draft]);
+  }, [serverId, channelId, draft]);
 
   const bannerInputRef = useRef<HTMLInputElement>(null);
   const [bannerUploading, setBannerUploading] = useState(false);
   const [bannerCropSrc, setBannerCropSrc] = useState<string | null>(null);
 
   const handleBannerUpload = useCallback(async (file: File) => {
-    if (!activeServerId || !activeChannelId) return;
+    if (!serverId || !channelId) return;
     setBannerUploading(true);
     try {
-      const conn = connectionManager.getServerConnection(activeServerId);
+      const conn = connectionManager.getServerConnection(serverId);
       if (!conn) throw new Error('Not connected');
       const formData = new FormData();
       formData.append('file', file);
-      const res = await fetch(`${conn.address}/upload/page-banner/${activeChannelId}`, {
+      const res = await fetch(`${conn.address}/upload/page-banner/${channelId}`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${conn.token}` },
         body: formData,
@@ -176,16 +171,16 @@ export function PageView() {
     } finally {
       setBannerUploading(false);
     }
-  }, [activeServerId, activeChannelId]);
+  }, [serverId, channelId]);
 
   const handleBannerRemove = useCallback(async () => {
-    if (!activeServerId || !activeChannelId) return;
+    if (!serverId || !channelId) return;
     setBannerUploading(true);
     try {
-      const trpc = connectionManager.getServerTrpc(activeServerId);
+      const trpc = connectionManager.getServerTrpc(serverId);
       if (!trpc) throw new Error('Not connected');
       await trpc.pages.updateBanner.mutate({
-        channel_id: activeChannelId,
+        channel_id: channelId,
         banner_url: null,
       });
     } catch (err: unknown) {
@@ -193,7 +188,7 @@ export function PageView() {
     } finally {
       setBannerUploading(false);
     }
-  }, [activeServerId, activeChannelId]);
+  }, [serverId, channelId]);
 
   const insertFormatting = useCallback((prefix: string, suffix: string) => {
     const textarea = document.getElementById('page-editor') as HTMLTextAreaElement | null;
@@ -215,7 +210,7 @@ export function PageView() {
     });
   }, [draft]);
 
-  if (!activeChannelId || !channel) {
+  if (!channelId || !channel) {
     return (
       <div className="flex flex-1 items-center justify-center">
         <EmptyState icon={<FileText />} title="Select a channel" description="Pick a channel from the sidebar." />
@@ -424,7 +419,7 @@ export function PageView() {
 
       {/* History panel */}
       <PageHistory
-        channelId={activeChannelId}
+        channelId={channelId}
         open={historyOpen}
         onClose={() => setHistoryOpen(false)}
       />
