@@ -5,10 +5,11 @@ type TextAreaProps = {
   label?: string;
   error?: string;
   maxRows?: number;
+  fillParent?: boolean;
 } & ComponentPropsWithRef<'textarea'>;
 
 export const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(
-  function TextArea({ label, error, maxRows = 8, className, onChange, value, ...props }, ref) {
+  function TextArea({ label, error, maxRows = 8, fillParent, className, onChange, value, ...props }, ref) {
     const internalRef = useRef<HTMLTextAreaElement | null>(null);
 
     const setRefs = (node: HTMLTextAreaElement | null) => {
@@ -21,6 +22,7 @@ export const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(
     };
 
     const resize = () => {
+      if (fillParent) return;
       const el = internalRef.current;
       if (!el) return;
 
@@ -52,7 +54,7 @@ export const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(
     };
 
     return (
-      <div className="flex flex-col gap-2">
+      <div className={cn('flex flex-col gap-2', fillParent && 'h-full')}>
         {label && <label className="text-sm font-medium text-secondary">{label}</label>}
         <textarea
           ref={setRefs}
@@ -63,6 +65,7 @@ export const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(
             'w-full rounded-md bg-secondary border-2 border-primary text-sm text-primary placeholder:text-muted',
             'focus:outline-none focus:ring-1 focus:ring-accent/40 focus:border-primary-active',
             'transition-colors duration-150 resize-none py-2.5 px-3',
+            fillParent && 'h-full',
             error && 'ring-1 ring-danger/40 border-danger/40',
             className,
           )}

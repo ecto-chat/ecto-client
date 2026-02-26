@@ -15,6 +15,7 @@ import { useChannels } from '@/hooks/useChannels';
 
 import { MessageList } from './MessageList';
 import { MessageInput } from './MessageInput';
+import { ReplyBanner } from './ReplyBanner';
 import { TypingIndicator } from './TypingIndicator';
 import { SearchPanel } from './SearchPanel';
 import { PinnedMessages } from './PinnedMessages';
@@ -32,6 +33,7 @@ export function ChannelView() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [pinsOpen, setPinsOpen] = useState(false);
   const [replyTo, setReplyTo] = useState<{ id: string; author: string; content: string } | null>(null);
+  const [inputExpanded, setInputExpanded] = useState(false);
   const navigate = useNavigate();
 
   const handleSearchNavigate = useCallback((targetChannelId: string, _messageId: string) => {
@@ -168,9 +170,24 @@ export function ChannelView() {
         })}
       />
 
-      <div className="shrink-0 border-t-2 border-primary">
+      <div
+        className="border-t-2 border-primary flex flex-col overflow-hidden"
+        style={{
+          height: inputExpanded ? 'calc(100% - 60px)' : replyTo ? '94px' : '60px',
+          flexShrink: 0,
+          transition: 'height 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+        }}
+      >
+        {replyTo && <ReplyBanner author={replyTo.author} onCancel={() => setReplyTo(null)} />}
         <TypingIndicator channelId={channelId} typingUsers={typingUsers} />
-        <MessageInput channelId={channelId} onSend={sendMessage} serverId={sid} replyTo={replyTo} onCancelReply={() => setReplyTo(null)} />
+        <MessageInput
+          channelId={channelId}
+          onSend={sendMessage}
+          serverId={sid}
+          replyTo={replyTo}
+          onCancelReply={() => setReplyTo(null)}
+          onExpandedChange={setInputExpanded}
+        />
       </div>
 
       <PinnedMessages channelId={channelId} open={pinsOpen} onClose={() => setPinsOpen(false)} />

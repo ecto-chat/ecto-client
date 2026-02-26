@@ -5,6 +5,7 @@ export { MessageAttachments } from './MessageAttachments';
 export { MessageReactions } from './MessageReactions';
 export { MessageToolbar } from './MessageToolbar';
 export { ReplyReference } from './ReplyReference';
+export { ReplyBanner } from './ReplyBanner';
 export { MessageList } from './MessageList';
 export { MessageInput } from './MessageInput';
 export { ChannelView } from './ChannelView';

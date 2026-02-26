@@ -8,7 +8,7 @@ import { useFriendStore } from '@/stores/friend';
 import { useCall } from '@/hooks/useCall';
 import { usePresence } from '@/hooks/usePresence';
 
-import { MessageList } from '@/features/chat';
+import { MessageList, ReplyBanner } from '@/features/chat';
 
 import { DMHeader } from './DMHeader';
 import { DMTypingIndicator } from './DMTypingIndicator';
@@ -23,6 +23,7 @@ export function DMView() {
   const { startCall, isInCall } = useCall();
   const [pinsOpen, setPinsOpen] = useState(false);
   const [replyTo, setReplyTo] = useState<{ id: string; author: string; content: string } | null>(null);
+  const [inputExpanded, setInputExpanded] = useState(false);
 
   const {
     messages,
@@ -90,9 +91,24 @@ export function DMView() {
         reactOnly
       />
 
-      <div className="shrink-0 border-t-2 border-primary">
+      <div
+        className="border-t-2 border-primary flex flex-col overflow-hidden"
+        style={{
+          height: inputExpanded ? 'calc(100% - 60px)' : replyTo ? '94px' : '60px',
+          flexShrink: 0,
+          transition: 'height 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+        }}
+      >
+        {replyTo && <ReplyBanner author={replyTo.author} onCancel={() => setReplyTo(null)} />}
         <DMTypingIndicator username={username} isTyping={isPeerTyping} />
-        <DMMessageInput userId={userId} username={username} onSend={handleSend} replyTo={replyTo} onCancelReply={() => setReplyTo(null)} />
+        <DMMessageInput
+          userId={userId}
+          username={username}
+          onSend={handleSend}
+          replyTo={replyTo}
+          onCancelReply={() => setReplyTo(null)}
+          onExpandedChange={setInputExpanded}
+        />
       </div>
 
       <DMPinnedMessages userId={userId} open={pinsOpen} onClose={() => setPinsOpen(false)} />

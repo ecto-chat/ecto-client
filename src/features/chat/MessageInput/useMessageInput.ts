@@ -5,6 +5,7 @@ import { connectionManager } from '@/services/connection-manager';
 import { useChannelStore } from '@/stores/channel';
 import { useUiStore } from '@/stores/ui';
 import { usePermissions } from '@/hooks/usePermissions';
+import { useMarkdownShortcuts } from '@/hooks/useMarkdownShortcuts';
 
 import { useFileUpload } from './useFileUpload';
 import { useAutocomplete } from './useAutocomplete';
@@ -20,6 +21,29 @@ type UseMessageInputOptions = {
 export function useMessageInput({ channelId, serverId, onSend, replyTo, onCancelReply }: UseMessageInputOptions) {
   const [content, setContent] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [expanded, setExpanded] = useState(false);
+  const manualExpand = useRef(false);
+  const prevHadNewline = useRef(false);
+
+  const { applyMarkdown, handleMarkdownKeyDown } = useMarkdownShortcuts(textareaRef, content, setContent);
+
+  // Auto-expand when content gains a newline, auto-collapse when all removed (unless manual)
+  useEffect(() => {
+    const hasNewline = content.includes('\n');
+    if (hasNewline && !prevHadNewline.current) {
+      setExpanded(true);
+    } else if (!hasNewline && prevHadNewline.current && !manualExpand.current) {
+      setExpanded(false);
+    }
+    prevHadNewline.current = hasNewline;
+  }, [content]);
+
+  const toggleExpanded = useCallback(() => {
+    setExpanded((prev) => {
+      manualExpand.current = !prev;
+      return !prev;
+    });
+  }, []);
 
   // Slowmode
   const channel = useChannelStore((s) => s.channels.get(serverId)?.get(channelId));
@@ -76,6 +100,9 @@ export function useMessageInput({ channelId, serverId, onSend, replyTo, onCancel
       await onSend(text, replyTo?.id);
       setContent('');
       onCancelReply?.();
+      setExpanded(false);
+      manualExpand.current = false;
+      prevHadNewline.current = false;
       if (textareaRef.current) textareaRef.current.style.height = 'auto';
 
       // Start slowmode countdown
@@ -104,6 +131,8 @@ export function useMessageInput({ channelId, serverId, onSend, replyTo, onCancel
   };
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (handleMarkdownKeyDown(e)) return;
+
     if (handleAutocompleteKey(e.key)) {
       e.preventDefault();
       return;
@@ -119,6 +148,7 @@ export function useMessageInput({ channelId, serverId, onSend, replyTo, onCancel
   };
 
   const handleInput = () => {
+    if (expanded) return;
     const el = textareaRef.current;
     if (el) {
       el.style.height = 'auto';
@@ -143,5 +173,8 @@ export function useMessageInput({ channelId, serverId, onSend, replyTo, onCancel
     handleSend,
     slowmodeDisabled,
     slowmodeRemaining,
+    expanded,
+    toggleExpanded,
+    applyMarkdown,
   };
 }

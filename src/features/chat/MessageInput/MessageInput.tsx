@@ -1,11 +1,12 @@
 import { useState, useRef, useCallback } from 'react';
 import { AnimatePresence } from 'motion/react';
-import { Send, Paperclip, Smile, CornerDownRight, X } from 'lucide-react';
+import { Send, Paperclip, Smile, Maximize2, Minimize2 } from 'lucide-react';
 
-import { IconButton, TextArea } from '@/ui';
+import { TextArea } from '@/ui';
 
 import { AutocompletePopup } from '../AutocompletePopup';
 import { EmojiGifPicker } from '../EmojiGifPicker';
+import { MarkdownToolbar } from './MarkdownToolbar';
 import { useMessageInput } from './useMessageInput';
 
 type MessageInputProps = {
@@ -14,9 +15,10 @@ type MessageInputProps = {
   onSend: (content: string, replyTo?: string, attachmentIds?: string[]) => Promise<void>;
   replyTo?: { id: string; author: string; content: string } | null;
   onCancelReply?: () => void;
+  onExpandedChange?: (expanded: boolean) => void;
 };
 
-export function MessageInput({ channelId, serverId, onSend, replyTo, onCancelReply }: MessageInputProps) {
+export function MessageInput({ channelId, serverId, onSend, replyTo, onCancelReply, onExpandedChange }: MessageInputProps) {
   const {
     content,
     setContent,
@@ -34,10 +36,20 @@ export function MessageInput({ channelId, serverId, onSend, replyTo, onCancelRep
     handleSend,
     slowmodeDisabled,
     slowmodeRemaining,
+    expanded,
+    toggleExpanded,
+    applyMarkdown,
   } = useMessageInput({ channelId, serverId, onSend, replyTo, onCancelReply });
 
   const [pickerOpen, setPickerOpen] = useState(false);
   const smileButtonRef = useRef<HTMLButtonElement>(null);
+
+  // Notify parent of expansion changes
+  const prevExpanded = useRef(expanded);
+  if (prevExpanded.current !== expanded) {
+    prevExpanded.current = expanded;
+    onExpandedChange?.(expanded);
+  }
 
   const handleEmojiInsert = useCallback(
     (emoji: string) => {
@@ -52,7 +64,6 @@ export function MessageInput({ channelId, serverId, onSend, replyTo, onCancelRep
       const after = content.slice(end);
       const newContent = before + emoji + after;
       setContent(newContent);
-      // Restore cursor position after emoji
       requestAnimationFrame(() => {
         const pos = start + emoji.length;
         textarea.selectionStart = pos;
@@ -72,51 +83,88 @@ export function MessageInput({ channelId, serverId, onSend, replyTo, onCancelRep
     [onSend, replyTo, onCancelReply],
   );
 
-  return (
-    <div className="relative">
-      {replyTo && (
-        <div className="flex items-center gap-2 px-3 py-1.5 bg-tertiary border-b-2 border-primary text-sm text-secondary">
-          <CornerDownRight size={14} className="text-muted" />
-          <span>
-            Replying to <span className="font-medium text-primary">{replyTo.author}</span>
-          </span>
-          <IconButton
-            variant="ghost"
-            size="sm"
-            onClick={onCancelReply}
-            className="ml-auto"
-            tooltip="Cancel reply"
-          >
-            <X size={14} />
-          </IconButton>
-        </div>
-      )}
+  const buttons = (
+    <>
+      <button
+        type="button"
+        onClick={() => fileInputRef.current?.click()}
+        disabled={uploading}
+        className="text-muted hover:text-primary disabled:opacity-30 transition-colors p-1"
+      >
+        <Paperclip size={18} />
+      </button>
+      <button
+        ref={smileButtonRef}
+        type="button"
+        onClick={() => setPickerOpen((v) => !v)}
+        className="text-muted hover:text-primary transition-colors p-1"
+      >
+        <Smile size={18} />
+      </button>
+      <button
+        type="button"
+        onClick={toggleExpanded}
+        className="text-muted hover:text-primary transition-colors p-1"
+        title={expanded ? 'Collapse' : 'Expand'}
+      >
+        {expanded ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
+      </button>
+      <button
+        type="button"
+        disabled={!content.trim() || slowmodeDisabled}
+        onClick={handleSend}
+        className="text-muted hover:text-primary disabled:opacity-30 transition-colors p-1"
+      >
+        <Send size={18} />
+      </button>
+    </>
+  );
 
-      <div className="relative">
-        <AnimatePresence>
-          {autocomplete && filteredItems.length > 0 && (
-            <AutocompletePopup
-              autocomplete={autocomplete}
-              items={filteredItems}
-              selectedIndex={selectedIndex}
-              onSelect={selectItem}
-            />
-          )}
-        </AnimatePresence>
-      </div>
+  const autocompletePopup = (
+    <div className="relative shrink-0">
+      <AnimatePresence>
+        {autocomplete && filteredItems.length > 0 && (
+          <AutocompletePopup
+            autocomplete={autocomplete}
+            items={filteredItems}
+            selectedIndex={selectedIndex}
+            onSelect={selectItem}
+          />
+        )}
+      </AnimatePresence>
+    </div>
+  );
 
-      {pickerOpen && (
-        <EmojiGifPicker
-          mode="both"
-          onEmojiSelect={handleEmojiInsert}
-          onGifSelect={handleGifSend}
-          onClose={() => setPickerOpen(false)}
-          anchorRef={smileButtonRef}
-        />
-      )}
+  const emojiPicker = pickerOpen && (
+    <EmojiGifPicker
+      mode="both"
+      onEmojiSelect={handleEmojiInsert}
+      onGifSelect={handleGifSend}
+      onClose={() => setPickerOpen(false)}
+      anchorRef={smileButtonRef}
+    />
+  );
 
-      <div className="p-3">
-        <div className="relative">
+  const hiddenFileInput = (
+    <input
+      ref={fileInputRef}
+      type="file"
+      multiple
+      className="hidden"
+      onChange={handleFileSelect}
+    />
+  );
+
+  if (expanded) {
+    return (
+      <div className="flex flex-col flex-1 overflow-hidden">
+        {autocompletePopup}
+        {emojiPicker}
+        {hiddenFileInput}
+
+        <MarkdownToolbar visible onAction={applyMarkdown} />
+
+        <div className="flex-1 overflow-auto px-2 pt-2">
           <TextArea
             ref={textareaRef}
             value={content}
@@ -125,43 +173,41 @@ export function MessageInput({ channelId, serverId, onSend, replyTo, onCancelRep
             onInput={handleInput}
             placeholder={slowmodeDisabled ? `Slowmode: ${slowmodeRemaining}s` : 'Message #channel'}
             maxRows={10}
+            fillParent
             disabled={slowmodeDisabled || uploading}
-            className="pr-22"
+            className="border-0 focus:ring-0 bg-transparent"
           />
-          <input
-            ref={fileInputRef}
-            type="file"
-            multiple
-            className="hidden"
-            onChange={handleFileSelect}
-          />
-          <div className="absolute right-2 bottom-1.5 flex items-center gap-1">
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={uploading}
-              className="text-muted hover:text-primary disabled:opacity-30 transition-colors p-1"
-            >
-              <Paperclip size={18} />
-            </button>
-            <button
-              ref={smileButtonRef}
-              type="button"
-              onClick={() => setPickerOpen((v) => !v)}
-              className="text-muted hover:text-primary transition-colors p-1"
-            >
-              <Smile size={18} />
-            </button>
-            <button
-              type="button"
-              disabled={!content.trim() || slowmodeDisabled}
-              onClick={handleSend}
-              className="text-muted hover:text-primary disabled:opacity-30 transition-colors p-1"
-            >
-              <Send size={18} />
-            </button>
-          </div>
         </div>
+
+        <div className="flex items-center justify-end gap-1 px-2 py-1 shrink-0">
+          {buttons}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center flex-1 overflow-hidden">
+      {autocompletePopup}
+      {emojiPicker}
+      {hiddenFileInput}
+
+      <div className="flex-1 min-w-0 px-2">
+        <TextArea
+          ref={textareaRef}
+          value={content}
+          onChange={handleChange}
+          onKeyDown={handleKeyDown}
+          onInput={handleInput}
+          placeholder={slowmodeDisabled ? `Slowmode: ${slowmodeRemaining}s` : 'Message #channel'}
+          maxRows={10}
+          disabled={slowmodeDisabled || uploading}
+          className="border-0 focus:ring-0 bg-transparent"
+        />
+      </div>
+
+      <div className="flex items-center gap-1 pr-2 shrink-0">
+        {buttons}
       </div>
     </div>
   );

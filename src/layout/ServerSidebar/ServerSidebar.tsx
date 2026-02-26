@@ -34,7 +34,7 @@ export function ServerSidebar() {
   }, [navigate]);
 
   return (
-    <div className="flex h-full w-[72px] shrink-0 flex-col items-center py-3 gap-2">
+    <div className="flex h-full w-[72px] shrink-0 flex-col items-center py-4 gap-2">
       <HomeButton />
       <ActivityBell />
       <Separator className="mx-auto w-8" />

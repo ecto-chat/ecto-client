@@ -1,13 +1,15 @@
-import { useState, useRef, useCallback, type KeyboardEvent } from 'react';
+import { useState, useRef, useCallback, useEffect, type KeyboardEvent } from 'react';
 
-import { Send, Paperclip, Smile, CornerDownRight, X } from 'lucide-react';
+import { Send, Paperclip, Smile, Maximize2, Minimize2 } from 'lucide-react';
 
-import { TextArea, IconButton } from '@/ui';
+import { TextArea } from '@/ui';
 
 import { connectionManager } from '@/services/connection-manager';
 import { useAuthStore } from '@/stores/auth';
+import { useMarkdownShortcuts } from '@/hooks/useMarkdownShortcuts';
 
 import { EmojiGifPicker } from '../chat/EmojiGifPicker';
+import { MarkdownToolbar } from '../chat/MessageInput/MarkdownToolbar';
 
 import type { Attachment } from 'ecto-shared';
 
@@ -18,15 +20,46 @@ type DMMessageInputProps = {
   onSend: (content: string, attachments?: Attachment[], replyTo?: string) => Promise<void>;
   replyTo?: { id: string; author: string; content: string } | null;
   onCancelReply?: () => void;
+  onExpandedChange?: (expanded: boolean) => void;
 };
 
-export function DMMessageInput({ userId, username, onSend, replyTo, onCancelReply }: DMMessageInputProps) {
+export function DMMessageInput({ userId, username, onSend, replyTo, onCancelReply, onExpandedChange }: DMMessageInputProps) {
   const [content, setContent] = useState('');
   const [uploading, setUploading] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const manualExpand = useRef(false);
+  const prevHadNewline = useRef(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const smileButtonRef = useRef<HTMLButtonElement>(null);
+
+  const { applyMarkdown, handleMarkdownKeyDown } = useMarkdownShortcuts(textareaRef, content, setContent);
+
+  // Auto-expand/collapse based on newlines
+  useEffect(() => {
+    const hasNewline = content.includes('\n');
+    if (hasNewline && !prevHadNewline.current) {
+      setExpanded(true);
+    } else if (!hasNewline && prevHadNewline.current && !manualExpand.current) {
+      setExpanded(false);
+    }
+    prevHadNewline.current = hasNewline;
+  }, [content]);
+
+  const toggleExpanded = useCallback(() => {
+    setExpanded((prev) => {
+      manualExpand.current = !prev;
+      return !prev;
+    });
+  }, []);
+
+  // Notify parent of expansion changes
+  const prevExpanded = useRef(expanded);
+  if (prevExpanded.current !== expanded) {
+    prevExpanded.current = expanded;
+    onExpandedChange?.(expanded);
+  }
 
   const handleSend = useCallback(() => {
     const text = content.trim();
@@ -34,9 +67,14 @@ export function DMMessageInput({ userId, username, onSend, replyTo, onCancelRepl
     onSend(text, undefined, replyTo?.id);
     setContent('');
     onCancelReply?.();
+    setExpanded(false);
+    manualExpand.current = false;
+    prevHadNewline.current = false;
   }, [content, onSend, replyTo, onCancelReply]);
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (handleMarkdownKeyDown(e)) return;
+
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSend();
@@ -112,38 +150,98 @@ export function DMMessageInput({ userId, username, onSend, replyTo, onCancelRepl
     [onSend, replyTo, onCancelReply],
   );
 
-  return (
-    <div className="relative">
-      {replyTo && (
-        <div className="flex items-center gap-2 px-3 py-1.5 bg-tertiary border-b-2 border-primary text-sm text-secondary">
-          <CornerDownRight size={14} className="text-muted" />
-          <span>
-            Replying to <span className="font-medium text-primary">{replyTo.author}</span>
-          </span>
-          <IconButton
-            variant="ghost"
-            size="sm"
-            onClick={onCancelReply}
-            className="ml-auto"
-            tooltip="Cancel reply"
-          >
-            <X size={14} />
-          </IconButton>
+  const buttons = (
+    <>
+      <button
+        type="button"
+        onClick={() => fileInputRef.current?.click()}
+        disabled={uploading}
+        className="text-muted hover:text-primary disabled:opacity-30 transition-colors p-1"
+      >
+        <Paperclip size={18} />
+      </button>
+      <button
+        ref={smileButtonRef}
+        type="button"
+        onClick={() => setPickerOpen((v) => !v)}
+        className="text-muted hover:text-primary transition-colors p-1"
+      >
+        <Smile size={18} />
+      </button>
+      <button
+        type="button"
+        onClick={toggleExpanded}
+        className="text-muted hover:text-primary transition-colors p-1"
+        title={expanded ? 'Collapse' : 'Expand'}
+      >
+        {expanded ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
+      </button>
+      <button
+        type="button"
+        disabled={!content.trim()}
+        onClick={handleSend}
+        className="text-muted hover:text-primary disabled:opacity-30 transition-colors p-1"
+      >
+        <Send size={18} />
+      </button>
+    </>
+  );
+
+  const emojiPicker = pickerOpen && (
+    <EmojiGifPicker
+      mode="both"
+      onEmojiSelect={handleEmojiInsert}
+      onGifSelect={handleGifSend}
+      onClose={() => setPickerOpen(false)}
+      anchorRef={smileButtonRef}
+    />
+  );
+
+  const hiddenFileInput = (
+    <input
+      ref={fileInputRef}
+      type="file"
+      accept="image/*"
+      className="hidden"
+      onChange={handleFileSelect}
+    />
+  );
+
+  if (expanded) {
+    return (
+      <div className="flex flex-col flex-1 overflow-hidden">
+        {emojiPicker}
+        {hiddenFileInput}
+
+        <MarkdownToolbar visible onAction={applyMarkdown} />
+
+        <div className="flex-1 overflow-auto px-2 pt-2">
+          <TextArea
+            ref={textareaRef}
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder={uploading ? 'Uploading...' : `Message @${username}`}
+            maxRows={8}
+            fillParent
+            className="border-0 focus:ring-0 bg-transparent"
+            disabled={uploading}
+          />
         </div>
-      )}
 
-      {pickerOpen && (
-        <EmojiGifPicker
-          mode="both"
-          onEmojiSelect={handleEmojiInsert}
-          onGifSelect={handleGifSend}
-          onClose={() => setPickerOpen(false)}
-          anchorRef={smileButtonRef}
-        />
-      )}
+        <div className="flex items-center justify-end gap-1 px-2 py-1 shrink-0">
+          {buttons}
+        </div>
+      </div>
+    );
+  }
 
-    <div className="p-3">
-      <div className="relative">
+  return (
+    <div className="flex items-center flex-1 overflow-hidden">
+      {emojiPicker}
+      {hiddenFileInput}
+
+      <div className="flex-1 min-w-0 px-2">
         <TextArea
           ref={textareaRef}
           value={content}
@@ -151,44 +249,14 @@ export function DMMessageInput({ userId, username, onSend, replyTo, onCancelRepl
           onKeyDown={handleKeyDown}
           placeholder={uploading ? 'Uploading...' : `Message @${username}`}
           maxRows={8}
-          className="pr-22"
+          className="border-0 focus:ring-0 bg-transparent"
           disabled={uploading}
         />
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={handleFileSelect}
-        />
-        <div className="absolute right-2 bottom-1.5 flex items-center gap-1">
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={uploading}
-            className="text-muted hover:text-primary disabled:opacity-30 transition-colors p-1"
-          >
-            <Paperclip size={18} />
-          </button>
-          <button
-            ref={smileButtonRef}
-            type="button"
-            onClick={() => setPickerOpen((v) => !v)}
-            className="text-muted hover:text-primary transition-colors p-1"
-          >
-            <Smile size={18} />
-          </button>
-          <button
-            type="button"
-            disabled={!content.trim()}
-            onClick={handleSend}
-            className="text-muted hover:text-primary disabled:opacity-30 transition-colors p-1"
-          >
-            <Send size={18} />
-          </button>
-        </div>
       </div>
-    </div>
+
+      <div className="flex items-center gap-1 pr-2 shrink-0">
+        {buttons}
+      </div>
     </div>
   );
 }
