@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { useParams } from 'react-router-dom';
 import { useServerDmStore } from '@/stores/server-dm';
 import { useUiStore } from '@/stores/ui';
 import { connectionManager } from '@/services/connection-manager';
@@ -6,7 +7,22 @@ import { ServerDmConversationList } from './ServerDmConversationList';
 import { ServerDmChat } from './ServerDmChat';
 
 export function ServerDmView() {
-  const serverId = useUiStore((s) => s.activeServerId);
+  const { serverId: routeServerId, conversationId } = useParams<{ serverId: string; conversationId?: string }>();
+  const storeServerId = useUiStore((s) => s.activeServerId);
+  const serverId = routeServerId ?? storeServerId;
+
+  // Sync route params to store
+  useEffect(() => {
+    if (!serverId) return;
+    useUiStore.getState().setActiveServer(serverId);
+    useUiStore.getState().setHubSection('server-dms');
+  }, [serverId]);
+
+  useEffect(() => {
+    if (conversationId) {
+      useServerDmStore.getState().setActiveConversation(conversationId);
+    }
+  }, [conversationId]);
 
   // Load conversations on mount
   useEffect(() => {

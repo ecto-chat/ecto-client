@@ -21,6 +21,11 @@ function ToastItem({ toast }: { toast: Toast }) {
     removeToast(toast.id);
     if (toast.peerId) {
       navigate(`/dms/${toast.peerId}`);
+    } else if (toast.conversationId) {
+      useUiStore.getState().setActiveServer(toast.serverId);
+      useUiStore.getState().setHubSection('server-dms');
+      connectionManager.switchServer(toast.serverId).catch(() => {});
+      navigate(`/servers/${toast.serverId}/dms/${toast.conversationId}`);
     } else {
       useUiStore.getState().setActiveServer(toast.serverId);
       useUiStore.getState().setActiveChannel(toast.channelId);

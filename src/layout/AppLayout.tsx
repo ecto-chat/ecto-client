@@ -81,7 +81,12 @@ export function AppLayout() {
 
   useEffect(() => {
     return setNotificationClickHandler((data) => {
-      if (data.serverId && data.channelId) {
+      if (data.serverId && data.conversationId) {
+        useUiStore.getState().setActiveServer(data.serverId);
+        useUiStore.getState().setHubSection('server-dms');
+        connectionManager.switchServer(data.serverId).catch(() => {});
+        navigate(`/servers/${data.serverId}/dms/${data.conversationId}`);
+      } else if (data.serverId && data.channelId) {
         useUiStore.getState().setActiveServer(data.serverId);
         useUiStore.getState().setActiveChannel(data.channelId);
         connectionManager.switchServer(data.serverId).catch(() => {});
@@ -143,8 +148,6 @@ export function AppLayout() {
             />
           ) : !isHomeMode && hubSection === 'file-browser' ? (
             <FileBrowserView />
-          ) : !isHomeMode && hubSection === 'server-dms' ? (
-            <ServerDmView />
           ) : (
             <AnimatePresence mode="wait">
               <motion.div
@@ -161,6 +164,7 @@ export function AppLayout() {
                   <Route path="friends" element={<FriendList />} />
                   <Route path="dms/:userId" element={<DMView />} />
                   <Route path="servers/:serverId/channels/:channelId" element={<ChannelView />} />
+                  <Route path="servers/:serverId/dms/:conversationId?" element={<ServerDmView />} />
                   <Route
                     path="*"
                     element={

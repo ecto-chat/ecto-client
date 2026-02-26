@@ -1,4 +1,5 @@
 import { memo, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Mail } from 'lucide-react';
 import { usePresence } from '@/hooks/usePresence';
 import { useUiStore } from '@/stores/ui';
@@ -24,6 +25,7 @@ export const MemberItem = memo(function MemberItem({ member, rolesMap }: MemberI
   const { status } = usePresence(member.user_id);
   const activeServerId = useUiStore((s) => s.activeServerId);
   const currentUserId = useAuthStore((s) => s.user?.id);
+  const navigate = useNavigate();
   const isOffline = status === 'offline';
   const isSelf = member.user_id === currentUserId;
 
@@ -61,6 +63,7 @@ export const MemberItem = memo(function MemberItem({ member, rolesMap }: MemberI
     for (const [, convo] of conversations) {
       if (convo.peer.user_id === member.user_id) {
         useServerDmStore.getState().setActiveConversation(convo.id);
+        navigate(`/servers/${activeServerId}/dms/${convo.id}`);
         return;
       }
     }
@@ -81,7 +84,8 @@ export const MemberItem = memo(function MemberItem({ member, rolesMap }: MemberI
       unread_count: 0,
     });
     useServerDmStore.getState().setActiveConversation(tempId);
-  }, [activeServerId, member]);
+    navigate(`/servers/${activeServerId}/dms/${tempId}`);
+  }, [activeServerId, member, navigate]);
 
   return (
     <ContextMenu>

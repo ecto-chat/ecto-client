@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import { FolderOpen, Mail } from 'lucide-react';
 import { Permissions, hasPermission } from 'ecto-shared';
 
@@ -12,6 +13,7 @@ import { cn } from '@/lib/cn';
 export function ServerHub() {
   const serverId = useUiStore((s) => s.activeServerId);
   const hubSection = useUiStore((s) => s.hubSection);
+  const navigate = useNavigate();
   const { effectivePermissions, isAdmin } = usePermissions(serverId);
   const canBrowse = isAdmin || hasPermission(effectivePermissions, Permissions.BROWSE_FILES);
   const allowMemberDms = useServerStore((s) =>
@@ -50,7 +52,10 @@ export function ServerHub() {
               ? 'bg-secondary text-primary border-[#6f53ef]'
               : 'text-secondary hover:bg-secondary border-transparent',
           )}
-          onClick={() => useUiStore.getState().setHubSection('server-dms')}
+          onClick={() => {
+            useUiStore.getState().setHubSection('server-dms');
+            if (serverId) navigate(`/servers/${serverId}/dms`);
+          }}
         >
           <Mail size={16} className="shrink-0 text-muted" />
           Private Messages

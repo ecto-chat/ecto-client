@@ -31,12 +31,10 @@ export function ActivityPanel() {
       useUiStore.getState().setActiveServer(null);
       navigate(`/dms/${item.source.peer_user_id}`);
     } else if (item.type === 'server_dm' && item.source.conversation_id) {
-      // Server DM — switch to server, open server DMs hub, select + mark read
+      // Server DM — switch to server, navigate to DM URL
       const serverId = item.source.server_id;
       const convoId = item.source.conversation_id;
       useUiStore.getState().setActiveServer(serverId);
-      useUiStore.getState().setHubSection('server-dms');
-      useServerDmStore.getState().setActiveConversation(convoId);
       useServerDmStore.getState().markConversationRead(serverId, convoId);
       connectionManager.switchServer(serverId).catch(() => {});
       // Persist read state to server
@@ -47,7 +45,7 @@ export function ActivityPanel() {
           .mutate({ conversation_id: convoId, last_read_message_id: lastMsgId })
           .catch(() => {});
       }
-      navigate(`/servers/${serverId}/channels`);
+      navigate(`/servers/${serverId}/dms/${convoId}`);
     } else if (item.source.channel_id) {
       // Server channel notification — navigate to server + channel
       useUiStore.getState().setActiveServer(item.source.server_id);

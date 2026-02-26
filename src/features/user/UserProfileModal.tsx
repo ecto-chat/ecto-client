@@ -118,6 +118,7 @@ function UserProfileContent({ data, onClose }: { data: ModalData; onClose: () =>
     for (const [, convo] of conversations) {
       if (convo.peer.user_id === userId) {
         useServerDmStore.getState().setActiveConversation(convo.id);
+        if (serverId) navigate(`/servers/${serverId}/dms/${convo.id}`);
         return;
       }
     }
@@ -137,6 +138,7 @@ function UserProfileContent({ data, onClose }: { data: ModalData; onClose: () =>
       unread_count: 0,
     });
     useServerDmStore.getState().setActiveConversation(tempId);
+    if (serverId) navigate(`/servers/${serverId}/dms/${tempId}`);
   };
 
   return (

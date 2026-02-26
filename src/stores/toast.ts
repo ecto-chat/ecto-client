@@ -9,6 +9,8 @@ export interface Toast {
   channelId: string;
   /** Peer user ID — set for DMs, undefined for server messages */
   peerId?: string;
+  /** Server DM conversation ID — set for server DMs */
+  conversationId?: string;
   authorName: string;
   avatarUrl?: string;
   content: string;
@@ -27,9 +29,10 @@ export const useToastStore = create<ToastStore>()((set) => ({
 
   addToast: (toast) =>
     set((state) => {
-      // Skip if user is already viewing this channel/DM
+      // Skip if user is already viewing this channel/DM/server-DM
       const path = window.location.pathname;
       if (toast.peerId && path === `/dms/${toast.peerId}`) return state;
+      if (toast.conversationId && path.endsWith(`/dms/${toast.conversationId}`)) return state;
       if (toast.channelId && path.endsWith(`/channels/${toast.channelId}`)) return state;
 
       const id = String(++nextId);
@@ -37,6 +40,9 @@ export const useToastStore = create<ToastStore>()((set) => ({
       const data: Record<string, string> = { type: 'toast' };
       if (toast.peerId) {
         data.peerId = toast.peerId;
+      } else if (toast.conversationId) {
+        data.serverId = toast.serverId;
+        data.conversationId = toast.conversationId;
       } else {
         data.serverId = toast.serverId;
         data.channelId = toast.channelId;

@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import { useServerDmStore } from '@/stores/server-dm';
 import { useUiStore } from '@/stores/ui';
 import { connectionManager } from '@/services/connection-manager';
@@ -60,6 +61,7 @@ function ConversationItem({
 export function ServerDmConversationList() {
   const conversations = useServerDmStore((s) => s.conversations);
   const activeId = useServerDmStore((s) => s.activeConversationId);
+  const navigate = useNavigate();
 
   const sorted = [...conversations.values()].sort((a, b) => {
     const aTime = a.last_message?.created_at ?? '';
@@ -71,6 +73,7 @@ export function ServerDmConversationList() {
     useServerDmStore.getState().setActiveConversation(convoId);
     const serverId = useUiStore.getState().activeServerId;
     if (serverId) {
+      navigate(`/servers/${serverId}/dms/${convoId}`);
       useServerDmStore.getState().markConversationRead(serverId, convoId);
       // Persist read state to server
       const convo = useServerDmStore.getState().conversations.get(convoId);

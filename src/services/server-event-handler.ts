@@ -257,6 +257,17 @@ export function handleMainEvent(serverId: string, event: string, data: unknown, 
           useUiStore.getState().activeServerId === serverId;
         if (!isViewingThisConvo) {
           useServerDmStore.getState().incrementUnread(serverId, convoId);
+          // Fire in-app toast for server DM messages
+          const author = d.author as { id: string; username: string; display_name: string | null; avatar_url: string | null; nickname: string | null };
+          const authorName = author.nickname ?? author.display_name ?? author.username;
+          useToastStore.getState().addToast({
+            serverId,
+            channelId: '',
+            conversationId: convoId,
+            authorName,
+            avatarUrl: author.avatar_url ?? undefined,
+            content: ((d.content as string) ?? '').slice(0, 200),
+          });
         }
         playNotificationSound('message');
       }
