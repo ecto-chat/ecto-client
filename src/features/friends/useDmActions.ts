@@ -6,7 +6,8 @@ import { connectionManager } from '@/services/connection-manager';
 
 import type { Attachment } from 'ecto-shared';
 
-import { sendDmMessage, toggleReaction } from './dm-utils';
+import { sendDmMessage } from './dm-utils';
+import { toggleReaction } from '@/lib/reactions';
 
 export function useDmActions(
   userId: string | undefined,
@@ -83,6 +84,15 @@ export function useDmActions(
     await centralTrpc.dms.pin.mutate({ message_id: messageId, pinned: false });
   }, []);
 
+  const handleMarkRead = useCallback(async (messageId: string) => {
+    const centralTrpc = connectionManager.getCentralTrpc();
+    if (!centralTrpc || !userId) return;
+    await centralTrpc.dms.markRead.mutate({
+      user_id: userId,
+      last_read_message_id: messageId,
+    });
+  }, [userId]);
+
   return {
     handleSend,
     handleLoadMore,
@@ -91,5 +101,6 @@ export function useDmActions(
     handleReact,
     handlePin,
     handleUnpin,
+    handleMarkRead,
   };
 }

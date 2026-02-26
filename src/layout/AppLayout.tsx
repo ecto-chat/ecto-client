@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, lazy, Suspense } from 'react';
 import { Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import { WifiOff } from 'lucide-react';
@@ -9,11 +9,11 @@ import { ChannelSidebar } from '../layout/ChannelSidebar';
 import { MemberList } from '../layout/MemberList';
 import { ServerFallback } from '../layout/ServerFallback';
 
-// features
-import { ServerSettings, SetupWizard, ChannelSettingsModal } from '@/features/admin';
+// features (eager — needed immediately or always visible)
+import { SetupWizard } from '@/features/admin';
 import { CentralSignInModal, AddAccountModal } from '@/features/auth';
-import { IncomingCallOverlay, ActiveCallOverlay, CallBanner } from '@/features/call';
-import { ChannelView, ImageLightbox } from '@/features/chat';
+import { IncomingCallOverlay, CallBanner } from '@/features/call';
+import { ChannelView } from '@/features/chat';
 import { NotificationPrompt, NotificationToast } from '@/features/common';
 import { ActivityPanel, ActivityView } from '@/features/activity';
 import { FriendList, DMView, DMSidebar } from '@/features/friends';
@@ -21,9 +21,15 @@ import { FloatingMediaWindow, SnappedMediaSidebar, ResizeHandle } from '@/featur
 import { AddServerModal, LeaveServerModal, ServerJoinModal } from '@/features/servers';
 import { FileBrowserView } from '@/features/hub/FileBrowserView';
 import { ServerDmView } from '@/features/server-dm/ServerDmView';
-import { UserSettingsModal } from '@/features/settings';
-import { UserProfileModal } from '@/features/user';
 import { VoiceControls, VoiceBanner } from '@/features/voice';
+
+// features (lazy — opened on demand, heavy import trees)
+const ServerSettings = lazy(() => import('@/features/admin/ServerSettings').then(m => ({ default: m.ServerSettings })));
+const ChannelSettingsModal = lazy(() => import('@/features/admin/ChannelSettingsModal').then(m => ({ default: m.ChannelSettingsModal })));
+const UserSettingsModal = lazy(() => import('@/features/settings/UserSettingsModal').then(m => ({ default: m.UserSettingsModal })));
+const UserProfileModal = lazy(() => import('@/features/user/UserProfileModal').then(m => ({ default: m.UserProfileModal })));
+const ActiveCallOverlay = lazy(() => import('@/features/call/ActiveCallOverlay').then(m => ({ default: m.ActiveCallOverlay })));
+const ImageLightbox = lazy(() => import('@/features/chat/ImageLightbox').then(m => ({ default: m.ImageLightbox })));
 
 // stores, hooks, services, ui
 import { useUiStore } from '@/stores/ui';
@@ -177,19 +183,21 @@ export function AppLayout() {
       <AddServerModal />
       <LeaveServerModal />
       <ServerJoinModal />
-      <UserProfileModal />
       <CentralSignInModal />
       <AddAccountModal />
-      <ServerSettings />
-      <ChannelSettingsModal />
-      <UserSettingsModal />
       <IncomingCallOverlay />
-      <ActiveCallOverlay />
       <FloatingMediaWindow />
-      <ImageLightbox />
       <NotificationToast />
       <NotificationPrompt />
       <ToastContainer />
+      <Suspense>
+        <UserProfileModal />
+        <ServerSettings />
+        <ChannelSettingsModal />
+        <UserSettingsModal />
+        <ActiveCallOverlay />
+        <ImageLightbox />
+      </Suspense>
     </div>
   );
 }

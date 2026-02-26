@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react';
 
-import { Button, Input, Select, Spinner } from '@/ui';
+import { Button, Input, Select } from '@/ui';
 
 import { useChannelStore } from '@/stores/channel';
 

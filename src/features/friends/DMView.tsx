@@ -36,6 +36,7 @@ export function DMView() {
     handleReact,
     handlePin,
     handleUnpin,
+    handleMarkRead,
   } = useDmMessages(userId);
 
   const username = friend?.username ?? userId ?? 'Unknown';
@@ -82,7 +83,7 @@ export function DMView() {
         onReact={handleReact}
         onPin={handlePin}
         onUnpin={handleUnpin}
-        onMarkRead={async () => {}}
+        onMarkRead={handleMarkRead}
         onReply={(msg) => setReplyTo({
           id: msg.id,
           author: msg.author?.display_name ?? msg.author?.username ?? 'Unknown',

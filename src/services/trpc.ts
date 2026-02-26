@@ -79,7 +79,7 @@ function createTrpcProxy(baseUrl: string, getToken: () => string | null): unknow
   return new Proxy(root, handler);
 }
 
-export class TrpcError extends Error {
+class TrpcError extends Error {
   constructor(
     public readonly code: string,
     message: string,

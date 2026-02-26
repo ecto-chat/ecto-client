@@ -21,6 +21,7 @@ export function ServerDmChat() {
     handleEdit,
     handleDelete,
     handleReact,
+    handleMarkRead,
   } = useServerDmMessages(activeConvoId);
 
   const [replyTo, setReplyTo] = useState<{ id: string; author: string; content: string } | null>(null);
@@ -46,9 +47,9 @@ export function ServerDmChat() {
         onEdit={handleEdit}
         onDelete={handleDelete}
         onReact={handleReact}
-        onPin={async () => {}}
-        onUnpin={async () => {}}
-        onMarkRead={async () => {}}
+        onPin={async () => {}} // NOT_IMPLEMENTED: server DM pinning — no server API endpoint
+        onUnpin={async () => {}} // NOT_IMPLEMENTED: server DM pinning — no server API endpoint
+        onMarkRead={handleMarkRead}
         onReply={(msg) => setReplyTo({
           id: msg.id,
           author: msg.author?.display_name ?? msg.author?.username ?? 'Unknown',

@@ -9,7 +9,7 @@ import { useMemberStore } from '../stores/member.js';
 import { usePresenceStore } from '../stores/presence.js';
 import { useReadStateStore } from '../stores/read-state.js';
 import { useVoiceStore } from '../stores/voice.js';
-import { resetVoiceSessionState } from '../hooks/useVoice.js';
+import { resetVoiceSessionState } from './voice-media.js';
 import { useConnectionStore } from '../stores/connection.js';
 import { useNotifyStore } from '../stores/notify.js';
 import { useFriendStore } from '../stores/friend.js';
@@ -57,7 +57,7 @@ interface ServerConnection {
   tokenRefreshTimer: ReturnType<typeof setTimeout> | null;
 }
 
-export class ConnectionManager {
+class ConnectionManager {
   private activeServerId: string | null = null;
   private connections = new Map<string, ServerConnection>();
   private centralWs: CentralWebSocket | null = null;

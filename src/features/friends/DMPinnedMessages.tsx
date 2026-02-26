@@ -10,7 +10,7 @@ import type { Message } from 'ecto-shared';
 
 import { MessageItem } from '@/features/chat';
 
-import { dmToMessage } from './dm-utils';
+import { dmToMessage } from '@/lib/message-adapters';
 
 type DMPinnedMessagesProps = {
   userId: string;

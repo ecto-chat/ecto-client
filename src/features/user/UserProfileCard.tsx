@@ -1,7 +1,5 @@
 import { Avatar, Badge, Separator } from '@/ui';
 
-import { cn } from '@/lib/cn';
-
 import type { Role, PresenceStatus } from 'ecto-shared';
 
 function presenceLabel(status: PresenceStatus): string {

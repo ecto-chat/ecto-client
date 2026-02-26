@@ -39,7 +39,6 @@ interface AuthStore {
   getToken: () => string | null;
   getCentralTrpc: () => CentralTrpcClient;
   enterLocalOnly: () => void;
-  signInToCentral: () => void;
   signInToCentralFromModal: (email: string, password: string) => Promise<void>;
   switchAccount: (targetUserId: string) => Promise<void>;
   logoutAll: () => Promise<void>;
@@ -187,10 +186,6 @@ export const useAuthStore = create<AuthStore>()((set, get) => {
         authState: 'authenticated',
         centralAuthState: 'unauthenticated',
       });
-    },
-
-    signInToCentral: () => {
-      useUiStore.getState().openModal('central-sign-in');
     },
 
     login: async (email, password) => {

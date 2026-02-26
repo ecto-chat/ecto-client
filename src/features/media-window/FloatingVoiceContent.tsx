@@ -4,7 +4,7 @@ import { cn } from '@/lib/cn';
 import { Avatar } from '@/ui';
 import { useVoiceStore } from '@/stores/voice';
 import { useMemberStore } from '@/stores/member';
-import { VideoRenderer } from '@/features/voice';
+import { VideoRenderer } from '@/features/shared/VideoRenderer';
 
 type FloatingVoiceContentProps = {
   participants: VoiceState[];

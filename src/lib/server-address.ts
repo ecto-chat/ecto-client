@@ -31,16 +31,3 @@ export function extractServerAddresses(text: string): string[] {
   return results;
 }
 
-/**
- * Check if a URL points to an ecto server (for filtering generic link previews).
- */
-export function isEctoServerUrl(url: string): boolean {
-  try {
-    const hostname = new URL(url).hostname.toLowerCase();
-    if (!hostname.endsWith('.ecto.chat')) return false;
-    const firstLabel = hostname.split('.')[0]!;
-    return !RESERVED_SUBDOMAINS.has(firstLabel);
-  } catch {
-    return false;
-  }
-}

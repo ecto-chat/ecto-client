@@ -61,14 +61,6 @@ export function showOsNotification(
   }
 }
 
-export function shouldNotifyDM(): boolean {
-  return getPrefs().showDMs;
-}
-
-export function shouldNotifyMention(): boolean {
-  return getPrefs().showMentions;
-}
-
 export function shouldNotifyEveryone(): boolean {
   return getPrefs().showEveryone;
 }

@@ -5,8 +5,8 @@ import { Send, Paperclip, Smile, Maximize2, Minimize2 } from 'lucide-react';
 import { TextArea } from '@/ui';
 
 import { AutocompletePopup } from '../AutocompletePopup';
-import { EmojiGifPicker } from '../EmojiGifPicker';
-import { MarkdownToolbar } from './MarkdownToolbar';
+import { EmojiGifPicker } from '../../shared/EmojiGifPicker';
+import { MarkdownToolbar } from '../../shared/MarkdownToolbar';
 import { useMessageInput } from './useMessageInput';
 
 type MessageInputProps = {

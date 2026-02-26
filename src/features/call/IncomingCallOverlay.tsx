@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 
 import { motion } from 'motion/react';
-import { Phone, Video, PhoneOff, ArrowRightLeft, X } from 'lucide-react';
+import { Phone, Video, PhoneOff } from 'lucide-react';
 
 import { Avatar, IconButton } from '@/ui';
 

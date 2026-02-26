@@ -5,28 +5,7 @@ import { useAuthStore } from '@/stores/auth';
 
 import { connectionManager } from '@/services/connection-manager';
 
-import type { Attachment, DirectMessage, Message, ReactionGroup } from 'ecto-shared';
-
-/** Adapt a DirectMessage to the Message shape used by MessageList/MessageItem. */
-export function dmToMessage(dm: DirectMessage): Message {
-  return {
-    id: dm.id,
-    channel_id: '',
-    author: dm.sender,
-    content: dm.content,
-    type: 0,
-    reply_to: dm.reply_to ?? null,
-    pinned: dm.pinned ?? false,
-    mention_everyone: false,
-    mention_roles: [],
-    mentions: [],
-    edited_at: dm.edited_at,
-    created_at: dm.created_at,
-    attachments: dm.attachments ?? [],
-    reactions: dm.reactions ?? [],
-    webhook_id: null,
-  };
-}
+import type { Attachment, DirectMessage } from 'ecto-shared';
 
 /** Send a DM with optimistic insert and reconciliation. */
 export async function sendDmMessage(userId: string, text: string, attachments?: Attachment[], replyTo?: string): Promise<void> {
@@ -103,34 +82,4 @@ export async function sendDmMessage(userId: string, text: string, attachments?: 
       }
     }
   }
-}
-
-/** Compute optimistic reaction toggle. Returns new reactions array. */
-export function toggleReaction(
-  reactions: ReactionGroup[],
-  emoji: string,
-  currentUserId: string,
-): ReactionGroup[] {
-  const existing = reactions.find((r) => r.emoji === emoji);
-  const isRemoving = existing?.me;
-
-  if (isRemoving && existing) {
-    const newUsers = existing.users.filter((u) => u !== currentUserId);
-    if (newUsers.length === 0) {
-      return reactions.filter((r) => r.emoji !== emoji);
-    }
-    return reactions.map((r) =>
-      r.emoji === emoji ? { ...r, count: newUsers.length, users: newUsers, me: false } : r,
-    );
-  }
-
-  if (existing) {
-    return reactions.map((r) =>
-      r.emoji === emoji
-        ? { ...r, count: r.count + 1, users: [...r.users, currentUserId], me: true }
-        : r,
-    );
-  }
-
-  return [...reactions, { emoji, count: 1, users: [currentUserId], me: true }];
 }

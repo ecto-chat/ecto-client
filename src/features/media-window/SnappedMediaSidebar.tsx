@@ -1,7 +1,6 @@
 import { motion } from 'motion/react';
 
 import { useUiStore } from '@/stores/ui';
-import { useVoiceStore } from '@/stores/voice';
 import { springDock } from '@/lib/animations';
 
 import { useMediaWindowMode } from './useMediaWindowMode';

@@ -2,7 +2,7 @@ import { useCallback } from 'react';
 import { useServerDmStore } from '@/stores/server-dm';
 import { useUiStore } from '@/stores/ui';
 import { connectionManager } from '@/services/connection-manager';
-import { toggleReaction } from '@/features/friends/dm-utils';
+import { toggleReaction } from '@/lib/reactions';
 
 export function useServerDmActions(
   conversationId: string | null,
@@ -106,11 +106,22 @@ export function useServerDmActions(
     }
   }, [conversationId, getServerTrpc]);
 
+  const handleMarkRead = useCallback(async (messageId: string) => {
+    if (!conversationId || conversationId.startsWith('pending-')) return;
+    const trpc = getServerTrpc();
+    if (!trpc) return;
+    await trpc.serverDms.markRead.mutate({
+      conversation_id: conversationId,
+      last_read_message_id: messageId,
+    });
+  }, [conversationId, getServerTrpc]);
+
   return {
     handleSend,
     handleLoadMore,
     handleEdit,
     handleDelete,
     handleReact,
+    handleMarkRead,
   };
 }

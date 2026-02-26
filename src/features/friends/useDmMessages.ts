@@ -7,7 +7,7 @@ import { connectionManager } from '@/services/connection-manager';
 
 import type { DirectMessage, Message } from 'ecto-shared';
 
-import { dmToMessage } from './dm-utils';
+import { dmToMessage } from '@/lib/message-adapters';
 import { useDmActions } from './useDmActions';
 
 export function useDmMessages(userId: string | undefined) {

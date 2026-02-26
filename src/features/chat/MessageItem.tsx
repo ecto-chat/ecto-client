@@ -18,7 +18,6 @@ import { useRoleStore } from '@/stores/role';
 import { usePermissions } from '@/hooks/usePermissions';
 
 import { renderMarkdown } from '@/lib/markdown';
-import { cn } from '@/lib/cn';
 import { extractServerAddresses } from '@/lib/server-address';
 
 import { MessageType, Permissions } from 'ecto-shared';

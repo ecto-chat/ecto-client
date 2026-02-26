@@ -8,4 +8,4 @@ export { VoiceParticipantGrid } from './VoiceParticipantGrid';
 export { VoiceToolbar } from './VoiceToolbar';
 export { VoiceToolbarControls } from './VoiceToolbarControls';
 export { VoiceStatsOverlay } from './VoiceStatsOverlay';
-export { VideoRenderer } from './VideoRenderer';
+export { VideoRenderer } from '../shared/VideoRenderer';

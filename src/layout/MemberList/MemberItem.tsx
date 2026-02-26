@@ -5,7 +5,6 @@ import { useUiStore } from '@/stores/ui';
 import { useServerStore } from '@/stores/server';
 import { useAuthStore } from '@/stores/auth';
 import { useServerDmStore } from '@/stores/server-dm';
-import { connectionManager } from '@/services/connection-manager';
 import { Avatar } from '@/ui/Avatar';
 import {
   ContextMenu,

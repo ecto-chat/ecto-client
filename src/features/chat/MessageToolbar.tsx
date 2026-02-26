@@ -3,7 +3,7 @@ import { SmilePlus, Pin, PinOff, Pencil, Trash2, Reply } from 'lucide-react';
 
 import { IconButton, Tooltip } from '@/ui';
 
-import { EmojiGifPicker } from './EmojiGifPicker';
+import { EmojiGifPicker } from '../shared/EmojiGifPicker';
 
 const QUICK_REACTIONS = [
   { emoji: '\u{1F44D}', label: 'Thumbs Up' },

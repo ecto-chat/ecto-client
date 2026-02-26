@@ -12,7 +12,7 @@ import { connectionManager } from '@/services/connection-manager';
 
 import { useModPermissions } from './useModPermissions';
 import { VoiceParticipant } from './VoiceParticipant';
-import { ParticipantGridLayout, type ParticipantSlot } from './ParticipantGridLayout';
+import { ParticipantGridLayout, type ParticipantSlot } from '../shared/ParticipantGridLayout';
 import type { GridSlot } from '@/lib/grid-layout';
 
 type VoiceParticipantGridProps = {

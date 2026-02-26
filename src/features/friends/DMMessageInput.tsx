@@ -8,8 +8,8 @@ import { connectionManager } from '@/services/connection-manager';
 import { useAuthStore } from '@/stores/auth';
 import { useMarkdownShortcuts } from '@/hooks/useMarkdownShortcuts';
 
-import { EmojiGifPicker } from '../chat/EmojiGifPicker';
-import { MarkdownToolbar } from '../chat/MessageInput/MarkdownToolbar';
+import { EmojiGifPicker } from '../shared/EmojiGifPicker';
+import { MarkdownToolbar } from '../shared/MarkdownToolbar';
 
 import type { Attachment } from 'ecto-shared';
 

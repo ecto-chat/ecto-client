@@ -10,7 +10,7 @@ import { useVoiceStore } from '@/stores/voice';
 
 import { cn } from '@/lib/cn';
 
-import { VideoRenderer } from './VideoRenderer';
+import { VideoRenderer } from '../shared/VideoRenderer';
 import { VoiceStatsOverlay } from './VoiceStatsOverlay';
 import { UserVolumeControl } from './VoiceVolumeControl';
 

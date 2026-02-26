@@ -17,5 +17,4 @@ export { MemberManager } from './MemberManager';
 export { RoleAssignment, KickBanDialog } from './MemberActions';
 export { InviteManager } from './InviteManager';
 export { WebhookManager } from './WebhookManager';
-export { AuditLog } from './AuditLog';
 export { ChannelSettingsModal } from './ChannelSettingsModal';

@@ -1,6 +1,6 @@
 import { Link, Copy, PartyPopper, Ticket } from 'lucide-react';
 
-import { Button, Input, Spinner } from '@/ui';
+import { Button, Input } from '@/ui';
 
 import type { StepProps } from './wizard-types';
 

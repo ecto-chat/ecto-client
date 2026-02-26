@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FileText, Pencil, History, X, Bold, Italic, Heading, Link, ImageIcon, AtSign, HashIcon, Upload, Trash2, Video } from 'lucide-react';
+import { FileText, Pencil, History, Bold, Italic, Heading, Link, ImageIcon, AtSign, HashIcon, Upload, Trash2, Video } from 'lucide-react';
 import { Permissions } from 'ecto-shared';
 
 import { Button, IconButton, Spinner, EmptyState, ImageCropModal } from '@/ui';

@@ -3,7 +3,6 @@ import { useCallStore } from '@/stores/call';
 import { useVoiceStore } from '@/stores/voice';
 import { useUiStore } from '@/stores/ui';
 import { useChannelStore } from '@/stores/channel';
-import { useMemberStore } from '@/stores/member';
 import type { VoiceState } from 'ecto-shared';
 
 type MediaWindowInfo = {

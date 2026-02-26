@@ -99,29 +99,6 @@ function VolumeSlider({ userId, source, className }: VolumeSliderProps) {
   );
 }
 
-export function ScreenAudioControl({ userId }: { userId: string }) {
-  const myUserId = useAuthStore((s) => s.user?.id);
-  const producers = useVoiceStore((s) => s.producers);
-  const consumerMeta = useVoiceStore((s) => s.consumerMeta);
-
-  const isOwner = userId === myUserId;
-  let hasScreenAudio = false;
-  if (isOwner) {
-    hasScreenAudio = producers.has('screen-audio');
-  } else {
-    for (const meta of consumerMeta.values()) {
-      if (meta.userId === userId && meta.source === 'screen-audio') {
-        hasScreenAudio = true;
-        break;
-      }
-    }
-  }
-
-  if (!hasScreenAudio) return null;
-
-  return <VolumeSlider userId={userId} source="screen-audio" />;
-}
-
 export function UserVolumeControl({ userId }: { userId: string }) {
   const myUserId = useAuthStore((s) => s.user?.id);
   const consumerMeta = useVoiceStore((s) => s.consumerMeta);

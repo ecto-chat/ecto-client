@@ -13,8 +13,8 @@ import { playOutgoingRingback } from '@/lib/ringtone';
 import type { GridSlot } from '@/lib/grid-layout';
 import type { VoiceState } from 'ecto-shared';
 
-import { VideoRenderer } from '../voice/VideoRenderer';
-import { ParticipantGridLayout, type ParticipantSlot } from '../voice/ParticipantGridLayout';
+import { VideoRenderer } from '../shared/VideoRenderer';
+import { ParticipantGridLayout, type ParticipantSlot } from '../shared/ParticipantGridLayout';
 import { CallControls } from './CallControls';
 
 /** Stub VoiceState for call participants (calls don't have server-level mute/deaf). */
