@@ -4,10 +4,11 @@ import { useServerStore } from '../stores/server.js';
 import { useConnectionStore } from '../stores/connection.js';
 import { useUiStore } from '../stores/ui.js';
 import { connectionManager } from '../services/connection-manager.js';
+import { getStoredServerSessions } from '../services/storage-manager.js';
 
 /**
  * Central-authenticated initialization: connect Central WS,
- * list servers from Central, connect all in parallel.
+ * list servers from Central, connect active server first, then background servers.
  */
 export function useInitializeCentral() {
   const centralAuthState = useAuthStore((s) => s.centralAuthState);
@@ -19,85 +20,126 @@ export function useInitializeCentral() {
     const token = getToken();
     if (!token) return;
 
-    connectionManager.initialize(useAuthStore.getState().centralUrl, () => useAuthStore.getState().token).then(async () => {
+    (async () => {
+      // Phase 4.1: Pre-populate sidebar from cached sessions for instant render
+      const cached = await getStoredServerSessions();
+      for (const session of cached) {
+        if (session.serverName) {
+          useServerStore.getState().addServer({
+            id: session.id,
+            server_address: session.address,
+            server_name: session.serverName,
+            server_icon: session.serverIcon ?? null,
+            position: 0,
+            joined_at: '',
+          });
+        }
+      }
+
+      await connectionManager.initialize(useAuthStore.getState().centralUrl, () => useAuthStore.getState().token);
       const centralTrpc = connectionManager.getCentralTrpc();
       if (!centralTrpc) return;
-      try {
-        const servers = await centralTrpc.servers.list.query();
 
-        const results = await Promise.allSettled(
-          servers.map(async (server) => {
-            const realId = await connectionManager.connectToServer(
-              server.server_address,
-              server.server_address,
-              token,
-            );
-            if (realId !== server.id) {
-              useConnectionStore.getState().removeConnection(server.id);
-              useServerStore.getState().removeServer(server.id);
+      const servers = await centralTrpc.servers.list.query();
+
+      // Determine which server should be the active one
+      const savedServerId = useUiStore.getState().activeServerId;
+      const savedChannelId = useUiStore.getState().activeChannelId;
+
+      // Find the active server — match by ID first, fallback to first
+      const activeServer = (savedServerId
+        ? servers.find((s) => s.id === savedServerId)
+        : undefined) ?? servers[0];
+
+      const backgroundServers = servers.filter((s) => s !== activeServer);
+
+      // ── Track A: Connect active server (critical path) ──
+      let firstActiveId: string | null = null;
+      if (activeServer) {
+        try {
+          const { realServerId, serverName, serverIcon } = await connectionManager.connectToServer(
+            activeServer.server_address,
+            activeServer.server_address,
+            token,
+            { openMainWs: true, activeChannelId: savedChannelId },
+          );
+          if (realServerId !== activeServer.id) {
+            useConnectionStore.getState().removeConnection(activeServer.id);
+            useServerStore.getState().removeServer(activeServer.id);
+          }
+          useServerStore.getState().addServer({ ...activeServer, id: realServerId });
+          if (serverName) {
+            useServerStore.getState().updateServer(realServerId, {
+              server_name: serverName,
+              server_icon: serverIcon ?? null,
+            });
+          }
+          firstActiveId = realServerId;
+          useUiStore.getState().setActiveServer(realServerId);
+        } catch {
+          useServerStore.getState().addServer(activeServer);
+          useConnectionStore.getState().setStatus(activeServer.id, 'disconnected');
+          connectionManager.startServerRetry(activeServer.server_address, (realId) => {
+            if (realId !== activeServer.id) {
+              useConnectionStore.getState().removeConnection(activeServer.id);
+              useServerStore.getState().removeServer(activeServer.id);
             }
-            useServerStore.getState().addServer({ ...server, id: realId });
+            useServerStore.getState().addServer({ ...activeServer, id: realId });
+            useUiStore.getState().setActiveServer(realId);
+            connectionManager.switchServer(realId).catch(() => {});
+          });
+        }
+      }
 
-            const trpc = connectionManager.getServerTrpc(realId);
-            if (trpc) {
-              trpc.server.info.query().then((info) => {
-                const srv = info as unknown as { server: { name?: string; icon_url?: string } };
-                useServerStore.getState().updateServer(realId, {
-                  server_name: srv.server.name ?? server.server_address,
-                  server_icon: srv.server.icon_url ?? null,
-                });
-              }).catch(() => {});
-            }
-
-            return { server, realId };
-          }),
-        );
-
-        const realIds: string[] = [];
-        for (const result of results) {
-          if (result.status === 'fulfilled') {
-            realIds.push(result.value.realId);
-          } else {
-            const idx = results.indexOf(result);
-            const server = servers[idx]!;
-            useServerStore.getState().addServer(server);
-            useConnectionStore.getState().setStatus(server.id, 'disconnected');
-            connectionManager.startServerRetry(server.server_address, (realId) => {
-              if (realId !== server.id) {
+      // ── Track B: Connect background servers (staggered, fire-and-forget) ──
+      if (backgroundServers.length > 0) {
+        setTimeout(() => {
+          Promise.allSettled(
+            backgroundServers.map(async (server) => {
+              const { realServerId, serverName, serverIcon } = await connectionManager.connectToServer(
+                server.server_address,
+                server.server_address,
+                token,
+                { openMainWs: false },
+              );
+              if (realServerId !== server.id) {
                 useConnectionStore.getState().removeConnection(server.id);
                 useServerStore.getState().removeServer(server.id);
               }
-              useServerStore.getState().addServer({ ...server, id: realId });
-              const trpc = connectionManager.getServerTrpc(realId);
-              if (trpc) {
-                trpc.server.info.query().then((info) => {
-                  const srv = info as unknown as { server: { name?: string; icon_url?: string } };
-                  useServerStore.getState().updateServer(realId, {
-                    server_name: srv.server.name ?? server.server_address,
-                    server_icon: srv.server.icon_url ?? null,
-                  });
-                }).catch(() => {});
+              useServerStore.getState().addServer({ ...server, id: realServerId });
+              if (serverName) {
+                useServerStore.getState().updateServer(realServerId, {
+                  server_name: serverName,
+                  server_icon: serverIcon ?? null,
+                });
               }
-              const current = useUiStore.getState().activeServerId;
-              if (!current || current === server.id) {
-                useUiStore.getState().setActiveServer(realId);
-                connectionManager.switchServer(realId).catch(() => {});
+            }),
+          ).then((results) => {
+            // Handle failed background connections
+            results.forEach((result, idx) => {
+              if (result.status === 'rejected') {
+                const server = backgroundServers[idx];
+                if (!server) return;
+                useServerStore.getState().addServer(server);
+                useConnectionStore.getState().setStatus(server.id, 'disconnected');
+                connectionManager.startServerRetry(server.server_address, (realId) => {
+                  if (realId !== server.id) {
+                    useConnectionStore.getState().removeConnection(server.id);
+                    useServerStore.getState().removeServer(server.id);
+                  }
+                  useServerStore.getState().addServer({ ...server, id: realId });
+                });
               }
             });
-          }
-        }
-
-        const savedServerId = useUiStore.getState().activeServerId;
-        if (savedServerId && realIds.includes(savedServerId)) {
-          connectionManager.switchServer(savedServerId).catch(() => {});
-        } else if (realIds.length > 0) {
-          useUiStore.getState().setActiveServer(realIds[0]!);
-          connectionManager.switchServer(realIds[0]!).catch(() => {});
-        }
-      } catch (err) {
-        console.warn('[central] Failed to initialize servers:', err);
+          });
+        }, 100);
       }
-    }).catch((err) => {
+
+      // If active server failed, try first background server
+      if (!firstActiveId && servers.length > 0 && servers[0]) {
+        useUiStore.getState().setActiveServer(servers[0].id);
+      }
+    })().catch((err) => {
       console.warn('[central] Connection initialization failed:', err);
     });
   }, [centralAuthState]);

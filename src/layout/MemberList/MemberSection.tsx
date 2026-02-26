@@ -18,7 +18,7 @@ export function MemberSection({ title, count, members, rolesMap, isFirst, indexO
       <h3
         className={cn(
           'px-2 pb-1 text-2xs font-semibold uppercase tracking-wider text-muted',
-          isFirst ? 'pt-0' : 'pt-3',
+          isFirst ? 'pt-0' : 'pt-2',
         )}
       >
         {title} — {count}

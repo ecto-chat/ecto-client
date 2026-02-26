@@ -29,6 +29,7 @@ export function MessageList({
   const topSentinelRef = useRef<HTMLDivElement>(null);
   const wasAtBottom = useRef(true);
   const loadingMore = useRef(false);
+  const lastMarkedId = useRef<string | null>(null);
 
   const isAtBottom = useCallback(() => {
     const el = containerRef.current;
@@ -61,8 +62,11 @@ export function MessageList({
   const handleScroll = () => {
     wasAtBottom.current = isAtBottom();
     if (wasAtBottom.current && messages.length > 0) {
-      const lastMsg = messages[messages.length - 1]!;
-      onMarkRead(lastMsg.id).catch(() => {});
+      const lastMsg = messages[messages.length - 1];
+      if (lastMsg && lastMsg.id !== lastMarkedId.current) {
+        lastMarkedId.current = lastMsg.id;
+        onMarkRead(lastMsg.id).catch(() => {});
+      }
     }
   };
 

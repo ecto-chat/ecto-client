@@ -125,8 +125,8 @@ export const ServerIcon = memo(function ServerIcon({
                 size="lg"
                 onClick={handleClick}
                 className={cn(
-                  'h-12 w-12 overflow-hidden transition-[border-radius,background-color,color] duration-150',
-                  isActive ? 'rounded-2xl bg-accent' : 'rounded-full bg-tertiary hover:rounded-2xl hover:bg-accent',
+                  'h-13 w-13 overflow-hidden transition-[border-radius,background-color,color] duration-150 flex items-center justify-center',
+                  isActive ? 'rounded-full bg-accent' : 'rounded-full bg-tertiary hover:bg-accent',
                   isOffline && 'opacity-50',
                 )}
               >

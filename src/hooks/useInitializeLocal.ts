@@ -17,32 +17,16 @@ export function useInitializeLocal() {
 
     connectionManager.getStoredServerSessions().then((sessions) => connectionManager.initializeLocalOnly().then(() => {
       for (const session of sessions) {
-        const trpc = connectionManager.getServerTrpc(session.id);
-        if (trpc) {
-          useServerStore.getState().addServer({
-            id: session.id,
-            server_address: session.address,
-            server_name: session.address,
-            server_icon: null,
-            position: useServerStore.getState().serverOrder.length,
-            joined_at: new Date().toISOString(),
-          });
-          trpc.server.info.query().then((info) => {
-            const srv = info as unknown as { server: { name?: string; icon_url?: string } };
-            useServerStore.getState().updateServer(session.id, {
-              server_name: srv.server.name ?? session.address,
-              server_icon: srv.server.icon_url ?? null,
-            });
-          }).catch(() => {});
-        } else {
-          useServerStore.getState().addServer({
-            id: session.id,
-            server_address: session.address,
-            server_name: session.address,
-            server_icon: null,
-            position: useServerStore.getState().serverOrder.length,
-            joined_at: new Date().toISOString(),
-          });
+        const connected = connectionManager.getServerConnection(session.id) !== null;
+        useServerStore.getState().addServer({
+          id: session.id,
+          server_address: session.address,
+          server_name: session.serverName ?? session.address,
+          server_icon: session.serverIcon ?? null,
+          position: useServerStore.getState().serverOrder.length,
+          joined_at: new Date().toISOString(),
+        });
+        if (!connected) {
           useConnectionStore.getState().setStatus(session.id, 'disconnected');
           connectionManager.startServerRetry(session.address, (realId) => {
             if (realId !== session.id) {
@@ -72,9 +56,9 @@ export function useInitializeLocal() {
       );
       if (savedServerId && connectedIds.includes(savedServerId)) {
         connectionManager.switchServer(savedServerId).catch(() => {});
-      } else if (connectedIds.length > 0) {
-        useUiStore.getState().setActiveServer(connectedIds[0]!);
-        connectionManager.switchServer(connectedIds[0]!).catch(() => {});
+      } else if (connectedIds.length > 0 && connectedIds[0]) {
+        useUiStore.getState().setActiveServer(connectedIds[0]);
+        connectionManager.switchServer(connectedIds[0]).catch(() => {});
       }
     })).catch(() => {});
   }, [centralAuthState]);

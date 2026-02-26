@@ -15,6 +15,7 @@ import {
 } from '../services/account-registry.js';
 import type { AccountEntry } from '../services/account-registry.js';
 import { reclaimLegacyData, hasLegacyData } from '../services/preference-migration.js';
+import { parseTokenExp } from '../lib/jwt.js';
 
 type AuthState = 'idle' | 'loading' | 'authenticated' | 'unauthenticated';
 type CentralAuthState = 'idle' | 'loading' | 'authenticated' | 'unauthenticated';
@@ -290,6 +291,7 @@ export const useAuthStore = create<AuthStore>()((set, get) => {
       const activeUserId = getActiveUserId();
       if (activeUserId) {
         preferenceManager.setActiveUser(activeUserId);
+        useUiStore.getState().hydrateFromPreferences();
       }
 
       try {
@@ -307,6 +309,43 @@ export const useAuthStore = create<AuthStore>()((set, get) => {
           }
           return;
         }
+
+        // Phase 4.3: Skip auth.refresh if stored access token is still valid
+        if (activeUserId) {
+          const storedAccessToken = await secureStorage.get(`auth:${activeUserId}:access_token`);
+          if (storedAccessToken) {
+            const exp = parseTokenExp(storedAccessToken);
+            if (exp && exp * 1000 - Date.now() > 30_000) {
+              // Access token still valid — skip refresh
+              set({ token: storedAccessToken, refreshToken_: rt });
+              scheduleRefresh(storedAccessToken);
+
+              // Phase 4.2: Use cached profile for instant render
+              const cachedUser = preferenceManager.getUserFor(activeUserId, 'cached-profile', null) as GlobalUser | null;
+              if (cachedUser) {
+                set({ user: cachedUser, authState: 'authenticated', centralAuthState: 'authenticated' });
+                // Background refresh of profile
+                const userTrpc = createCentralTrpcClient(get().centralUrl, () => storedAccessToken);
+                userTrpc.profile.get.query({ user_id: activeUserId }).then((u) => {
+                  set({ user: u });
+                  preferenceManager.setUser('cached-profile', u);
+                }).catch(() => {});
+                return;
+              }
+
+              // No cached profile — fetch it but don't block on refresh
+              const userTrpc = createCentralTrpcClient(get().centralUrl, () => storedAccessToken);
+              const user = await userTrpc.profile.get.query({ user_id: activeUserId });
+              registryAddAccount(buildAccountEntry(user));
+              setActiveUserId(activeUserId);
+              set({ user, authState: 'authenticated', centralAuthState: 'authenticated' });
+              preferenceManager.setUser('cached-profile', user);
+              return;
+            }
+          }
+        }
+
+        // Fallthrough: access token expired or missing — do full refresh
         const trpc = createCentralTrpcClient(get().centralUrl, () => null);
         const result = await trpc.auth.refresh.mutate({ refresh_token: rt });
 
@@ -327,6 +366,7 @@ export const useAuthStore = create<AuthStore>()((set, get) => {
         // Update registry with latest user info
         registryAddAccount(buildAccountEntry(user));
         setActiveUserId(uid);
+        preferenceManager.setUser('cached-profile', user);
 
         set({ user, authState: 'authenticated', centralAuthState: 'authenticated' });
       } catch {

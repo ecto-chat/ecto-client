@@ -50,8 +50,8 @@ export function ServerPreview() {
 
       const token = useAuthStore.getState().getToken();
       if (token) {
-        const realServerId = await connectionManager.connectToServer(
-          modalData.address, modalData.address, token,
+        const { realServerId } = await connectionManager.connectToServer(
+          modalData.address, modalData.address, token, { openMainWs: true },
         );
         await centralTrpc.servers.add.mutate({ server_address: modalData.address }).catch(() => {});
 

@@ -72,13 +72,13 @@ export function useAddServer() {
     const token = useAuthStore.getState().getToken();
     if (isCentral && token) {
       try {
-        const id = await connectionManager.connectToServer(addr, addr, token);
+        const { realServerId, serverName } = await connectionManager.connectToServer(addr, addr, token, { openMainWs: true });
         const ct = connectionManager.getCentralTrpc();
         if (ct) await ct.servers.add.mutate({ server_address: addr }).catch((err: unknown) => {
           console.warn('[central] Failed to sync server addition:', err);
         });
-        const name = await queryServerName(id, addr);
-        addToServerStore(id, addr, name, null);
+        const name = serverName ?? await queryServerName(realServerId, addr);
+        addToServerStore(realServerId, addr, name, null);
         resetAndClose();
       } catch (err: unknown) {
         const ectoCode = (err as { ectoCode?: number }).ectoCode ?? 0;
@@ -115,13 +115,13 @@ export function useAddServer() {
     const token = useAuthStore.getState().getToken();
     if (!token) return;
     try {
-      const id = await connectionManager.connectToServer(address, address, token, { inviteCode });
+      const { realServerId, serverName } = await connectionManager.connectToServer(address, address, token, { inviteCode, openMainWs: true });
       const ct = connectionManager.getCentralTrpc();
       if (ct) await ct.servers.add.mutate({ server_address: address }).catch((err: unknown) => {
         console.warn('[central] Failed to sync server addition:', err);
       });
-      const name = await queryServerName(id, address);
-      addToServerStore(id, address, name, null);
+      const name = serverName ?? await queryServerName(realServerId, address);
+      addToServerStore(realServerId, address, name, null);
       resetAndClose();
     } catch (err: unknown) {
       setError((err as Error).message ?? 'Invalid invite code');

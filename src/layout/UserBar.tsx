@@ -99,7 +99,7 @@ export function UserBar() {
 
   return (
     <>
-      <div className="flex h-[60px] shrink-0 items-center gap-2 border-t-2 border-primary bg-[rgba(18,18,30,0.8)] px-2">
+      <div className="flex h-[60px] shrink-0 items-center gap-2 border-t-3 border-primary bg-[rgba(18,18,30,0.8)] px-2">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button className="flex items-center gap-2 min-w-0 flex-1 cursor-pointer rounded p-1 -m-1 transition-colors hover:bg-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent">

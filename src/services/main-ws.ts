@@ -28,7 +28,7 @@ export class MainWebSocket {
     return this.ws?.readyState === WebSocket.OPEN;
   }
 
-  connect(url: string, token: string): Promise<SystemReadyPayload> {
+  connect(url: string, token: string, activeChannelId?: string | null): Promise<SystemReadyPayload> {
     return new Promise((resolve, reject) => {
       this.cleanup();
       const wsUrl = url.replace(/^http/, 'ws') + '/ws';
@@ -48,7 +48,11 @@ export class MainWebSocket {
         if (msg.event === 'system.hello') {
           const hello = msg.data as SystemHelloPayload;
           this.startHeartbeat(hello.heartbeat_interval ?? HEARTBEAT_INTERVAL);
-          this.send('system.identify', { token, protocol_version: PROTOCOL_VERSION });
+          this.send('system.identify', {
+            token,
+            protocol_version: PROTOCOL_VERSION,
+            ...(activeChannelId ? { active_channel_id: activeChannelId } : {}),
+          });
           return;
         }
 

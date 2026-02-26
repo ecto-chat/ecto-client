@@ -21,15 +21,18 @@ import { useRoleStore } from '../stores/role.js';
 import { useCallStore } from '../stores/call.js';
 import { useServerDmStore } from '../stores/server-dm.js';
 import { useActivityStore } from '../stores/activity.js';
+import { useMessageStore } from '../stores/message.js';
 import {
   getStoredServerSessions,
   storeServerSession,
+  updateStoredServerMeta,
   removeStoredServerSession,
   clearStoredServerSessions,
   storeLocalCredentials,
   getStoredLocalCredentials,
   clearLocalCredentials,
 } from './storage-manager.js';
+import { parseTokenExp } from '../lib/jwt.js';
 import { handleMainEvent } from './server-event-handler.js';
 import { handleCentralEvent } from './central-event-handler.js';
 import { ReconnectionManager } from './reconnection-manager.js';
@@ -258,12 +261,52 @@ export class ConnectionManager {
 
   // Server connections
 
-  async connectToServer(serverId: string, address: string, token: string, options?: { silent?: boolean; inviteCode?: string }) {
+  async connectToServer(serverId: string, address: string, token: string, options?: { silent?: boolean; inviteCode?: string; openMainWs?: boolean; activeChannelId?: string | null }): Promise<{ realServerId: string; serverName: string | null; serverIcon: string | null; defaultChannelId: string | null }> {
     if (!options?.silent) {
       useConnectionStore.getState().setStatus(serverId, 'connecting');
     }
 
     const serverUrl = toServerUrl(address);
+
+    // Check for a cached, non-expired server token to skip server.join
+    if (!options?.inviteCode) {
+      const sessions = await getStoredServerSessions();
+      const cached = sessions.find((s) => s.address === serverUrl);
+      if (cached?.tokenExp && cached.tokenExp * 1000 - Date.now() > 5 * 60 * 1000) {
+        const cachedServerId = cached.id;
+        const trpc = createServerTrpcClient(serverUrl, () => cached.token);
+        const conn: ServerConnection = {
+          address: serverUrl,
+          token: cached.token,
+          serverId: cachedServerId,
+          mainWs: null,
+          notifyWs: null,
+          trpc,
+          tokenRefreshTimer: null,
+        };
+        this.connections.set(cachedServerId, conn);
+
+        if (cachedServerId !== serverId) {
+          useConnectionStore.getState().removeConnection(serverId);
+          useConnectionStore.getState().setStatus(cachedServerId, 'connecting');
+        }
+
+        if (options?.openMainWs) {
+          await this.openMainWs(conn, options?.activeChannelId);
+          this.activeServerId = cachedServerId;
+        } else {
+          await this.openNotifyWs(conn);
+        }
+
+        return {
+          realServerId: cachedServerId,
+          serverName: cached.serverName ?? null,
+          serverIcon: cached.serverIcon ?? null,
+          defaultChannelId: cached.defaultChannelId ?? null,
+        };
+      }
+    }
+
     let realServerId = serverId;
     let serverToken = token;
     const joinBody: Record<string, string> = {};
@@ -280,10 +323,12 @@ export class ConnectionManager {
       throw new Error(`Server unreachable: ${address}`);
     }
 
+    let joinData: {
+      result: { data: { server_token: string; server: { id: string; name: string; icon_url?: string | null; default_channel_id?: string | null } } };
+    };
+
     if (joinRes.ok) {
-      const joinData = (await joinRes.json()) as {
-        result: { data: { server_token: string; server: { id: string; name: string } } };
-      };
+      joinData = (await joinRes.json()) as typeof joinData;
       realServerId = joinData.result.data.server.id;
       serverToken = joinData.result.data.server_token;
     } else {
@@ -316,14 +361,26 @@ export class ConnectionManager {
 
     this.connections.set(realServerId, conn);
 
-    if (this.activeServerId === serverId || this.activeServerId === realServerId || this.activeServerId === null) {
-      await this.openMainWs(conn);
+    // Store enriched session with metadata
+    await storeServerSession(realServerId, serverUrl, serverToken, {
+      tokenExp: parseTokenExp(serverToken),
+      serverName: joinData.result.data.server.name,
+      serverIcon: joinData.result.data.server.icon_url ?? null,
+      defaultChannelId: joinData.result.data.server.default_channel_id ?? null,
+    });
+
+    const serverName = joinData.result.data.server.name ?? null;
+    const serverIcon = joinData.result.data.server.icon_url ?? null;
+    const defaultChannelId = joinData.result.data.server.default_channel_id ?? null;
+
+    if (options?.openMainWs) {
+      await this.openMainWs(conn, options?.activeChannelId);
       this.activeServerId = realServerId;
     } else {
       await this.openNotifyWs(conn);
     }
 
-    return realServerId;
+    return { realServerId, serverName, serverIcon, defaultChannelId };
   }
 
   async switchServer(newServerId: string) {
@@ -432,8 +489,8 @@ export class ConnectionManager {
       try {
         await fetch(serverUrl, { method: 'HEAD' });
         this.reconnection.stopServerRetry(address);
-        const realId = await this.connectToServer(address, address, token!, { silent: true });
-        if (realId) onReconnected(realId);
+        const { realServerId } = await this.connectToServer(address, address, token!, { silent: true, openMainWs: this.activeServerId === null });
+        if (realServerId) onReconnected(realServerId);
       } catch {
         connecting = false;
       }
@@ -464,8 +521,10 @@ export class ConnectionManager {
         try {
           const result = await conn.trpc.server.refreshToken.mutate() as { server_token: string };
           conn.token = result.server_token;
-          // Update stored session
-          await storeServerSession(conn.serverId, conn.address, result.server_token);
+          // Update stored session with new token + exp
+          await storeServerSession(conn.serverId, conn.address, result.server_token, {
+            tokenExp: parseTokenExp(result.server_token),
+          });
           // Recreate trpc client with new token
           conn.trpc = createServerTrpcClient(conn.address, () => conn.token);
           // Schedule next refresh
@@ -482,7 +541,7 @@ export class ConnectionManager {
 
   // Private: open Main WS
 
-  private async openMainWs(conn: ServerConnection) {
+  private async openMainWs(conn: ServerConnection, activeChannelId?: string | null) {
     const ws = new MainWebSocket();
 
     ws.onEvent = (event, data, seq) => handleMainEvent(conn.serverId, event, data, seq);
@@ -537,7 +596,7 @@ export class ConnectionManager {
     };
 
     try {
-      const ready = await ws.connect(conn.address, conn.token);
+      const ready = await ws.connect(conn.address, conn.token, activeChannelId);
       conn.mainWs = ws;
       useConnectionStore.getState().setStatus(conn.serverId, 'connected');
       this.reconnection.resetAttempts(conn.serverId);
@@ -545,7 +604,7 @@ export class ConnectionManager {
 
       const readyData = ready as unknown as {
         user_id?: string;
-        server?: { setup_completed?: boolean; admin_user_id?: string | null; default_channel_id?: string | null; banner_url?: string | null; allow_member_dms?: boolean; hosting_mode?: 'self-hosted' | 'managed' };
+        server?: { name?: string; icon_url?: string | null; setup_completed?: boolean; admin_user_id?: string | null; default_channel_id?: string | null; banner_url?: string | null; allow_member_dms?: boolean; hosting_mode?: 'self-hosted' | 'managed' };
         channels?: Channel[];
         categories?: Category[];
         members?: Member[];
@@ -555,6 +614,9 @@ export class ConnectionManager {
         voice_states?: VoiceState[];
         activity_unread_notifications?: number;
         activity_unread_server_dms?: number;
+        initial_messages?: unknown[];
+        initial_messages_channel_id?: string;
+        initial_messages_has_more?: boolean;
       };
 
       if (readyData.server) {
@@ -623,9 +685,29 @@ export class ConnectionManager {
         }).catch(() => {});
       }
 
-      const { activeServerId, activeChannelId } = useUiStore.getState();
-      if (activeChannelId && (activeServerId === conn.serverId || activeServerId === null)) {
-        ws.subscribe(activeChannelId);
+      // Handle pre-loaded messages from system.ready
+      if (readyData.initial_messages?.length && readyData.initial_messages_channel_id) {
+        useMessageStore.getState().prependMessages(
+          readyData.initial_messages_channel_id,
+          readyData.initial_messages as import('ecto-shared').Message[],
+          readyData.initial_messages_has_more ?? false,
+        );
+      }
+
+      // Update cached server metadata after successful ready
+      updateStoredServerMeta(conn.serverId, {
+        serverName: readyData.server?.name,
+        serverIcon: readyData.server?.icon_url,
+        defaultChannelId: readyData.server?.default_channel_id,
+      }).catch(() => {});
+
+      // Subscribe to active channel (skip if server already subscribed via initial_messages)
+      const storeActiveChannelId = activeChannelId ?? useUiStore.getState().activeChannelId;
+      if (storeActiveChannelId && storeActiveChannelId !== readyData.initial_messages_channel_id) {
+        const { activeServerId: storeActiveServerId } = useUiStore.getState();
+        if (storeActiveServerId === conn.serverId || storeActiveServerId === null) {
+          ws.subscribe(storeActiveChannelId);
+        }
       }
     } catch (err) {
       useConnectionStore.getState().setStatus(conn.serverId, 'disconnected');

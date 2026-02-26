@@ -35,7 +35,7 @@ export function CreateServerForm({ onCancel }: CreateServerFormProps) {
       // Connect to the new server
       const token = useAuthStore.getState().token;
       if (token) {
-        await connectionManager.connectToServer(result.serverId, result.address, token);
+        await connectionManager.connectToServer(result.serverId, result.address, token, { openMainWs: true });
       }
 
       // Close modal and switch to the new server

@@ -24,7 +24,7 @@ export function CategoryGroup({
   return (
     <div>
       <div
-        className="flex items-center px-2 pt-3 pb-1 cursor-pointer select-none group focus-visible:ring-1 focus-visible:ring-accent/40 outline-none rounded-md"
+        className="flex items-center px-2 pt-2 pb-1 cursor-pointer select-none group focus-visible:ring-1 focus-visible:ring-accent/40 outline-none rounded-md"
         onClick={onToggle}
         {...dragHandleProps}
       >

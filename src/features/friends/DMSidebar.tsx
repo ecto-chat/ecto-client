@@ -33,14 +33,14 @@ export function DMSidebar() {
 
   return (
     <div className="flex flex-col h-full bg-secondary">
-      <div className="flex h-[60px] shrink-0 items-center px-4 border-b-2 border-primary">
+      <div className="flex h-[60px] shrink-0 items-center px-4 border-b-3 border-primary">
         <h2 className="text-sm font-semibold text-primary">Direct Messages</h2>
       </div>
 
       <div
         className={cn(
           'flex items-center gap-2 px-3 py-2 cursor-pointer transition-colors',
-          openConversationId === null ? 'bg-primary border-l-4 border-[#6f53ef]' : 'hover:bg-primary border-l-4 border-transparent',
+          openConversationId === null ? 'bg-secondary border-l-4 border-[#6f53ef]' : 'hover:bg-secondary border-l-4 border-transparent',
         )}
         onClick={() => navigate('/friends')}
       >
@@ -72,7 +72,7 @@ export function DMSidebar() {
                     transition={{ delay: index * 0.04 + 0.02, duration: 0.2 }}
                     className={cn(
                       'flex items-center gap-2 px-3 py-2 cursor-pointer transition-colors',
-                      isActive ? 'bg-primary border-l-4 border-[#6f53ef]' : 'hover:bg-primary border-l-4 border-transparent',
+                      isActive ? 'bg-secondary border-l-4 border-[#6f53ef]' : 'hover:bg-secondary border-l-4 border-transparent',
                     )}
                     onClick={() => navigate(`/dms/${conv.user_id}`)}
                   >

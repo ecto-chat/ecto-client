@@ -54,8 +54,14 @@ export const useUiStore = create<UiStore>()((set) => ({
   hubSection: null,
   snappedSidebarWidth: preferenceManager.getDevice('snapped-width', 360),
 
-  setActiveServer: (serverId) => set({ activeServerId: serverId }),
-  setActiveChannel: (channelId) => set({ activeChannelId: channelId, channelLocked: false, hubSection: null }),
+  setActiveServer: (serverId) => {
+    if (serverId) preferenceManager.setUser('last-active-server', serverId);
+    set({ activeServerId: serverId });
+  },
+  setActiveChannel: (channelId) => {
+    if (channelId) preferenceManager.setUser('last-active-channel', channelId);
+    set({ activeChannelId: channelId, channelLocked: false, hubSection: null });
+  },
   setHubSection: (section) => set({ hubSection: section, activeChannelId: null }),
   setChannelLocked: (locked) => set({ channelLocked: locked }),
   toggleSidebar: () => set((state) => {
@@ -94,7 +100,9 @@ export const useUiStore = create<UiStore>()((set) => ({
     preferenceManager.setDevice('snapped-width', width);
     set({ snappedSidebarWidth: width });
   },
-  hydrateFromPreferences: () => set({
+  hydrateFromPreferences: () => set((state) => ({
     nsfwDismissed: new Set(preferenceManager.getUser<string[]>('nsfw-dismissed', [])),
-  }),
+    activeServerId: state.activeServerId ?? preferenceManager.getUser<string | null>('last-active-server', null),
+    activeChannelId: state.activeChannelId ?? preferenceManager.getUser<string | null>('last-active-channel', null),
+  })),
 }));

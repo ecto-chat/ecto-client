@@ -4,6 +4,10 @@ import { getActiveUserId } from './account-registry.js';
 interface StoredServerSession {
   address: string;
   token: string;
+  tokenExp?: number;
+  serverName?: string;
+  serverIcon?: string | null;
+  defaultChannelId?: string | null;
 }
 
 function serverTokensKey(userId?: string): string {
@@ -18,7 +22,15 @@ function localCredentialsKey(userId?: string): string {
   return 'ecto-local-credentials'; // legacy fallback
 }
 
-export async function getStoredServerSessions(userId?: string): Promise<Array<{ id: string; address: string; token: string }>> {
+export async function getStoredServerSessions(userId?: string): Promise<Array<{
+  id: string;
+  address: string;
+  token: string;
+  tokenExp?: number;
+  serverName?: string;
+  serverIcon?: string | null;
+  defaultChannelId?: string | null;
+}>> {
   try {
     const raw = await secureStorage.get(serverTokensKey(userId));
     if (!raw) return [];
@@ -27,21 +39,61 @@ export async function getStoredServerSessions(userId?: string): Promise<Array<{ 
       id,
       address: session.address,
       token: session.token,
+      tokenExp: session.tokenExp,
+      serverName: session.serverName,
+      serverIcon: session.serverIcon,
+      defaultChannelId: session.defaultChannelId,
     }));
   } catch {
     return [];
   }
 }
 
-export async function storeServerSession(serverId: string, address: string, token: string, userId?: string): Promise<void> {
+export async function storeServerSession(
+  serverId: string,
+  address: string,
+  token: string,
+  meta?: { tokenExp?: number; serverName?: string; serverIcon?: string | null; defaultChannelId?: string | null },
+  userId?: string,
+): Promise<void> {
   try {
     const key = serverTokensKey(userId);
     const raw = await secureStorage.get(key);
     const sessions: Record<string, StoredServerSession> = raw ? JSON.parse(raw) as Record<string, StoredServerSession> : {};
-    sessions[serverId] = { address, token };
+    sessions[serverId] = {
+      address,
+      token,
+      ...(meta?.tokenExp !== undefined && { tokenExp: meta.tokenExp }),
+      ...(meta?.serverName !== undefined && { serverName: meta.serverName }),
+      ...(meta?.serverIcon !== undefined && { serverIcon: meta.serverIcon }),
+      ...(meta?.defaultChannelId !== undefined && { defaultChannelId: meta.defaultChannelId }),
+    };
     await secureStorage.set(key, JSON.stringify(sessions));
   } catch {
     // Storage full or unavailable
+  }
+}
+
+/** Update cached metadata for a stored server session without re-storing the token. */
+export async function updateStoredServerMeta(
+  serverId: string,
+  meta: { serverName?: string; serverIcon?: string | null; defaultChannelId?: string | null; tokenExp?: number },
+  userId?: string,
+): Promise<void> {
+  try {
+    const key = serverTokensKey(userId);
+    const raw = await secureStorage.get(key);
+    if (!raw) return;
+    const sessions: Record<string, StoredServerSession> = JSON.parse(raw) as Record<string, StoredServerSession>;
+    const session = sessions[serverId];
+    if (!session) return;
+    if (meta.serverName !== undefined) session.serverName = meta.serverName;
+    if (meta.serverIcon !== undefined) session.serverIcon = meta.serverIcon;
+    if (meta.defaultChannelId !== undefined) session.defaultChannelId = meta.defaultChannelId;
+    if (meta.tokenExp !== undefined) session.tokenExp = meta.tokenExp;
+    await secureStorage.set(key, JSON.stringify(sessions));
+  } catch {
+    // Storage unavailable
   }
 }
 

@@ -110,9 +110,9 @@ export function AppLayout() {
   return (
     <div className="flex h-full w-full">
       <ServerSidebar />
-      <div className="flex flex-1 min-w-0 py-3 pr-3">
+      <div className="flex flex-1 min-w-0 py-2 pr-2">
         {!sidebarCollapsed && !isServerOffline && (
-          <div className="flex w-[240px] min-w-[240px] flex-col border-2 border-primary bg-secondary rounded-md overflow-hidden">
+          <div className="flex w-[240px] min-w-[240px] flex-col bg-tertiary rounded-l-md overflow-hidden border-r-3 border-primary">
             {sidebarContent}
             <VoiceControls />
           </div>
@@ -123,7 +123,7 @@ export function AppLayout() {
             <ResizeHandle side="left" />
           </>
         )}
-        <main className="flex flex-1 flex-col min-w-0 bg-primary">
+        <main className="flex flex-1 flex-col min-w-0 bg-secondary rounded-r-md overflow-hidden">
           {showVoiceBanner && <VoiceBanner />}
           {(callState === 'active' || answeredElsewhere) && <CallBanner />}
           {showSetupWizard ? (

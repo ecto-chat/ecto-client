@@ -22,8 +22,8 @@ export function ServerHub() {
   );
 
   return (
-    <div className="border-b-2 border-primary py-3">
-      <h3 className="text-xs uppercase tracking-wider font-semibold text-muted mb-2 pl-3">
+    <div className="border-b-3 border-primary py-2">
+      <h3 className="text-xs uppercase tracking-wider font-semibold text-muted mb-2 pl-2">
         Server Hub
       </h3>
       {canBrowse && (
@@ -32,8 +32,8 @@ export function ServerHub() {
           className={cn(
             'flex items-center gap-1.5 w-full px-2 py-1.5 text-sm transition-colors duration-150 border-l-4',
             hubSection === 'file-browser'
-              ? 'bg-primary text-primary border-[#6f53ef]'
-              : 'text-secondary hover:bg-primary border-transparent',
+              ? 'bg-secondary text-primary border-[#6f53ef]'
+              : 'text-secondary hover:bg-secondary border-transparent',
           )}
           onClick={() => useUiStore.getState().setHubSection('file-browser')}
         >
@@ -47,8 +47,8 @@ export function ServerHub() {
           className={cn(
             'flex items-center gap-1.5 w-full px-2 py-1.5 text-sm transition-colors duration-150 border-l-4',
             hubSection === 'server-dms'
-              ? 'bg-primary text-primary border-[#6f53ef]'
-              : 'text-secondary hover:bg-primary border-transparent',
+              ? 'bg-secondary text-primary border-[#6f53ef]'
+              : 'text-secondary hover:bg-secondary border-transparent',
           )}
           onClick={() => useUiStore.getState().setHubSection('server-dms')}
         >

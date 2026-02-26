@@ -29,11 +29,7 @@ export function SnappedMediaSidebar() {
       animate={{ width, opacity: 1 }}
       exit={{ width: 0, opacity: 0 }}
       transition={springDock}
-      className="flex flex-col shrink-0 overflow-hidden border-primary bg-secondary"
-      style={{
-        borderLeftWidth: mediaViewMode === 'snapped-right' ? 1 : 0,
-        borderRightWidth: mediaViewMode === 'snapped-left' ? 1 : 0,
-      }}
+      className="flex flex-col shrink-0 overflow-hidden bg-tertiary"
     >
       <SnappedHeader title={title} startedAt={callStartedAt} />
       <div className="flex flex-1 flex-col overflow-hidden bg-[rgba(12,12,20,0.95)]">
