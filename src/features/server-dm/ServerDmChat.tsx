@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { MessageList } from '@/features/chat';
+import { MessageList, ReplyBanner } from '@/features/chat';
 import { useServerDmStore } from '@/stores/server-dm';
 import { ServerDmHeader } from './ServerDmHeader';
 import { ServerDmInput } from './ServerDmInput';
@@ -25,6 +25,7 @@ export function ServerDmChat() {
   } = useServerDmMessages(activeConvoId);
 
   const [replyTo, setReplyTo] = useState<{ id: string; author: string; content: string } | null>(null);
+  const [inputExpanded, setInputExpanded] = useState(false);
 
   if (!activeConvoId || !convo) {
     return <ServerDmEmptyState />;
@@ -58,9 +59,17 @@ export function ServerDmChat() {
         reactOnly
       />
 
-      <div className="shrink-0 border-t-2 border-primary">
+      <div
+        className="border-t-2 border-primary flex flex-col overflow-hidden"
+        style={{
+          height: inputExpanded ? 'calc(100% - 60px)' : replyTo ? '94px' : '60px',
+          flexShrink: 0,
+          transition: 'height 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+        }}
+      >
+        {replyTo && <ReplyBanner author={replyTo.author} onCancel={() => setReplyTo(null)} />}
         {isPeerTyping && (
-          <div className="px-4 py-1 text-xs text-muted">
+          <div className="px-4 py-1 text-xs text-muted shrink-0">
             {peerName} is typing...
           </div>
         )}
@@ -70,6 +79,7 @@ export function ServerDmChat() {
           onSend={handleSend}
           replyTo={replyTo}
           onCancelReply={() => setReplyTo(null)}
+          onExpandedChange={setInputExpanded}
         />
       </div>
     </div>

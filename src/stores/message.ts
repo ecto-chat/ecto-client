@@ -12,6 +12,10 @@ interface MessageStore {
   hasMore: Map<string, boolean>;
   // channelId → userId → timestamp of last typing event
   typingUsers: Map<string, Map<string, number>>;
+  // Nonces of optimistic messages sent by this client (for WS echo suppression)
+  pendingNonces: Set<string>;
+  // Stable React keys for optimistic messages (realId → tempId)
+  stableKeys: Map<string, string>;
 
   addMessage: (channelId: string, message: Message) => void;
   prependMessages: (channelId: string, messages: Message[], hasMore: boolean) => void;
@@ -23,14 +27,18 @@ interface MessageStore {
   setTyping: (channelId: string, userId: string) => void;
   clearTyping: (channelId: string, userId: string) => void;
   clearExpiredTyping: () => void;
+  addNonce: (nonce: string) => void;
+  consumeNonce: (nonce: string) => boolean;
 }
 
-export const useMessageStore = create<MessageStore>()((set) => ({
+export const useMessageStore = create<MessageStore>()((set, get) => ({
   messages: new Map(),
   messageOrder: new Map(),
   oldestLoaded: new Map(),
   hasMore: new Map(),
   typingUsers: new Map(),
+  pendingNonces: new Set(),
+  stableKeys: new Map(),
 
   addMessage: (channelId, message) =>
     set((state) => {
@@ -136,6 +144,7 @@ export const useMessageStore = create<MessageStore>()((set) => ({
       if (!channelMessages?.has(tempId)) return state;
       const messages = new Map(state.messages);
       const messageOrder = new Map(state.messageOrder);
+      const stableKeys = new Map(state.stableKeys);
       const updated = new Map(channelMessages);
       updated.delete(tempId);
       updated.set(real.id, real);
@@ -147,7 +156,10 @@ export const useMessageStore = create<MessageStore>()((set) => ({
       } else {
         messageOrder.set(channelId, order.map((id) => (id === tempId ? real.id : id)));
       }
-      return { messages, messageOrder };
+      // Carry the stable key so React doesn't unmount/remount the message
+      stableKeys.set(real.id, tempId);
+      stableKeys.delete(tempId);
+      return { messages, messageOrder, stableKeys };
     }),
 
   clearChannel: (channelId) =>
@@ -200,4 +212,13 @@ export const useMessageStore = create<MessageStore>()((set) => ({
       }
       return changed ? { typingUsers } : state;
     }),
+
+  addNonce: (nonce) => {
+    get().pendingNonces.add(nonce);
+  },
+
+  consumeNonce: (nonce) => {
+    const removed = get().pendingNonces.delete(nonce);
+    return removed;
+  },
 }));

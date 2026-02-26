@@ -53,6 +53,7 @@ export interface ServerRouter {
         content?: string;
         reply_to?: string;
         attachment_ids?: string[];
+        nonce?: string;
       }) => Promise<Message>;
     };
     update: {

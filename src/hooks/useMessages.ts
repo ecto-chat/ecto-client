@@ -46,6 +46,7 @@ export function useMessages(channelId: string) {
 
       // Build optimistic message
       const tempId = generateUUIDv7();
+      const nonce = tempId; // Use tempId as nonce for WS echo suppression
       const user = useAuthStore.getState().user;
       const member = user ? useMemberStore.getState().members.get(serverId)?.get(user.id) : undefined;
       if (user) {
@@ -73,6 +74,7 @@ export function useMessages(channelId: string) {
           webhook_id: null,
         };
         useMessageStore.getState().addMessage(channelId, optimistic);
+        useMessageStore.getState().addNonce(nonce);
       }
 
       try {
@@ -81,16 +83,16 @@ export function useMessages(channelId: string) {
           content: content || undefined,
           reply_to: replyTo,
           attachment_ids: attachmentIds,
+          nonce,
         });
-        // Replace optimistic message with real one; WS echo dedup handles itself
         if (real && user) {
-          // Remove temp, real message arrives via WS echo (addMessage dedup)
           useMessageStore.getState().replaceMessage(channelId, tempId, real as Message);
         }
       } catch {
         // Remove optimistic message on failure
         if (user) {
           useMessageStore.getState().deleteMessage(channelId, tempId);
+          useMessageStore.getState().consumeNonce(nonce);
         }
       }
     },

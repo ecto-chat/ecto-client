@@ -4,6 +4,7 @@ import { Spinner, ScrollArea } from '@/ui';
 
 import type { Message } from 'ecto-shared';
 
+import { useMessageStore } from '@/stores/message';
 import { MessageItem } from './MessageItem';
 
 type MessageListProps = {
@@ -26,6 +27,7 @@ export function MessageList({
   onPin, onUnpin, onMarkRead, onReply, readOnly, reactOnly,
 }: MessageListProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
   const topSentinelRef = useRef<HTMLDivElement>(null);
   const wasAtBottom = useRef(true);
   const loadingMore = useRef(false);
@@ -58,6 +60,17 @@ export function MessageList({
     }
     prevMessagesRef.current = messages;
   }, [messages, scrollToBottom]);
+
+  // Re-scroll to bottom when content resizes (e.g. images loading) if user was at bottom
+  useEffect(() => {
+    const content = contentRef.current;
+    if (!content) return;
+    const observer = new ResizeObserver(() => {
+      if (wasAtBottom.current && !loadingMore.current) scrollToBottom();
+    });
+    observer.observe(content);
+    return () => observer.disconnect();
+  }, [scrollToBottom]);
 
   const handleScroll = () => {
     wasAtBottom.current = isAtBottom();
@@ -119,6 +132,9 @@ export function MessageList({
     }, 300);
   }, []);
 
+  // Stable keys prevent React unmount/remount when optimistic messages are replaced
+  const stableKeys = useMessageStore((s) => s.stableKeys);
+
   // Group messages and add date separators
   let lastDate = '';
   let lastAuthorId = '';
@@ -129,6 +145,7 @@ export function MessageList({
       onScroll={handleScroll}
       className="flex-1"
     >
+      <div ref={contentRef}>
       <div ref={topSentinelRef} className="flex justify-center py-2">
         {hasMore && <Spinner size="sm" />}
       </div>
@@ -144,7 +161,7 @@ export function MessageList({
         lastAuthorId = currentAuthorId;
 
         return (
-          <div key={msg.id} data-message-id={msg.id} className={isGrouped ? 'mt-0.5' : idx === 0 ? '' : 'mt-4'}>
+          <div key={stableKeys.get(msg.id) ?? msg.id} data-message-id={msg.id} className={isGrouped ? 'mt-0.5' : idx === 0 ? '' : 'mt-4'}>
             {showDateSeparator && (
               <div className="my-2 flex items-center gap-3 px-4">
                 <div className="h-px flex-1 bg-border" />
@@ -167,6 +184,7 @@ export function MessageList({
           </div>
         );
       })}
+      </div>
     </ScrollArea>
   );
 }

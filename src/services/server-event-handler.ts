@@ -23,11 +23,15 @@ export function handleMainEvent(serverId: string, event: string, data: unknown, 
   const d = data as Record<string, unknown>;
 
   switch (event) {
-    case 'message.create':
+    case 'message.create': {
+      // Suppress WS echo for messages sent by this client (matched by nonce)
+      const nonce = d.nonce as string | undefined;
+      if (nonce && useMessageStore.getState().consumeNonce(nonce)) break;
       useMessageStore.getState().addMessage(d.channel_id as string, d as unknown as Message);
       useReadStateStore.getState().incrementUnread(d.channel_id as string);
       maybeNotify(serverId, d);
       break;
+    }
 
     case 'mention.create': {
       useReadStateStore.getState().incrementMention(d.channel_id as string);
