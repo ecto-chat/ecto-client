@@ -2,10 +2,7 @@
 
 The desktop and web client for [Ecto](https://ecto.chat) - a federated chat platform where users own their servers and traverse freely between communities through a unified client.
 
-<details>
-<summary><img src="https://img.shields.io/badge/AI--Assisted_Development_Disclosure-Claude_(Anthropic)-8A2BE2?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJ3aGl0ZSI+PHBhdGggZD0iTTEyIDJhMTAgMTAgMCAxIDAgMCAyMCAxMCAxMCAwIDAgMCAwLTIwem0wIDE4YTggOCAwIDEgMSAwLTE2IDggOCAwIDAgMSAwIDE2eiIvPjwvc3ZnPg==" alt="AI-Assisted Development" /></summary>
-
-<br>
+<img src="https://img.shields.io/badge/AI--Assisted_Development_Disclosure-Claude_(Anthropic)-8A2BE2?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJ3aGl0ZSI+PHBhdGggZD0iTTEyIDJhMTAgMTAgMCAxIDAgMCAyMCAxMCAxMCAwIDAgMCAwLTIwem0wIDE4YTggOCAwIDEgMSAwLTE2IDggOCAwIDAgMSAwIDE2eiIvPjwvc3ZnPg==" alt="AI-Assisted Development" />
 
 > [!NOTE]
 > This project uses **Claude** (Anthropic) as a development tool. Responsible AI-assisted development means every generated contribution is reviewed, tested, and validated by the project team before merging. AI accelerates development, it does not replace engineering judgment, code review, or security auditing.
@@ -18,8 +15,6 @@ The desktop and web client for [Ecto](https://ecto.chat) - a federated chat plat
 > - **Server Address Validation** - Public servers enforce HTTPS; LAN addresses are detected automatically and allowed over HTTP for self-hosted setups
 > - **Markdown Rendering Pipeline** - User content rendered through `marked` + DOMPurify; iframe embeds restricted to YouTube and Vimeo; images restricted to HTTPS sources
 > - **CSS Injection Prevention** - Custom theming uses CSS property allowlisting to prevent script injection via style attributes
-
-</details>
 
 ---
 
