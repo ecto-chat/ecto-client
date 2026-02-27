@@ -133,7 +133,9 @@ class ConnectionManager {
     this.centralWs.onDisconnect = (code, reason) => {
       console.warn('Central WS disconnected:', code, reason);
       this.reconnection.scheduleReconnect('__central__', async () => {
-        await this.centralWs!.connect(centralUrl, getToken()!).catch(() => {});
+        const freshToken = await useAuthStore.getState().ensureFreshToken();
+        if (!freshToken) return; // Will retry on next scheduled attempt
+        await this.centralWs!.connect(centralUrl, freshToken).catch(() => {});
       });
     };
 
@@ -210,7 +212,9 @@ class ConnectionManager {
     this.centralWs.onDisconnect = (code, reason) => {
       console.warn('Central WS disconnected:', code, reason);
       this.reconnection.scheduleReconnect('__central__', async () => {
-        await this.centralWs!.connect(centralUrl, getToken()!).catch(() => {});
+        const freshToken = await useAuthStore.getState().ensureFreshToken();
+        if (!freshToken) return; // Will retry on next scheduled attempt
+        await this.centralWs!.connect(centralUrl, freshToken).catch(() => {});
       });
     };
 
@@ -556,7 +560,37 @@ class ConnectionManager {
       }
 
       if (ws.isAuthFailure(code)) {
-        useConnectionStore.getState().setStatus(conn.serverId, 'disconnected');
+        // Attempt server token refresh before giving up
+        (async () => {
+          try {
+            const result = await conn.trpc.server.refreshToken.mutate() as { server_token: string };
+            conn.token = result.server_token;
+            conn.trpc = createServerTrpcClient(conn.address, () => conn.token);
+            await storeServerSession(conn.serverId, conn.address, result.server_token, {
+              tokenExp: parseTokenExp(result.server_token),
+            });
+            // Retry connect with fresh token
+            await ws.connect(conn.address, conn.token);
+            useConnectionStore.getState().setStatus(conn.serverId, 'connected');
+            this.reconnection.resetAttempts(conn.serverId);
+            this.scheduleServerTokenRefresh(conn);
+          } catch {
+            // Server token refresh failed — try re-joining via Central token
+            const centralToken = useAuthStore.getState().getToken();
+            if (centralToken) {
+              try {
+                const { realServerId } = await this.connectToServer(
+                  conn.serverId, conn.address, centralToken, { silent: true, openMainWs: true },
+                );
+                if (realServerId) {
+                  useConnectionStore.getState().setStatus(realServerId, 'connected');
+                }
+                return;
+              } catch { /* fall through */ }
+            }
+            useConnectionStore.getState().setStatus(conn.serverId, 'disconnected');
+          }
+        })();
         return;
       }
       const reconnect = async () => {

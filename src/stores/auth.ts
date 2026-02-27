@@ -37,6 +37,7 @@ interface AuthStore {
   setUser: (user: GlobalUser) => void;
   restoreSession: () => Promise<void>;
   getToken: () => string | null;
+  ensureFreshToken: () => Promise<string | null>;
   getCentralTrpc: () => CentralTrpcClient;
   enterLocalOnly: () => void;
   signInToCentralFromModal: (email: string, password: string) => Promise<void>;
@@ -176,6 +177,21 @@ export const useAuthStore = create<AuthStore>()((set, get) => {
     centralUrl: DEFAULT_CENTRAL_URL,
 
     getToken: () => get().token,
+
+    ensureFreshToken: async () => {
+      const token = get().token;
+      if (!token) return null;
+      const exp = parseTokenExp(token);
+      // If token expires within 60s, refresh it
+      if (exp && exp * 1000 - Date.now() < 60_000) {
+        try {
+          await get().refreshToken();
+        } catch {
+          return null;
+        }
+      }
+      return get().token;
+    },
 
     isCentralAuth: () => get().centralAuthState === 'authenticated',
 
@@ -518,3 +534,18 @@ export const useAuthStore = create<AuthStore>()((set, get) => {
     },
   };
 });
+
+// Proactively refresh token when tab becomes visible or network reconnects
+// (setTimeout-based refresh timers don't fire reliably in background tabs)
+function onWakeUp() {
+  const { token, authState } = useAuthStore.getState();
+  if (authState !== 'authenticated' || !token) return;
+  const exp = parseTokenExp(token);
+  if (exp && exp * 1000 - Date.now() < 60_000) {
+    useAuthStore.getState().refreshToken().catch(() => {});
+  }
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') onWakeUp();
+});
+window.addEventListener('online', onWakeUp);
