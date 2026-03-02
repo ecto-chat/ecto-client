@@ -10,7 +10,7 @@ export const STEP_LABELS = [
   'Server Settings',
   'Template',
   'Channels',
-  'First Invite',
+  'Finish',
 ] as const;
 
 export const UPLOAD_SIZE_OPTIONS = [
@@ -39,6 +39,8 @@ export type WizardState = {
   allowMemberDms: boolean;
   maxUploadSizeBytes: number;
   selectedTemplate: ServerTemplate | null;
+  categories: { name: string; channels: { name: string; type: 'text' | 'voice' }[] }[];
+  roles: { name: string; color: string }[];
   channels: { name: string; type: 'text' | 'voice' }[];
   channelsCreated: boolean;
   invite: Invite | null;

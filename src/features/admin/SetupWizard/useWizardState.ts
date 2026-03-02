@@ -15,10 +15,9 @@ const INITIAL_STATE: WizardState = {
   allowMemberDms: false,
   maxUploadSizeBytes: 5 * 1024 * 1024,
   selectedTemplate: null,
-  channels: [
-    { name: 'general', type: 'text' },
-    { name: 'General', type: 'voice' },
-  ],
+  categories: [],
+  roles: [],
+  channels: [],
   channelsCreated: false,
   invite: null,
   inviteUrl: null,

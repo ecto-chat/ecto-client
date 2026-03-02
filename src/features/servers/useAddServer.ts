@@ -1,9 +1,11 @@
 import { useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 import { EctoErrorCode } from 'ecto-shared';
 
 import { useUiStore } from '@/stores/ui';
 import { useAuthStore } from '@/stores/auth';
+import { useServerStore } from '@/stores/server';
 import { connectionManager } from '@/services/connection-manager';
 
 import type { LocalJoinStage, ServerPreviewData } from './types';
@@ -20,6 +22,20 @@ export function useAddServer() {
   const [needsPassword, setNeedsPassword] = useState(false);
   const [needsInvite, setNeedsInvite] = useState(false);
   const [detectedUser, setDetectedUser] = useState('');
+
+  const navigate = useNavigate();
+
+  const navigateToServer = useCallback((serverId: string) => {
+    const meta = useServerStore.getState().serverMeta.get(serverId);
+    const defaultChannelId = meta?.default_channel_id;
+    if (defaultChannelId) {
+      useUiStore.getState().setActiveChannel(defaultChannelId);
+      navigate(`/servers/${serverId}/channels/${defaultChannelId}`);
+    } else {
+      useUiStore.getState().setActiveChannel(null);
+      navigate(`/servers/${serverId}/channels`);
+    }
+  }, [navigate]);
 
   const resetAndClose = useCallback(() => {
     setAddress('');
@@ -44,6 +60,8 @@ export function useAddServer() {
       await connectionManager.storeLocalCredentials(username, password);
       const name = await queryServerName(result.serverId, preview?.name ?? addr);
       addToServerStore(result.serverId, addr, name, preview?.icon_url ?? null);
+      await connectionManager.switchServer(result.serverId);
+      navigateToServer(result.serverId);
       resetAndClose();
       return;
     }
@@ -61,7 +79,7 @@ export function useAddServer() {
       setStage('idle');
       setError(message);
     }
-  }, [preview, resetAndClose]);
+  }, [preview, resetAndClose, navigateToServer]);
 
   const handleAddressSubmit = useCallback(async (rawAddr: string) => {
     const addr = rawAddr.replace(/^https?:\/\//, '').replace(/\/+$/, '');
@@ -79,6 +97,7 @@ export function useAddServer() {
         });
         const name = serverName ?? await queryServerName(realServerId, addr);
         addToServerStore(realServerId, addr, name, null);
+        navigateToServer(realServerId);
         resetAndClose();
       } catch (err: unknown) {
         const ectoCode = (err as { ectoCode?: number }).ectoCode ?? 0;
@@ -108,7 +127,7 @@ export function useAddServer() {
     }
     if (prev.require_invite) { setStage('preview'); return; }
     await attemptAutoJoin(addr, creds.username, creds.password);
-  }, [attemptAutoJoin, resetAndClose]);
+  }, [attemptAutoJoin, resetAndClose, navigateToServer]);
 
   const handleCentralInviteSubmit = useCallback(async (inviteCode: string) => {
     setError('');
@@ -122,11 +141,12 @@ export function useAddServer() {
       });
       const name = serverName ?? await queryServerName(realServerId, address);
       addToServerStore(realServerId, address, name, null);
+      navigateToServer(realServerId);
       resetAndClose();
     } catch (err: unknown) {
       setError((err as Error).message ?? 'Invalid invite code');
     }
-  }, [address, resetAndClose]);
+  }, [address, resetAndClose, navigateToServer]);
 
   const handleInviteSubmit = useCallback(async (inviteCode: string, password?: string) => {
     if (needsPassword && password) {

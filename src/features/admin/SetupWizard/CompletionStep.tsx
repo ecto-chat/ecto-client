@@ -5,6 +5,8 @@ import { Button, Input } from '@/ui';
 import type { StepProps } from './wizard-types';
 
 type CompletionStepProps = Pick<StepProps, 'state' | 'loading'> & {
+  requireInvite: boolean;
+  serverUrl: string | null;
   onCreateInvite: () => void;
   onCopyInvite: () => void;
   onFinish: () => void;
@@ -13,10 +15,13 @@ type CompletionStepProps = Pick<StepProps, 'state' | 'loading'> & {
 export function CompletionStep({
   state,
   loading,
+  requireInvite,
+  serverUrl,
   onCreateInvite,
   onCopyInvite,
   onFinish,
 }: CompletionStepProps) {
+  // State 3: Invite created — show invite code + URL
   if (state.invite) {
     return (
       <div className="flex flex-col items-center gap-6 py-4 text-center">
@@ -62,21 +67,88 @@ export function CompletionStep({
     );
   }
 
+  // State 1: Not invite-only — setup complete, show server URL
+  if (!requireInvite) {
+    return (
+      <div className="flex flex-col items-center gap-6 py-4 text-center">
+        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-accent/10">
+          <PartyPopper size={24} className="text-accent" />
+        </div>
+        <div className="space-y-2">
+          <h2 className="text-xl text-primary">Setup Complete!</h2>
+          <p className="text-sm text-secondary leading-relaxed max-w-sm">
+            Your server is ready. Anyone can join using the server address below.
+          </p>
+        </div>
+
+        {serverUrl && (
+          <div className="flex items-center gap-2 w-full">
+            <Input
+              value={serverUrl}
+              readOnly
+              onClick={(e) => (e.target as HTMLInputElement).select()}
+            />
+            <Button
+              variant="secondary"
+              size="md"
+              onClick={() => {
+                navigator.clipboard.writeText(serverUrl).catch(() => {});
+              }}
+            >
+              <Copy size={14} />
+              Copy
+            </Button>
+          </div>
+        )}
+
+        <Button onClick={onFinish} className="w-full">
+          Close Setup Wizard
+        </Button>
+      </div>
+    );
+  }
+
+  // State 2: Invite-only, no invite yet — prompt to generate
   return (
     <div className="flex flex-col items-center gap-6 py-4 text-center">
       <div className="flex h-14 w-14 items-center justify-center rounded-full bg-accent/10">
         <Link size={24} className="text-accent" />
       </div>
       <div className="space-y-2">
-        <h2 className="text-xl text-primary">Create Your First Invite</h2>
+        <h2 className="text-xl text-primary">Invite Friends to Your Server</h2>
         <p className="text-sm text-secondary leading-relaxed max-w-sm">
-          Create an invite link so others can join your server. You can
-          always create more invites later from the admin panel.
+          Your server requires an invite to join. Generate an invite link so others can find their way in.
         </p>
       </div>
-      <Button onClick={onCreateInvite} loading={loading} className="w-full">
-        Generate Invite
-      </Button>
+
+      {serverUrl && (
+        <div className="flex items-center gap-2 w-full">
+          <Input
+            value={serverUrl}
+            readOnly
+            onClick={(e) => (e.target as HTMLInputElement).select()}
+          />
+          <Button
+            variant="secondary"
+            size="md"
+            onClick={() => {
+              navigator.clipboard.writeText(serverUrl).catch(() => {});
+            }}
+          >
+            <Copy size={14} />
+            Copy
+          </Button>
+        </div>
+      )}
+
+      <div className="flex flex-col gap-2 w-full">
+        <Button onClick={onCreateInvite} loading={loading} className="w-full">
+          Generate Invite
+        </Button>
+        <Button variant="ghost" onClick={onFinish} className="w-full">
+          I'll do it later
+        </Button>
+      </div>
     </div>
   );
 }

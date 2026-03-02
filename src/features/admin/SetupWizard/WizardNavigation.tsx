@@ -7,7 +7,6 @@ type WizardNavigationProps = {
   loading: boolean;
   showBack: boolean;
   channelsCreated: boolean;
-  hasInvite: boolean;
   onBack: () => void;
   onNext: () => void;
   onSaveIdentity: () => void;
@@ -20,14 +19,13 @@ export function WizardNavigation({
   loading,
   showBack,
   channelsCreated,
-  hasInvite,
   onBack,
   onNext,
   onSaveIdentity,
   onSaveSettings,
   onCreateChannels,
 }: WizardNavigationProps) {
-  if (step === 5 || (step === 7 && hasInvite)) return null;
+  if (step === 5 || step === 7) return null;
 
   return (
     <div className="flex items-center justify-between pt-2 border-t-2 border-primary">
@@ -52,7 +50,7 @@ export function WizardNavigation({
       )}
       {step === 6 && !channelsCreated && (
         <Button onClick={onCreateChannels} loading={loading}>
-          Create Channels
+          Create Channels & Roles
         </Button>
       )}
       {step === 6 && channelsCreated && <Button onClick={onNext}>Next</Button>}

@@ -296,6 +296,15 @@ class ConnectionManager {
         }
 
         if (options?.openMainWs) {
+          // Demote old active server from main WS to notify WS
+          if (this.activeServerId && this.activeServerId !== cachedServerId) {
+            const oldConn = this.connections.get(this.activeServerId);
+            if (oldConn?.mainWs) {
+              oldConn.mainWs.disconnect();
+              oldConn.mainWs = null;
+              this.openNotifyWs(oldConn).catch(() => {});
+            }
+          }
           await this.openMainWs(conn, options?.activeChannelId);
           this.activeServerId = cachedServerId;
         } else {
@@ -378,6 +387,15 @@ class ConnectionManager {
     const defaultChannelId = joinData.result.data.server.default_channel_id ?? null;
 
     if (options?.openMainWs) {
+      // Demote old active server from main WS to notify WS
+      if (this.activeServerId && this.activeServerId !== realServerId) {
+        const oldConn = this.connections.get(this.activeServerId);
+        if (oldConn?.mainWs) {
+          oldConn.mainWs.disconnect();
+          oldConn.mainWs = null;
+          this.openNotifyWs(oldConn).catch(() => {});
+        }
+      }
       await this.openMainWs(conn, options?.activeChannelId);
       this.activeServerId = realServerId;
     } else {
@@ -654,7 +672,7 @@ class ConnectionManager {
       };
 
       if (readyData.server) {
-        useServerStore.getState().setServerMeta(conn.serverId, {
+        const metaPayload = {
           setup_completed: readyData.server.setup_completed ?? true,
           admin_user_id: readyData.server.admin_user_id ?? null,
           user_id: readyData.user_id ?? null,
@@ -662,7 +680,8 @@ class ConnectionManager {
           banner_url: readyData.server.banner_url ?? null,
           allow_member_dms: readyData.server.allow_member_dms ?? false,
           hosting_mode: readyData.server.hosting_mode ?? 'self-hosted',
-        });
+        };
+        useServerStore.getState().setServerMeta(conn.serverId, metaPayload);
       }
 
       if (readyData.channels) {

@@ -1,10 +1,9 @@
 import { useCallback } from 'react';
 
 import { useServerStore } from '@/stores/server';
+import { useChannelStore } from '@/stores/channel';
 
 import { connectionManager } from '@/services/connection-manager';
-
-import { flattenTemplateChannels } from '@/lib/server-templates';
 
 import type { ServerTemplate } from '@/lib/server-templates';
 
@@ -16,11 +15,21 @@ export function useWizardActions(serverId: string | null, onClose: () => void) {
 
   const handleSelectTemplate = useCallback((template: ServerTemplate | null) => {
     if (template) {
-      updateState({ selectedTemplate: template, channels: flattenTemplateChannels(template) });
+      updateState({
+        selectedTemplate: template,
+        categories: template.categories.map((c) => ({
+          name: c.name,
+          channels: c.channels.map((ch) => ({ name: ch.name, type: ch.type })),
+        })),
+        channels: template.uncategorized.map((ch) => ({ name: ch.name, type: ch.type })),
+        roles: template.roles.map((r) => ({ name: r.name, color: r.color })),
+      });
     } else {
       updateState({
         selectedTemplate: null,
-        channels: [{ name: 'general', type: 'text' }, { name: 'General', type: 'voice' }],
+        categories: [],
+        channels: [],
+        roles: [],
       });
     }
     goNext();
@@ -30,41 +39,61 @@ export function useWizardActions(serverId: string | null, onClose: () => void) {
     if (!serverId) return;
     const trpc = connectionManager.getServerTrpc(serverId);
     if (!trpc) return;
-    const template = state.selectedTemplate;
     const validChannels = state.channels.filter((c) => c.name.trim());
-    if (validChannels.length === 0 && (!template || template.categories.length === 0)) {
-      setError('At least one channel is required'); return;
+    const hasCategories = state.categories.some((cat) => cat.channels.some((ch) => ch.name.trim()));
+    if (validChannels.length === 0 && !hasCategories) {
+      // Check if existing channels cover everything — allow zero new creations
+      const existingMap = useChannelStore.getState().channels.get(serverId);
+      if (!existingMap || existingMap.size === 0) {
+        setError('At least one channel is required'); return;
+      }
     }
     setLoading(true); setError('');
     try {
-      if (template && template.categories.length > 0) {
-        for (const cat of template.categories) {
-          const category = await trpc.categories.create.mutate({ name: cat.name });
-          for (const ch of cat.channels) {
-            await trpc.channels.create.mutate({
-              name: ch.name.trim(), type: ch.type, category_id: category.id,
-            });
-          }
-        }
-        for (const ch of template.uncategorized) {
-          await trpc.channels.create.mutate({ name: ch.name.trim(), type: ch.type });
-        }
-      } else {
-        for (const channel of validChannels) {
-          await trpc.channels.create.mutate({ name: channel.name.trim(), type: channel.type });
+      // Build set of existing channel keys to prevent duplicates
+      const existingKeys = new Set<string>();
+      const existingMap = useChannelStore.getState().channels.get(serverId);
+      if (existingMap) {
+        for (const ch of existingMap.values()) {
+          existingKeys.add(`${ch.name.toLowerCase()}:${ch.type}`);
         }
       }
-      if (template && template.roles.length > 0) {
-        for (const role of template.roles) {
-          await trpc.roles.create.mutate({ name: role.name, color: role.color });
+
+      // Create categories and their channels
+      for (const cat of state.categories) {
+        const validCatChannels = cat.channels.filter((ch) => ch.name.trim());
+        if (!cat.name.trim() && validCatChannels.length === 0) continue;
+        const category = await trpc.categories.create.mutate({ name: cat.name.trim() });
+        for (const ch of validCatChannels) {
+          const key = `${ch.name.trim().toLowerCase()}:${ch.type}`;
+          if (existingKeys.has(key)) continue;
+          await trpc.channels.create.mutate({
+            name: ch.name.trim(), type: ch.type, category_id: category.id,
+          });
+          existingKeys.add(key);
         }
       }
+
+      // Create uncategorized channels
+      for (const ch of validChannels) {
+        const key = `${ch.name.trim().toLowerCase()}:${ch.type}`;
+        if (existingKeys.has(key)) continue;
+        await trpc.channels.create.mutate({ name: ch.name.trim(), type: ch.type });
+        existingKeys.add(key);
+      }
+
+      // Create roles
+      for (const role of state.roles) {
+        if (!role.name.trim()) continue;
+        await trpc.roles.create.mutate({ name: role.name.trim(), color: role.color });
+      }
+
       updateState({ channelsCreated: true });
       goNext();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to create channels');
     } finally { setLoading(false); }
-  }, [serverId, state.selectedTemplate, state.channels, updateState, goNext, setLoading, setError]);
+  }, [serverId, state.categories, state.channels, state.roles, updateState, goNext, setLoading, setError]);
 
   const handleCreateInvite = useCallback(async () => {
     if (!serverId) return;

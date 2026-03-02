@@ -58,7 +58,6 @@ export function AppLayout() {
   const showVoiceBanner = voiceServerId !== null && voiceServerId !== activeServerId;
   const callState = useCallStore((s) => s.callState);
   const answeredElsewhere = useCallStore((s) => s.answeredElsewhere);
-  const showSetupWizard = useUiStore((s) => s.activeModal === 'setup-wizard');
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -137,9 +136,7 @@ export function AppLayout() {
         <main className="flex flex-1 flex-col min-w-0 bg-secondary rounded-r-md overflow-hidden">
           {showVoiceBanner && <VoiceBanner />}
           {(callState === 'active' || answeredElsewhere) && <CallBanner />}
-          {showSetupWizard ? (
-            <SetupWizard onClose={() => useUiStore.getState().closeModal()} />
-          ) : isServerOffline ? (
+          {isServerOffline ? (
             <EmptyState
               icon={<WifiOff />}
               title="Server is offline"
@@ -184,6 +181,7 @@ export function AppLayout() {
         )}
         {!isHomeMode && !isServerOffline && memberListVisible && <MemberList />}
       </div>
+      <SetupWizard />
       <AddServerModal />
       <LeaveServerModal />
       <ServerJoinModal />
