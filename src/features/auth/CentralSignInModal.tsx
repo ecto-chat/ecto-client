@@ -19,6 +19,7 @@ export function CentralSignInModal() {
   const [username, setUsername] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [tosAccepted, setTosAccepted] = useState(false);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -49,6 +50,7 @@ export function CentralSignInModal() {
   const switchMode = () => {
     setMode(mode === 'login' ? 'register' : 'login');
     setError('');
+    setTosAccepted(false);
   };
 
   return (
@@ -87,11 +89,28 @@ export function CentralSignInModal() {
           required
         />
 
+        {mode === 'register' && (
+          <label className="flex items-start gap-2 text-sm text-muted cursor-pointer">
+            <input
+              type="checkbox"
+              checked={tosAccepted}
+              onChange={(e) => setTosAccepted(e.target.checked)}
+              className="mt-0.5 accent-accent"
+            />
+            <span>
+              I have read and agree to the{' '}
+              <a href="https://ecto.chat/privacy" target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">Privacy Policy</a>
+              {' '}and{' '}
+              <a href="https://ecto.chat/terms" target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">Terms of Service</a>
+            </span>
+          </label>
+        )}
+
         <div className="flex justify-end gap-3 pt-2">
           <Button type="button" variant="secondary" onClick={close}>
             Cancel
           </Button>
-          <Button type="submit" loading={loading}>
+          <Button type="submit" loading={loading} disabled={mode === 'register' && !tosAccepted}>
             {mode === 'login' ? 'Sign In' : 'Create Account'}
           </Button>
         </div>

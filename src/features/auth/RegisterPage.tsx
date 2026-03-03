@@ -22,6 +22,7 @@ export function RegisterPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [tosAccepted, setTosAccepted] = useState(false);
   const register = useAuthStore((s) => s.register);
   const navigate = useNavigate();
 
@@ -95,7 +96,22 @@ export function RegisterPage() {
             minLength={8}
           />
 
-          <Button type="submit" loading={loading} className="w-full">
+          <label className="flex items-start gap-2 text-sm text-muted cursor-pointer">
+            <input
+              type="checkbox"
+              checked={tosAccepted}
+              onChange={(e) => setTosAccepted(e.target.checked)}
+              className="mt-0.5 accent-accent"
+            />
+            <span>
+              I have read and agree to the{' '}
+              <a href="https://ecto.chat/privacy" target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">Privacy Policy</a>
+              {' '}and{' '}
+              <a href="https://ecto.chat/terms" target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">Terms of Service</a>
+            </span>
+          </label>
+
+          <Button type="submit" loading={loading} disabled={!tosAccepted} className="w-full">
             Continue
           </Button>
         </motion.form>
