@@ -170,7 +170,7 @@ export function SearchSidebar() {
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: 16 }}
       transition={easeContent}
-      className="flex w-[240px] min-w-[240px] flex-col bg-tertiary overflow-hidden border-l-3 border-primary"
+      className="flex w-[360px] min-w-[360px] flex-col bg-tertiary overflow-hidden border-l-3 border-primary"
     >
       {/* Header */}
       <div className="flex h-[60px] shrink-0 items-center gap-2 border-b-2 border-primary px-3">
