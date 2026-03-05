@@ -41,6 +41,7 @@ interface AuthStore {
   getCentralTrpc: () => CentralTrpcClient;
   enterLocalOnly: () => void;
   signInToCentralFromModal: (email: string, password: string) => Promise<void>;
+  signInToCentralFromModalGoogle: (googleToken: string) => Promise<void>;
   switchAccount: (targetUserId: string) => Promise<void>;
   logoutAll: () => Promise<void>;
 }
@@ -398,6 +399,46 @@ export const useAuthStore = create<AuthStore>()((set, get) => {
       try {
         const trpc = createCentralTrpcClient(get().centralUrl, () => null);
         const result = await trpc.auth.login.mutate({ email, password });
+
+        const userId = parseUserId(result.access_token);
+        if (userId) {
+          await storeTokens(userId, result.access_token, result.refresh_token);
+          preferenceManager.setActiveUser(userId);
+        }
+        scheduleRefresh(result.access_token);
+
+        // Fetch user profile
+        const userTrpc = createCentralTrpcClient(get().centralUrl, () => result.access_token);
+        const modalUid = parseUserId(result.access_token);
+        if (!modalUid) throw new Error('Invalid access token');
+        const user = await userTrpc.profile.get.query({ user_id: modalUid });
+
+        // Update registry
+        registryAddAccount(buildAccountEntry(user));
+        setActiveUserId(modalUid);
+
+        // Reclaim legacy data if present
+        if (hasLegacyData()) {
+          reclaimLegacyData(modalUid);
+        }
+
+        set({
+          user,
+          token: result.access_token,
+          refreshToken_: result.refresh_token,
+          centralAuthState: 'authenticated',
+        });
+      } catch (err) {
+        set({ centralAuthState: 'unauthenticated' });
+        throw err;
+      }
+    },
+
+    signInToCentralFromModalGoogle: async (googleToken) => {
+      set({ centralAuthState: 'loading' });
+      try {
+        const trpc = createCentralTrpcClient(get().centralUrl, () => null);
+        const result = await trpc.auth.loginGoogle.mutate({ google_token: googleToken });
 
         const userId = parseUserId(result.access_token);
         if (userId) {

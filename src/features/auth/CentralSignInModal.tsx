@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react';
 
-import { Button, Input, Modal } from '@/ui';
+import { Button, Input, Modal, Separator } from '@/ui';
 
 import { useUiStore } from '@/stores/ui';
 import { useAuthStore } from '@/stores/auth';
@@ -45,6 +45,34 @@ export function CentralSignInModal() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleGoogleLogin = () => {
+    const { centralUrl } = useAuthStore.getState();
+    const popup = window.open(
+      `${centralUrl}/auth/google`,
+      'google-login',
+      'width=500,height=600',
+    );
+    const onMessage = async (event: MessageEvent) => {
+      if (event.data?.type === 'google-auth' && event.data.token) {
+        window.removeEventListener('message', onMessage);
+        popup?.close();
+        setError('');
+        setLoading(true);
+        try {
+          await useAuthStore.getState().signInToCentralFromModalGoogle(event.data.token as string);
+          const { centralUrl: url } = useAuthStore.getState();
+          await connectionManager.initializeCentralMidSession(url, () => useAuthStore.getState().token);
+          close();
+        } catch (err: unknown) {
+          setError(err instanceof Error ? err.message : 'Google login failed');
+        } finally {
+          setLoading(false);
+        }
+      }
+    };
+    window.addEventListener('message', onMessage);
   };
 
   const switchMode = () => {
@@ -114,6 +142,16 @@ export function CentralSignInModal() {
             {mode === 'login' ? 'Sign In' : 'Create Account'}
           </Button>
         </div>
+
+        <div className="flex items-center gap-3">
+          <Separator className="flex-1" />
+          <span className="text-xs text-muted">or</span>
+          <Separator className="flex-1" />
+        </div>
+
+        <Button type="button" variant="secondary" className="w-full" onClick={handleGoogleLogin} disabled={loading}>
+          Sign in with Google
+        </Button>
 
         <p className="text-center text-sm text-muted">
           {mode === 'login' ? (

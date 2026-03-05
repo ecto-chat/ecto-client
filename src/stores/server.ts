@@ -9,6 +9,8 @@ interface ServerMeta {
   banner_url: string | null;
   allow_member_dms: boolean;
   hosting_mode: 'self-hosted' | 'managed';
+  discoverable: boolean;
+  discovery_approved: boolean;
 }
 
 interface ServerStore {

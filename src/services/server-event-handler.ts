@@ -143,6 +143,8 @@ export function handleMainEvent(serverId: string, event: string, data: unknown, 
           if (d.banner_url !== undefined) metaUpdates.banner_url = d.banner_url as string | null;
           if (d.allow_member_dms !== undefined) metaUpdates.allow_member_dms = d.allow_member_dms as boolean;
           if (d.default_channel_id !== undefined) metaUpdates.default_channel_id = d.default_channel_id as string | null;
+          if (d.discoverable !== undefined) metaUpdates.discoverable = d.discoverable as boolean;
+          if (d.discovery_approved !== undefined) metaUpdates.discovery_approved = d.discovery_approved as boolean;
           if (Object.keys(metaUpdates).length > 0) {
             useServerStore.getState().setServerMeta(serverId, { ...meta, ...metaUpdates });
           }

@@ -31,6 +31,7 @@ const PERMISSION_LABELS: { key: PermissionKey; label: string; category: string }
   { key: 'MUTE_MEMBERS', label: 'Mute Members', category: 'Voice' },
   { key: 'DEAFEN_MEMBERS', label: 'Deafen Members', category: 'Voice' },
   { key: 'USE_VOICE_ACTIVITY', label: 'Use Voice Activity', category: 'Voice' },
+  { key: 'MANAGE_NEWS', label: 'Manage News', category: 'News' },
 ];
 
 const CATEGORIES = [...new Set(PERMISSION_LABELS.map((p) => p.category))];

@@ -32,6 +32,10 @@ import type {
   ServerDmConversation,
   ServerDmMessage,
   ActivityListResponse,
+  NewsPost,
+  NewsComment,
+  DiscoveryServer,
+  DiscoveryPost,
 } from 'ecto-shared';
 
 // ---------- Server tRPC Router ----------
@@ -84,7 +88,7 @@ export interface ServerRouter {
     create: {
       mutate: (input: {
         name: string;
-        type: 'text' | 'voice' | 'page';
+        type: 'text' | 'voice' | 'page' | 'news';
         category_id?: string;
         topic?: string;
         slowmode_seconds?: number;
@@ -478,6 +482,58 @@ export interface ServerRouter {
     };
   };
 
+  news: {
+    listPosts: {
+      query: (input: {
+        channel_id: string;
+        before?: string;
+        limit?: number;
+      }) => Promise<{ posts: NewsPost[]; has_more: boolean }>;
+    };
+    getPost: {
+      query: (input: { post_id: string }) => Promise<NewsPost>;
+    };
+    createPost: {
+      mutate: (input: {
+        channel_id: string;
+        title: string;
+        subtitle?: string;
+        hero_image_url?: string;
+        content: string;
+        submit_to_discovery?: boolean;
+      }) => Promise<NewsPost>;
+    };
+    updatePost: {
+      mutate: (input: {
+        post_id: string;
+        title?: string;
+        subtitle?: string;
+        hero_image_url?: string;
+        content?: string;
+        submit_to_discovery?: boolean;
+      }) => Promise<NewsPost>;
+    };
+    deletePost: {
+      mutate: (input: { post_id: string }) => Promise<{ success: boolean }>;
+    };
+    listComments: {
+      query: (input: {
+        post_id: string;
+        after?: string;
+        limit?: number;
+      }) => Promise<{ comments: NewsComment[] }>;
+    };
+    addComment: {
+      mutate: (input: {
+        post_id: string;
+        content: string;
+      }) => Promise<NewsComment>;
+    };
+    deleteComment: {
+      mutate: (input: { comment_id: string }) => Promise<{ success: boolean }>;
+    };
+  };
+
   serverConfig: {
     get: {
       query: () => Promise<{
@@ -487,6 +543,8 @@ export interface ServerRouter {
         require_invite: boolean;
         allow_member_dms: boolean;
         show_system_messages: boolean;
+        discoverable: boolean;
+        discovery_approved: boolean;
         version: string;
       }>;
     };
@@ -498,6 +556,7 @@ export interface ServerRouter {
         require_invite?: boolean;
         allow_member_dms?: boolean;
         show_system_messages?: boolean;
+        discoverable?: boolean;
       }) => Promise<{ success: boolean }>;
     };
     completeSetup: {
@@ -788,6 +847,19 @@ export interface CentralRouter {
     };
     unreadCount: {
       query: () => Promise<{ count: number }>;
+    };
+  };
+
+  discovery: {
+    getFeed: {
+      query: (input: {
+        before?: string;
+        limit?: number;
+        featured_only?: boolean;
+      }) => Promise<{ posts: DiscoveryPost[]; has_more: boolean }>;
+    };
+    getServers: {
+      query: (input: { limit?: number }) => Promise<{ servers: DiscoveryServer[] }>;
     };
   };
 }

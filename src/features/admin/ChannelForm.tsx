@@ -25,6 +25,7 @@ export function CreateChannelForm({ serverId, categories, onDone }: CreateChanne
     { value: 'text', label: 'Text' },
     { value: 'voice', label: 'Voice' },
     { value: 'page', label: 'Page' },
+    { value: 'news', label: 'News' },
   ];
 
   const categoryOptions = [
@@ -42,7 +43,7 @@ export function CreateChannelForm({ serverId, categories, onDone }: CreateChanne
       if (!trpc) throw new Error('Not connected');
       const created = await trpc.channels.create.mutate({
         name: name.trim(),
-        type: type as 'text' | 'voice' | 'page',
+        type: type as 'text' | 'voice' | 'page' | 'news',
         category_id: categoryId === 'none' ? undefined : categoryId,
       });
       useChannelStore.getState().addChannel(serverId, created);

@@ -1,24 +1,23 @@
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Home } from 'lucide-react';
+import { Users } from 'lucide-react';
 import { useUiStore } from '@/stores/ui';
 import { IconButton } from '@/ui/IconButton';
 import { Tooltip } from '@/ui/Tooltip';
 import { cn } from '@/lib/cn';
 
-export function HomeButton() {
+export function FriendsButton() {
   const location = useLocation();
   const navigate = useNavigate();
-
-  const isActive = location.pathname.startsWith('/discover');
+  const isActive = location.pathname.startsWith('/friends');
 
   const handleClick = () => {
     useUiStore.getState().setActiveServer(null);
     useUiStore.getState().setActiveChannel(null);
-    navigate('/discover');
+    navigate('/friends');
   };
 
   return (
-    <Tooltip content="Home" side="right">
+    <Tooltip content="Friends" side="right">
       <IconButton
         variant="default"
         size="lg"
@@ -30,7 +29,7 @@ export function HomeButton() {
             : 'rounded-full bg-tertiary text-secondary hover:rounded-2xl hover:bg-accent hover:text-white',
         )}
       >
-        <Home size={20} />
+        <Users size={20} />
       </IconButton>
     </Tooltip>
   );

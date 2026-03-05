@@ -1,5 +1,5 @@
 import { useEffect, lazy, Suspense } from 'react';
-import { Routes, Route, useLocation, useNavigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import { WifiOff } from 'lucide-react';
 
@@ -16,12 +16,16 @@ import { IncomingCallOverlay, CallBanner } from '@/features/call';
 import { ChannelView } from '@/features/chat';
 import { NotificationPrompt, NotificationToast } from '@/features/common';
 import { ActivityPanel, ActivityView } from '@/features/activity';
+import { DiscoverSidebar } from '@/features/discover/DiscoverSidebar';
 import { FriendList, DMView, DMSidebar } from '@/features/friends';
 import { FloatingMediaWindow, SnappedMediaSidebar, ResizeHandle } from '@/features/media-window';
 import { AddServerModal, LeaveServerModal, ServerJoinModal } from '@/features/servers';
 import { FileBrowserView } from '@/features/hub/FileBrowserView';
 import { ServerDmView } from '@/features/server-dm/ServerDmView';
 import { VoiceControls, VoiceBanner } from '@/features/voice';
+
+// features (lazy — opened on demand)
+const DiscoverPage = lazy(() => import('@/features/discover/DiscoverPage').then(m => ({ default: m.DiscoverPage })));
 
 // features (lazy — opened on demand, heavy import trees)
 const ServerSettings = lazy(() => import('@/features/admin/ServerSettings').then(m => ({ default: m.ServerSettings })));
@@ -97,9 +101,11 @@ export function AppLayout() {
   }, [navigate]);
 
   const isActivityRoute = location.pathname.startsWith('/activity');
+  const isDiscoverRoute = location.pathname.startsWith('/discover');
   const isHomeRoute =
     location.pathname.startsWith('/dms') || location.pathname.startsWith('/friends');
-  const isHomeMode = isHomeRoute || isActivityRoute || activeServerId === null;
+  const isHomeMode = isHomeRoute || isActivityRoute || isDiscoverRoute || activeServerId === null;
+  const showSidebar = true;
   const activeServerStatus = useConnectionStore((s) =>
     activeServerId ? s.connections.get(activeServerId) : undefined,
   );
@@ -111,17 +117,19 @@ export function AppLayout() {
   const isSnappedRight = mediaViewMode === 'snapped-right';
 
   // Choose sidebar content based on route
-  const sidebarContent = isActivityRoute
-    ? <ActivityPanel />
-    : isHomeMode
-      ? <DMSidebar />
-      : <ChannelSidebar />;
+  const sidebarContent = isDiscoverRoute
+    ? <DiscoverSidebar />
+    : isActivityRoute
+      ? <ActivityPanel />
+      : isHomeMode
+        ? <DMSidebar />
+        : <ChannelSidebar />;
 
   return (
     <div className="flex h-full w-full">
       <ServerSidebar />
       <div className="flex flex-1 min-w-0 py-2 pr-2">
-        {!sidebarCollapsed && !isServerOffline && (
+        {!sidebarCollapsed && !isServerOffline && showSidebar && (
           <div className="flex w-[240px] min-w-[240px] flex-col bg-tertiary rounded-l-md overflow-hidden border-r-3 border-primary">
             {sidebarContent}
             <VoiceControls />
@@ -133,7 +141,7 @@ export function AppLayout() {
             <ResizeHandle side="left" />
           </>
         )}
-        <main className="flex flex-1 flex-col min-w-0 bg-secondary rounded-r-md overflow-hidden">
+        <main className={`flex flex-1 flex-col min-w-0 bg-secondary overflow-hidden ${showSidebar ? 'rounded-r-md' : 'rounded-md'}`}>
           {showVoiceBanner && <VoiceBanner />}
           {(callState === 'active' || answeredElsewhere) && <CallBanner />}
           {isServerOffline ? (
@@ -158,6 +166,7 @@ export function AppLayout() {
               >
                 <Routes location={location}>
                   <Route path="activity" element={<ActivityView />} />
+                  <Route path="discover" element={<Suspense><DiscoverPage /></Suspense>} />
                   <Route path="friends" element={<FriendList />} />
                   <Route path="dms/:userId" element={<DMView />} />
                   <Route path="servers/:serverId/channels/:channelId" element={<ChannelView />} />
@@ -165,7 +174,7 @@ export function AppLayout() {
                   <Route
                     path="*"
                     element={
-                      isHomeMode ? <FriendList /> : <ServerFallback />
+                      isHomeMode ? <Navigate to="/discover" replace /> : <ServerFallback />
                     }
                   />
                 </Routes>

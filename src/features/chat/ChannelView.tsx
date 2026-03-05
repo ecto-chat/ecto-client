@@ -23,6 +23,7 @@ import { NsfwWarning } from './NsfwWarning';
 import { ChannelLockedScreen } from './ChannelLockedScreen';
 import { VoiceView } from '@/features/voice';
 import { PageView } from '@/features/page';
+import { NewsView } from '@/features/news';
 
 export function ChannelView() {
   const { channelId, serverId } = useParams<{ channelId: string; serverId: string }>();
@@ -116,6 +117,10 @@ export function ChannelView() {
 
   if (channel.type === 'page') {
     return <PageView serverId={sid} channelId={channelId ?? ''} />;
+  }
+
+  if (channel.type === 'news') {
+    return <NewsView serverId={sid} channelId={channelId ?? ''} />;
   }
 
   if (channel.type === 'voice') {

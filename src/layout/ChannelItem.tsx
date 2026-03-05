@@ -1,5 +1,5 @@
 import { memo, useCallback } from 'react';
-import { Hash, BellOff, Star, FileText, Settings, ShieldAlert } from 'lucide-react';
+import { Hash, BellOff, Star, FileText, Newspaper, Settings, ShieldAlert } from 'lucide-react';
 import { Permissions } from 'ecto-shared';
 import { useReadStateStore } from '@/stores/read-state';
 import { useNotifyStore } from '@/stores/notify';
@@ -81,7 +81,9 @@ export const ChannelItem = memo(function ChannelItem({
           )}
           onClick={() => onClick(channel)}
         >
-          {channel.type === 'page' ? (
+          {channel.type === 'news' ? (
+            <Newspaper size={16} className="shrink-0 text-muted" />
+          ) : channel.type === 'page' ? (
             <FileText size={16} className="shrink-0 text-muted" />
           ) : (
             <Hash size={16} className="shrink-0 text-muted" />

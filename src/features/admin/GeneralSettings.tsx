@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, type FormEvent } from 'react';
 import { Button, Input, TextArea, Spinner, Switch, Select, Separator, ImageCropModal } from '@/ui';
 
 import { cn } from '@/lib/cn';
+import { cssUrl } from '@/lib/css-utils';
 
 import { connectionManager } from '@/services/connection-manager';
 import { useServerStore } from '@/stores/server';
@@ -28,6 +29,7 @@ type ServerConfig = {
   require_invite: boolean;
   allow_member_dms: boolean;
   show_system_messages: boolean;
+  discoverable: boolean;
 };
 
 type GeneralSettingsProps = {
@@ -70,6 +72,7 @@ export function GeneralSettings({ serverId }: GeneralSettingsProps) {
         require_invite: cfg.require_invite,
         allow_member_dms: cfg.allow_member_dms,
         show_system_messages: cfg.show_system_messages,
+        discoverable: cfg.discoverable ?? false,
       });
     }).catch((err: unknown) => {
       console.warn('[admin] Failed to load server config:', err);
@@ -174,6 +177,7 @@ export function GeneralSettings({ serverId }: GeneralSettingsProps) {
         require_invite: config.require_invite,
         allow_member_dms: config.allow_member_dms,
         show_system_messages: config.show_system_messages,
+        discoverable: config.discoverable,
       });
       setConfigSuccess('Server configuration saved.');
     } catch (err: unknown) {
@@ -208,7 +212,7 @@ export function GeneralSettings({ serverId }: GeneralSettingsProps) {
                 'size-20 rounded-full bg-tertiary bg-cover bg-center flex items-center justify-center',
                 'text-2xl text-secondary hover:opacity-80 p-0',
               )}
-              style={server.icon_url ? { backgroundImage: `url(${server.icon_url})` } : undefined}
+              style={server.icon_url ? { backgroundImage: cssUrl(server.icon_url) } : undefined}
               onClick={() => fileInputRef.current?.click()}
             >
               {!server.icon_url && server.name.charAt(0).toUpperCase()}
@@ -344,6 +348,13 @@ export function GeneralSettings({ serverId }: GeneralSettingsProps) {
               description="Display notifications in chat when members join or messages are pinned."
               checked={config.show_system_messages}
               onCheckedChange={(checked) => setConfig({ ...config, show_system_messages: checked })}
+            />
+
+            <Switch
+              label="Server Discovery"
+              description="Allow this server to appear in the Ecto Discover feed. Requires approval by Ecto admins."
+              checked={config.discoverable}
+              onCheckedChange={(checked) => setConfig({ ...config, discoverable: checked })}
             />
 
             <Select

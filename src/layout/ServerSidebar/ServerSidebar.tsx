@@ -6,6 +6,7 @@ import { connectionManager } from '@/services/connection-manager';
 import { ScrollArea } from '@/ui/ScrollArea';
 import { Separator } from '@/ui/Separator';
 import { HomeButton } from './HomeButton';
+import { FriendsButton } from './FriendsButton';
 import { ActivityBell } from './ActivityBell';
 import { AddServerButton } from './AddServerButton';
 import { ServerList } from './ServerList';
@@ -36,6 +37,7 @@ export function ServerSidebar() {
   return (
     <div className="flex h-full w-[72px] shrink-0 flex-col items-center py-4 gap-2">
       <HomeButton />
+      <FriendsButton />
       <ActivityBell />
       <Separator className="mx-auto w-8" />
 

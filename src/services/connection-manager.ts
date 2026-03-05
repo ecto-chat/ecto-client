@@ -36,16 +36,7 @@ import { parseTokenExp } from '../lib/jwt.js';
 import { handleMainEvent } from './server-event-handler.js';
 import { handleCentralEvent } from './central-event-handler.js';
 import { ReconnectionManager } from './reconnection-manager.js';
-
-function toServerUrl(address: string): string {
-  if (address.startsWith('http://') || address.startsWith('https://')) {
-    return address.replace(/\/+$/, '');
-  }
-  // Use HTTPS for public domains, HTTP for localhost/LAN
-  const isLocal = /^(localhost|127\.|192\.168\.|10\.|172\.(1[6-9]|2\d|3[01])\.)/.test(address);
-  const protocol = isLocal ? 'http' : 'https';
-  return `${protocol}://${address}`.replace(/\/+$/, '');
-}
+import { toServerUrl } from '../lib/server-address.js';
 
 interface ServerConnection {
   address: string;
@@ -656,7 +647,7 @@ class ConnectionManager {
 
       const readyData = ready as unknown as {
         user_id?: string;
-        server?: { name?: string; icon_url?: string | null; setup_completed?: boolean; admin_user_id?: string | null; default_channel_id?: string | null; banner_url?: string | null; allow_member_dms?: boolean; hosting_mode?: 'self-hosted' | 'managed' };
+        server?: { name?: string; icon_url?: string | null; setup_completed?: boolean; admin_user_id?: string | null; default_channel_id?: string | null; banner_url?: string | null; allow_member_dms?: boolean; hosting_mode?: 'self-hosted' | 'managed'; discoverable?: boolean; discovery_approved?: boolean };
         channels?: Channel[];
         categories?: Category[];
         members?: Member[];
@@ -680,6 +671,8 @@ class ConnectionManager {
           banner_url: readyData.server.banner_url ?? null,
           allow_member_dms: readyData.server.allow_member_dms ?? false,
           hosting_mode: readyData.server.hosting_mode ?? 'self-hosted',
+          discoverable: readyData.server.discoverable ?? false,
+          discovery_approved: readyData.server.discovery_approved ?? false,
         };
         useServerStore.getState().setServerMeta(conn.serverId, metaPayload);
       }
