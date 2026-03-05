@@ -159,6 +159,7 @@ export function ChannelView() {
       </AnimatePresence>
 
       <MessageList
+        channelId={channelId}
         messages={messages}
         hasMore={hasMore}
         onLoadMore={loadOlderMessages}

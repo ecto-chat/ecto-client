@@ -75,6 +75,7 @@ export function DMView() {
       />
 
       <MessageList
+        channelId={userId}
         messages={messages}
         hasMore={hasMore}
         onLoadMore={handleLoadMore}

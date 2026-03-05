@@ -42,6 +42,7 @@ export function ServerDmChat() {
       />
 
       <MessageList
+        channelId={activeConvoId}
         messages={messages}
         hasMore={hasMore}
         onLoadMore={handleLoadMore}

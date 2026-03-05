@@ -8,6 +8,7 @@ import { useMessageStore } from '@/stores/message';
 import { MessageItem } from './MessageItem';
 
 type MessageListProps = {
+  channelId: string;
   messages: Message[];
   hasMore: boolean;
   onLoadMore: () => Promise<void>;
@@ -23,7 +24,7 @@ type MessageListProps = {
 };
 
 export function MessageList({
-  messages, hasMore, onLoadMore, onEdit, onDelete, onReact,
+  channelId, messages, hasMore, onLoadMore, onEdit, onDelete, onReact,
   onPin, onUnpin, onMarkRead, onReply, readOnly, reactOnly,
 }: MessageListProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -51,15 +52,15 @@ export function MessageList({
     if (wasAtBottom.current) scrollToBottom();
   }, [messages.length, scrollToBottom]);
 
-  // Scroll to bottom when channel changes (messages identity changes)
-  const prevMessagesRef = useRef(messages);
+  // Scroll to bottom when channel changes
+  const prevChannelRef = useRef(channelId);
   useEffect(() => {
-    if (messages !== prevMessagesRef.current) {
+    if (channelId !== prevChannelRef.current) {
       wasAtBottom.current = true;
       scrollToBottom();
     }
-    prevMessagesRef.current = messages;
-  }, [messages, scrollToBottom]);
+    prevChannelRef.current = channelId;
+  }, [channelId, scrollToBottom]);
 
   // Re-scroll to bottom when content resizes (e.g. images loading) if user was at bottom
   useEffect(() => {
