@@ -23,7 +23,7 @@ import { useChannelStore } from '@/stores/channel';
 
 import { connectionManager } from '@/services/connection-manager';
 
-import type { Channel } from 'ecto-shared';
+import { normalizeChannelName, type Channel } from 'ecto-shared';
 
 import { SortableChannelRow } from './ChannelRow';
 import { CreateChannelForm, CreateCategoryForm } from './ChannelForm';
@@ -128,7 +128,7 @@ export function ChannelEditor({ serverId }: { serverId: string }) {
 
   const rowProps = (ch: Channel) => ({
     channel: ch, isEditing: editing?.id === ch.id, editName, editTopic,
-    onEditNameChange: setEditName, onEditTopicChange: setEditTopic,
+    onEditNameChange: (v: string) => setEditName(normalizeChannelName(v)), onEditTopicChange: setEditTopic,
     onStartEdit: () => startEdit(ch), onSave: handleSaveEdit, onCancel: () => setEditing(null),
     onDelete: () => setDeleteTarget({ type: 'channel', id: ch.id, name: ch.name }),
   });

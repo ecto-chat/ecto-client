@@ -6,7 +6,7 @@ import { useChannelStore } from '@/stores/channel';
 
 import { connectionManager } from '@/services/connection-manager';
 
-import type { Category } from 'ecto-shared';
+import { normalizeChannelName, type Category } from 'ecto-shared';
 
 type CreateChannelFormProps = {
   serverId: string;
@@ -62,8 +62,8 @@ export function CreateChannelForm({ serverId, categories, onDone }: CreateChanne
         <div className="flex-1">
           <Input
             value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Channel name"
+            onChange={(e) => setName(normalizeChannelName(e.target.value))}
+            placeholder="e.g., general-chat"
             required
             autoFocus
           />
@@ -121,8 +121,8 @@ export function CreateCategoryForm({ serverId, onDone }: CreateCategoryFormProps
         <div className="flex-1">
           <Input
             value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Category name"
+            onChange={(e) => setName(normalizeChannelName(e.target.value))}
+            placeholder="e.g., general-chat"
             required
             autoFocus
           />

@@ -5,7 +5,14 @@ directories:
 asar: true
 files:
   - "out/**"
+  - "resources/**"
   - "package.json"
   - "!node_modules/**"
+icon: resources/icon.png
 win:
   target: nsis
+  icon: resources/icon.ico
+mac:
+  icon: resources/icon.png
+linux:
+  icon: resources/icon.png

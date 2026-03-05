@@ -15,6 +15,7 @@ import { playNotificationSound } from '../lib/notification-sounds.js';
 import { showOsNotification, shouldNotifyEveryone } from './notification-service.js';
 import { connectionManager } from './connection-manager.js';
 import { pageEventListeners } from '../hooks/usePage.js';
+import { newsPostListeners, newsCommentListeners } from '../hooks/useNews.js';
 import { useHubFilesStore } from '../stores/hub-files.js';
 import { useServerDmStore } from '../stores/server-dm.js';
 import { useActivityStore } from '../stores/activity.js';
@@ -195,6 +196,33 @@ export function handleMainEvent(serverId: string, event: string, data: unknown, 
     case 'page.update':
       for (const listener of pageEventListeners) {
         listener(d as unknown as PageContent);
+      }
+      break;
+
+    // News channel events
+    case 'news.post_create':
+      for (const listener of newsPostListeners) {
+        listener({ type: 'create', post: d as unknown as import('ecto-shared').NewsPost });
+      }
+      break;
+    case 'news.post_update':
+      for (const listener of newsPostListeners) {
+        listener({ type: 'update', post: d as unknown as import('ecto-shared').NewsPost });
+      }
+      break;
+    case 'news.post_delete':
+      for (const listener of newsPostListeners) {
+        listener({ type: 'delete', id: d.id as string, channel_id: d.channel_id as string });
+      }
+      break;
+    case 'news.comment_create':
+      for (const listener of newsCommentListeners) {
+        listener({ type: 'create', comment: d as unknown as import('ecto-shared').NewsComment });
+      }
+      break;
+    case 'news.comment_delete':
+      for (const listener of newsCommentListeners) {
+        listener({ type: 'delete', id: d.id as string, post_id: d.post_id as string });
       }
       break;
 

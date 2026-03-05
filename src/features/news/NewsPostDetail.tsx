@@ -1,13 +1,13 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { ArrowLeft, Pencil, MessageCircle } from 'lucide-react';
-import type { NewsPost, NewsComment } from 'ecto-shared';
-import { connectionManager } from '@/services/connection-manager';
+import type { NewsPost } from 'ecto-shared';
 import { cssUrl } from '@/lib/css-utils';
 import { ScrollArea } from '@/ui/ScrollArea';
 import { IconButton, Spinner } from '@/ui';
 import { Avatar } from '@/ui/Avatar';
 import { renderMarkdown } from '@/lib/markdown';
 import { NewsCommentInput } from './NewsCommentInput';
+import { useNewsComments, newsPostListeners, type NewsPostEvent } from '@/hooks/useNews';
 
 interface NewsPostDetailProps {
   serverId: string;
@@ -18,32 +18,33 @@ interface NewsPostDetailProps {
   onEdit: (post: NewsPost) => void;
 }
 
-export function NewsPostDetail({ serverId, channelId, post, canManage, onBack, onEdit }: NewsPostDetailProps) {
-  const [comments, setComments] = useState<NewsComment[]>([]);
-  const [loadingComments, setLoadingComments] = useState(true);
+export function NewsPostDetail({ serverId, channelId, post: initialPost, canManage, onBack, onEdit }: NewsPostDetailProps) {
+  const [post, setPost] = useState(initialPost);
+  const { comments, loading: loadingComments, addComment } = useNewsComments(serverId, post.id);
   const [showAllComments, setShowAllComments] = useState(false);
 
-  const loadComments = useCallback(async () => {
-    const trpc = connectionManager.getServerTrpc(serverId);
-    if (!trpc) return;
-    setLoadingComments(true);
-    try {
-      const res = await trpc.news.listComments.query({ post_id: post.id, limit: 100 });
-      setComments(res.comments);
-    } catch {
-      // handle silently
-    } finally {
-      setLoadingComments(false);
-    }
-  }, [serverId, post.id]);
-
+  // Listen for real-time post updates and deletions
   useEffect(() => {
-    loadComments();
-  }, [loadComments]);
+    const handler = (event: NewsPostEvent) => {
+      switch (event.type) {
+        case 'update':
+          if (event.post.id === post.id) {
+            setPost(event.post);
+          }
+          break;
+        case 'delete':
+          if (event.id === post.id) {
+            onBack();
+          }
+          break;
+      }
+    };
+    newsPostListeners.add(handler);
+    return () => { newsPostListeners.delete(handler); };
+  }, [post.id, onBack]);
 
-  const handleCommentAdded = (comment: NewsComment) => {
-    setComments((prev) => [...prev, comment]);
-  };
+  // Update comment count based on live comments length
+  const commentCount = comments.length;
 
   const displayedComments = showAllComments ? comments : comments.slice(0, 3);
 
@@ -100,7 +101,7 @@ export function NewsPostDetail({ serverId, channelId, post, canManage, onBack, o
             <div className="flex items-center gap-2 mb-4">
               <MessageCircle size={18} className="text-muted" />
               <h3 className="text-sm font-semibold text-primary">
-                Comments ({post.comment_count})
+                Comments ({commentCount})
               </h3>
             </div>
 
@@ -139,7 +140,7 @@ export function NewsPostDetail({ serverId, channelId, post, canManage, onBack, o
             <NewsCommentInput
               serverId={serverId}
               postId={post.id}
-              onCommentAdded={handleCommentAdded}
+              onCommentAdded={addComment}
             />
           </div>
         </article>

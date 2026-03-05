@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { ChannelPermissionOverride, CategoryPermissionOverride } from 'ecto-shared';
-import { Permissions } from 'ecto-shared';
+import { Permissions, normalizeChannelName } from 'ecto-shared';
 import { X, Check, Minus, AlertTriangle } from 'lucide-react';
 
 import { Modal, Tabs, TabsList, TabsTrigger, TabsContent, Input, Select, Switch, Button, ScrollArea } from '@/ui';
@@ -488,7 +488,7 @@ export function ChannelSettingsModal() {
               <Input
                 label="Category Name"
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(e) => setName(normalizeChannelName(e.target.value))}
                 maxLength={100}
               />
               <div className="flex gap-2 pt-2">
@@ -537,7 +537,7 @@ export function ChannelSettingsModal() {
             <Input
               label="Channel Name"
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) => setName(normalizeChannelName(e.target.value))}
               maxLength={100}
             />
             <Input

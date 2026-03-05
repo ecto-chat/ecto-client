@@ -1,4 +1,3 @@
-import { useState, useEffect, useCallback } from 'react';
 import { AlertCircle, Newspaper, Pencil, Trash2 } from 'lucide-react';
 import type { NewsPost } from 'ecto-shared';
 import { connectionManager } from '@/services/connection-manager';
@@ -6,6 +5,7 @@ import { cssUrl } from '@/lib/css-utils';
 import { ScrollArea } from '@/ui/ScrollArea';
 import { Spinner, EmptyState } from '@/ui';
 import { Avatar } from '@/ui/Avatar';
+import { useNewsPosts } from '@/hooks/useNews';
 
 interface NewsPostListProps {
   serverId: string;
@@ -16,40 +16,14 @@ interface NewsPostListProps {
 }
 
 export function NewsPostList({ serverId, channelId, canManage, onSelect, onEdit }: NewsPostListProps) {
-  const [posts, setPosts] = useState<NewsPost[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [hasMore, setHasMore] = useState(false);
-
-  const load = useCallback(async (before?: string) => {
-    const trpc = connectionManager.getServerTrpc(serverId);
-    if (!trpc) return;
-
-    setLoading(true);
-    try {
-      const res = await trpc.news.listPosts.query({ channel_id: channelId, before, limit: 20 });
-      if (before) {
-        setPosts((prev) => [...prev, ...res.posts]);
-      } else {
-        setPosts(res.posts);
-      }
-      setHasMore(res.has_more);
-    } catch {
-      // handle silently
-    } finally {
-      setLoading(false);
-    }
-  }, [serverId, channelId]);
-
-  useEffect(() => {
-    load();
-  }, [load]);
+  const { posts, loading, hasMore, loadMore } = useNewsPosts(serverId, channelId);
 
   const handleDelete = async (postId: string) => {
     const trpc = connectionManager.getServerTrpc(serverId);
     if (!trpc) return;
     try {
       await trpc.news.deletePost.mutate({ post_id: postId });
-      setPosts((prev) => prev.filter((p) => p.id !== postId));
+      // WS event will remove the post from the list
     } catch {
       // handle silently
     }
@@ -130,7 +104,7 @@ export function NewsPostList({ serverId, channelId, canManage, onSelect, onEdit 
               className="px-4 py-2 text-sm bg-tertiary text-secondary rounded-md hover:bg-secondary hover:text-primary transition-colors"
               onClick={() => {
                 const last = posts[posts.length - 1];
-                if (last) load(last.id);
+                if (last) loadMore(last.id);
               }}
               disabled={loading}
             >

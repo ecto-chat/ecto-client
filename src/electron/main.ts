@@ -6,12 +6,15 @@ let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
 
 function createWindow() {
+  const iconPath = path.join(__dirname, '../../resources/icon.png');
+
   mainWindow = new BrowserWindow({
     width: 1280,
     height: 800,
     minWidth: 940,
     minHeight: 500,
     title: 'Ecto',
+    icon: iconPath,
     backgroundColor: '#1a1a2e',
     autoHideMenuBar: true,
     titleBarStyle: 'hidden',
@@ -41,7 +44,8 @@ function createWindow() {
 }
 
 function createTray() {
-  const icon = nativeImage.createEmpty();
+  const trayIconPath = path.join(__dirname, '../../resources/icon.png');
+  const icon = nativeImage.createFromPath(trayIconPath).resize({ width: 16, height: 16 });
   tray = new Tray(icon);
   tray.setToolTip('Ecto');
 
