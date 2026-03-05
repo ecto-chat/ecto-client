@@ -5,6 +5,7 @@ import { Spinner, ScrollArea } from '@/ui';
 import type { Message } from 'ecto-shared';
 
 import { useMessageStore } from '@/stores/message';
+import { useUiStore } from '@/stores/ui';
 import { MessageItem } from './MessageItem';
 
 type MessageListProps = {
@@ -21,11 +22,12 @@ type MessageListProps = {
   onReply?: (message: Message) => void;
   readOnly?: boolean;
   reactOnly?: boolean;
+  jumpToMessageId?: string | null;
 };
 
 export function MessageList({
   channelId, messages, hasMore, onLoadMore, onEdit, onDelete, onReact,
-  onPin, onUnpin, onMarkRead, onReply, readOnly, reactOnly,
+  onPin, onUnpin, onMarkRead, onReply, readOnly, reactOnly, jumpToMessageId,
 }: MessageListProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -132,6 +134,18 @@ export function MessageList({
       }, 800);
     }, 300);
   }, []);
+
+  // Jump to a specific message when requested (e.g. from search results)
+  useEffect(() => {
+    if (jumpToMessageId) {
+      // Small delay to let channel navigation render messages first
+      const timer = setTimeout(() => {
+        jumpToMessage(jumpToMessageId);
+        useUiStore.getState().setPendingJumpMessageId(null);
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [jumpToMessageId, jumpToMessage]);
 
   // Stable keys prevent React unmount/remount when optimistic messages are replaced
   const stableKeys = useMessageStore((s) => s.stableKeys);

@@ -22,6 +22,7 @@ interface UiStore {
   hubSection: string | null;
   searchSidebarOpen: boolean;
   searchContext: SearchContext | null;
+  pendingJumpMessageId: string | null;
 
   setActiveServer: (serverId: string | null) => void;
   setActiveChannel: (channelId: string | null) => void;
@@ -40,6 +41,7 @@ interface UiStore {
   setBypassNsfwWarnings: (bypass: boolean) => void;
   openSearchSidebar: (context: SearchContext) => void;
   closeSearchSidebar: () => void;
+  setPendingJumpMessageId: (id: string | null) => void;
   hydrateFromPreferences: () => void;
 }
 
@@ -61,6 +63,7 @@ export const useUiStore = create<UiStore>()((set) => ({
   snappedSidebarWidth: preferenceManager.getDevice('snapped-width', 360),
   searchSidebarOpen: false,
   searchContext: null,
+  pendingJumpMessageId: null,
 
   setActiveServer: (serverId) => {
     if (serverId) preferenceManager.setUser('last-active-server', serverId);
@@ -113,6 +116,7 @@ export const useUiStore = create<UiStore>()((set) => ({
     searchContext: null,
     memberListVisible: preferenceManager.getDevice('member-list-visible', true),
   })),
+  setPendingJumpMessageId: (id) => set({ pendingJumpMessageId: id }),
   setMediaViewMode: (mode) => set({ mediaViewMode: mode }),
   setSnappedSidebarWidth: (width) => {
     preferenceManager.setDevice('snapped-width', width);

@@ -5,6 +5,7 @@ import { MessageCircle } from 'lucide-react';
 
 import { EmptyState } from '@/ui';
 import { useFriendStore } from '@/stores/friend';
+import { useUiStore } from '@/stores/ui';
 import { useCall } from '@/hooks/useCall';
 import { usePresence } from '@/hooks/usePresence';
 
@@ -21,6 +22,7 @@ export function DMView() {
   const friend = useFriendStore((s) => (userId ? s.friends.get(userId) : undefined));
   const { status } = usePresence(userId ?? '');
   const { startCall, isInCall } = useCall();
+  const pendingJumpMessageId = useUiStore((s) => s.pendingJumpMessageId);
   const [pinsOpen, setPinsOpen] = useState(false);
   const [replyTo, setReplyTo] = useState<{ id: string; author: string; content: string } | null>(null);
   const [inputExpanded, setInputExpanded] = useState(false);
@@ -92,6 +94,7 @@ export function DMView() {
           content: msg.content ?? '',
         })}
         reactOnly
+        jumpToMessageId={pendingJumpMessageId}
       />
 
       <div

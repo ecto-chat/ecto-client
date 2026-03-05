@@ -33,6 +33,7 @@ export function ChannelView() {
   const [replyTo, setReplyTo] = useState<{ id: string; author: string; content: string } | null>(null);
   const [inputExpanded, setInputExpanded] = useState(false);
   const searchActive = useUiStore((s) => s.searchSidebarOpen && s.searchContext?.type === 'server');
+  const pendingJumpMessageId = useUiStore((s) => s.pendingJumpMessageId);
   const navigate = useNavigate();
 
   const {
@@ -171,6 +172,7 @@ export function ChannelView() {
           author: msg.author?.display_name ?? msg.author?.username ?? 'Unknown',
           content: msg.content ?? '',
         })}
+        jumpToMessageId={pendingJumpMessageId}
       />
 
       <div

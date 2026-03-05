@@ -1,7 +1,8 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 
 import { motion, AnimatePresence } from 'motion/react';
-import { ArrowLeft, Search } from 'lucide-react';
+import { ArrowLeft, Hash, Search } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 import { Input, IconButton, Button, Spinner, EmptyState, ScrollArea, Switch } from '@/ui';
 
@@ -16,6 +17,8 @@ import { SearchFilters, SearchResult } from '@/features/chat';
 
 import type { Message } from 'ecto-shared';
 
+const GROUPED_LIMIT = 5;
+
 export function SearchSidebar() {
   const searchContext = useUiStore((s) => s.searchContext);
   const [query, setQuery] = useState('');
@@ -29,7 +32,11 @@ export function SearchSidebar() {
   const [filterAuthorId, setFilterAuthorId] = useState('');
   const [filterHasAttachment, setFilterHasAttachment] = useState(false);
 
+  // Track whether the channel filter was set via "show more" (grouped → single-channel drill-in)
+  const [groupedDrillIn, setGroupedDrillIn] = useState(false);
+
   const inputRef = useRef<HTMLInputElement>(null);
+  const navigate = useNavigate();
   const isServer = searchContext?.type === 'server';
   const serverId = isServer ? searchContext.serverId : '';
   const userId = searchContext?.type === 'dm' ? searchContext.userId : '';
@@ -45,9 +52,10 @@ export function SearchSidebar() {
     setFilterChannelId('');
     setFilterAuthorId('');
     setFilterHasAttachment(false);
+    setGroupedDrillIn(false);
   }, [searchContext?.type === 'server' ? serverId : userId]);
 
-  const doSearch = useCallback(async (searchQuery: string, before?: string) => {
+  const doSearch = useCallback(async (searchQuery: string, before?: string, channelOverride?: string) => {
     if (!searchQuery.trim()) return;
     setLoading(true);
     try {
@@ -58,9 +66,11 @@ export function SearchSidebar() {
         const has: ('attachment' | 'link')[] = [];
         if (filterHasAttachment) has.push('attachment');
 
+        const effectiveChannelId = channelOverride ?? filterChannelId;
+
         const result = await trpc.search.search.query({
           query: searchQuery.trim(),
-          channel_id: filterChannelId || undefined,
+          channel_id: effectiveChannelId || undefined,
           author_id: filterAuthorId || undefined,
           has: has.length > 0 ? has : undefined,
           before,
@@ -116,6 +126,44 @@ export function SearchSidebar() {
     useUiStore.getState().closeSearchSidebar();
   };
 
+  const handleResultClick = (msg: Message) => {
+    if (isServer) {
+      navigate(`/servers/${serverId}/channels/${msg.channel_id}`);
+    }
+    useUiStore.getState().setPendingJumpMessageId(msg.id);
+  };
+
+  const handleShowMoreInChannel = (channelId: string) => {
+    setFilterChannelId(channelId);
+    setGroupedDrillIn(true);
+    setResults([]);
+    doSearch(query, undefined, channelId);
+  };
+
+  const handleBackToAll = () => {
+    setFilterChannelId('');
+    setGroupedDrillIn(false);
+    setResults([]);
+    doSearch(query);
+  };
+
+  // In server mode without a channel filter, group results by channel
+  const isGroupedMode = isServer && !filterChannelId;
+
+  const groupedResults = useMemo(() => {
+    if (!isGroupedMode) return null;
+    const groups = new Map<string, Message[]>();
+    for (const msg of results) {
+      const existing = groups.get(msg.channel_id);
+      if (existing) {
+        existing.push(msg);
+      } else {
+        groups.set(msg.channel_id, [msg]);
+      }
+    }
+    return groups;
+  }, [isGroupedMode, results]);
+
   return (
     <motion.div
       initial={{ opacity: 0, x: 16 }}
@@ -153,7 +201,7 @@ export function SearchSidebar() {
         <SearchFilters
           serverId={serverId}
           filterChannelId={filterChannelId}
-          onChannelChange={setFilterChannelId}
+          onChannelChange={(id) => { setFilterChannelId(id); setGroupedDrillIn(false); }}
           filterAuthorId={filterAuthorId}
           onAuthorChange={setFilterAuthorId}
           filterHasAttachment={filterHasAttachment}
@@ -176,16 +224,60 @@ export function SearchSidebar() {
             {searched && results.length === 0 && !loading && (
               <EmptyState icon={<Search />} title="No results found" className="py-8" />
             )}
-            {results.map((msg) => (
+
+            {/* Back link when drilled into a single channel from grouped view */}
+            {groupedDrillIn && filterChannelId && (
+              <button
+                onClick={handleBackToAll}
+                className="flex items-center gap-1 px-3 py-1.5 text-xs text-accent hover:underline cursor-pointer"
+              >
+                <ArrowLeft size={12} />
+                Back to all results
+              </button>
+            )}
+
+            {/* Server mode: grouped by channel */}
+            {isGroupedMode && groupedResults && [...groupedResults.entries()].map(([channelId, msgs]) => {
+              const channelName = channelsMap?.get(channelId)?.name ?? 'unknown';
+              const shown = msgs.slice(0, GROUPED_LIMIT);
+              const hasMoreInChannel = msgs.length > GROUPED_LIMIT;
+
+              return (
+                <div key={channelId} className="mb-2">
+                  <div className="flex items-center gap-1.5 px-3 py-1.5">
+                    <Hash size={12} className="text-muted" />
+                    <span className="text-xs font-medium text-muted">{channelName}</span>
+                  </div>
+                  {shown.map((msg) => (
+                    <SearchResult
+                      key={msg.id}
+                      message={msg}
+                      onClick={() => handleResultClick(msg)}
+                    />
+                  ))}
+                  {hasMoreInChannel && (
+                    <button
+                      onClick={() => handleShowMoreInChannel(channelId)}
+                      className="w-full px-3 py-1 text-xs text-accent hover:underline cursor-pointer text-left"
+                    >
+                      Show more in #{channelName}
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+
+            {/* Flat list: DM mode or single-channel filter */}
+            {!isGroupedMode && results.map((msg) => (
               <SearchResult
                 key={msg.id}
                 message={msg}
                 channelName={isServer ? channelsMap?.get(msg.channel_id)?.name : undefined}
-                onClick={() => {}}
+                onClick={() => handleResultClick(msg)}
               />
             ))}
           </AnimatePresence>
-          {hasMore && !loading && (
+          {hasMore && !loading && !isGroupedMode && (
             <div className="flex justify-center py-2">
               <Button variant="ghost" size="sm" onClick={handleLoadMore}>Load More</Button>
             </div>
