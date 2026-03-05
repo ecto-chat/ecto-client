@@ -139,7 +139,7 @@ export function DiscoverPage() {
   const subPosts = carouselPosts.filter((_, i) => i !== activeIndex);
 
   return (
-    <div className="flex flex-1 overflow-hidden">
+    <div className="flex flex-1 overflow-hidden bg-primary">
       <ScrollArea className="flex-1">
         <div className="max-w-[960px] mx-auto p-6 mt-4">
 
