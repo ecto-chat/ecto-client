@@ -14,6 +14,7 @@ import { SetupWizard } from '@/features/admin';
 import { CentralSignInModal, AddAccountModal } from '@/features/auth';
 import { IncomingCallOverlay, CallBanner } from '@/features/call';
 import { ChannelView } from '@/features/chat';
+import { SearchSidebar } from '@/features/search';
 import { NotificationPrompt, NotificationToast } from '@/features/common';
 import { ActivityPanel, ActivityView } from '@/features/activity';
 import { DiscoverSidebar } from '@/features/discover/DiscoverSidebar';
@@ -55,6 +56,7 @@ export function AppLayout() {
   const activeServerId = useUiStore((s) => s.activeServerId);
   const hubSection = useUiStore((s) => s.hubSection);
   const memberListVisible = useUiStore((s) => s.memberListVisible);
+  const searchSidebarOpen = useUiStore((s) => s.searchSidebarOpen);
   const sidebarCollapsed = useUiStore((s) => s.sidebarCollapsed);
   const mediaViewMode = useUiStore((s) => s.mediaViewMode);
   const snappedSidebarWidth = useUiStore((s) => s.snappedSidebarWidth);
@@ -188,7 +190,13 @@ export function AppLayout() {
             <SnappedMediaSidebar />
           </>
         )}
-        {!isHomeMode && !isServerOffline && memberListVisible && <MemberList />}
+        <AnimatePresence mode="wait">
+          {searchSidebarOpen ? (
+            <SearchSidebar key="search" />
+          ) : (
+            !isHomeMode && !isServerOffline && memberListVisible && <MemberList key="members" />
+          )}
+        </AnimatePresence>
       </div>
       <SetupWizard />
       <AddServerModal />

@@ -1,7 +1,6 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { useParams, useNavigate } from 'react-router-dom';
-import { AnimatePresence } from 'motion/react';
 import { Search, Users, Hash, Pin } from 'lucide-react';
 
 import { IconButton, EmptyState } from '@/ui';
@@ -17,7 +16,6 @@ import { MessageList } from './MessageList';
 import { MessageInput } from './MessageInput';
 import { ReplyBanner } from './ReplyBanner';
 import { TypingIndicator } from './TypingIndicator';
-import { SearchPanel } from './SearchPanel';
 import { PinnedMessages } from './PinnedMessages';
 import { NsfwWarning } from './NsfwWarning';
 import { ChannelLockedScreen } from './ChannelLockedScreen';
@@ -31,18 +29,11 @@ export function ChannelView() {
   const sid = serverId ?? activeServerId ?? '';
   const channel = useChannelStore((s) => s.channels.get(sid)?.get(channelId ?? ''));
   const { openChannel, closeChannel } = useChannels(sid);
-  const [searchOpen, setSearchOpen] = useState(false);
   const [pinsOpen, setPinsOpen] = useState(false);
   const [replyTo, setReplyTo] = useState<{ id: string; author: string; content: string } | null>(null);
   const [inputExpanded, setInputExpanded] = useState(false);
+  const searchActive = useUiStore((s) => s.searchSidebarOpen && s.searchContext?.type === 'server');
   const navigate = useNavigate();
-
-  const handleSearchNavigate = useCallback((targetChannelId: string, _messageId: string) => {
-    setSearchOpen(false);
-    if (targetChannelId && targetChannelId !== channelId) {
-      navigate(`/servers/${sid}/channels/${targetChannelId}`);
-    }
-  }, [sid, channelId, navigate]);
 
   const {
     messages, hasMore, typingUsers, loadMessages, loadOlderMessages,
@@ -143,7 +134,19 @@ export function ChannelView() {
           <IconButton variant="ghost" size="sm" tooltip="Pinned Messages" onClick={() => setPinsOpen(true)}>
             <Pin size={16} />
           </IconButton>
-          <IconButton variant="ghost" size="sm" tooltip="Search Messages" onClick={() => setSearchOpen((v) => !v)}>
+          <IconButton
+            variant="ghost"
+            size="sm"
+            tooltip="Search Messages"
+            onClick={() => {
+              if (searchActive) {
+                useUiStore.getState().closeSearchSidebar();
+              } else {
+                useUiStore.getState().openSearchSidebar({ type: 'server', serverId: sid });
+              }
+            }}
+            className={searchActive ? 'text-accent' : undefined}
+          >
             <Search size={16} />
           </IconButton>
           <IconButton variant="ghost" size="sm" tooltip="Toggle Member List" onClick={() => useUiStore.getState().toggleMemberList()}>
@@ -151,12 +154,6 @@ export function ChannelView() {
           </IconButton>
         </div>
       </div>
-
-      <AnimatePresence>
-        {searchOpen && (
-          <SearchPanel serverId={sid} onNavigate={handleSearchNavigate} onClose={() => setSearchOpen(false)} />
-        )}
-      </AnimatePresence>
 
       <MessageList
         channelId={channelId}

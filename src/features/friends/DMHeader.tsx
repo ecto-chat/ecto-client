@@ -1,10 +1,13 @@
-import { Pin, Phone, Video } from 'lucide-react';
+import { Pin, Search, Phone, Video } from 'lucide-react';
 
 import { Avatar, IconButton } from '@/ui';
+
+import { useUiStore } from '@/stores/ui';
 
 import type { PresenceStatus } from 'ecto-shared';
 
 type DMHeaderProps = {
+  userId: string;
   username: string;
   avatarUrl?: string | null;
   status: PresenceStatus;
@@ -16,6 +19,7 @@ type DMHeaderProps = {
 };
 
 export function DMHeader({
+  userId,
   username,
   avatarUrl,
   status,
@@ -25,6 +29,8 @@ export function DMHeader({
   onVideoCall,
   isInCall,
 }: DMHeaderProps) {
+  const searchActive = useUiStore((s) => s.searchSidebarOpen && s.searchContext?.type === 'dm');
+
   return (
     <div className="flex h-[60px] shrink-0 items-center gap-2 border-b-2 border-primary px-4">
       <Avatar src={avatarUrl} username={username} size={28} status={status} />
@@ -39,6 +45,21 @@ export function DMHeader({
           className={pinsOpen ? 'text-accent' : undefined}
         >
           <Pin size={16} />
+        </IconButton>
+        <IconButton
+          variant="ghost"
+          size="sm"
+          tooltip="Search Messages"
+          onClick={() => {
+            if (searchActive) {
+              useUiStore.getState().closeSearchSidebar();
+            } else {
+              useUiStore.getState().openSearchSidebar({ type: 'dm', userId });
+            }
+          }}
+          className={searchActive ? 'text-accent' : undefined}
+        >
+          <Search size={16} />
         </IconButton>
         <IconButton
           variant="ghost"

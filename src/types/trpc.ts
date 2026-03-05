@@ -787,6 +787,15 @@ export interface CentralRouter {
     listPinned: {
       query: (input: { user_id: string }) => Promise<DirectMessage[]>;
     };
+    search: {
+      query: (input: {
+        user_id: string;
+        query: string;
+        before?: string;
+        has?: ('attachment')[];
+        limit?: number;
+      }) => Promise<{ messages: DirectMessage[]; has_more: boolean }>;
+    };
   };
 
   servers: {

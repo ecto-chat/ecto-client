@@ -64,6 +64,7 @@ export function DMView() {
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
       <DMHeader
+        userId={userId!}
         username={username}
         avatarUrl={friend?.avatar_url}
         status={status}

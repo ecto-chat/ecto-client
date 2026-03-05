@@ -2,6 +2,8 @@ import { create } from 'zustand';
 
 import { preferenceManager } from '../services/preference-manager.js';
 
+type SearchContext = { type: 'server'; serverId: string } | { type: 'dm'; userId: string };
+
 interface UiStore {
   activeServerId: string | null;
   activeChannelId: string | null;
@@ -18,6 +20,8 @@ interface UiStore {
   mediaViewMode: 'fullscreen' | 'floating' | 'snapped-left' | 'snapped-right';
   snappedSidebarWidth: number;
   hubSection: string | null;
+  searchSidebarOpen: boolean;
+  searchContext: SearchContext | null;
 
   setActiveServer: (serverId: string | null) => void;
   setActiveChannel: (channelId: string | null) => void;
@@ -34,6 +38,8 @@ interface UiStore {
   setChannelSettingsId: (id: string | null) => void;
   dismissNsfw: (channelId: string) => void;
   setBypassNsfwWarnings: (bypass: boolean) => void;
+  openSearchSidebar: (context: SearchContext) => void;
+  closeSearchSidebar: () => void;
   hydrateFromPreferences: () => void;
 }
 
@@ -53,14 +59,16 @@ export const useUiStore = create<UiStore>()((set) => ({
   mediaViewMode: 'fullscreen',
   hubSection: null,
   snappedSidebarWidth: preferenceManager.getDevice('snapped-width', 360),
+  searchSidebarOpen: false,
+  searchContext: null,
 
   setActiveServer: (serverId) => {
     if (serverId) preferenceManager.setUser('last-active-server', serverId);
-    set({ activeServerId: serverId });
+    set({ activeServerId: serverId, searchSidebarOpen: false, searchContext: null });
   },
   setActiveChannel: (channelId) => {
     if (channelId) preferenceManager.setUser('last-active-channel', channelId);
-    set({ activeChannelId: channelId, channelLocked: false, hubSection: null });
+    set({ activeChannelId: channelId, channelLocked: false, hubSection: null, searchSidebarOpen: false, searchContext: null });
   },
   setHubSection: (section) => set({ hubSection: section, activeChannelId: null }),
   setChannelLocked: (locked) => set({ channelLocked: locked }),
@@ -95,6 +103,16 @@ export const useUiStore = create<UiStore>()((set) => ({
     preferenceManager.setDevice('bypass-nsfw', bypass);
     set({ bypassNsfwWarnings: bypass });
   },
+  openSearchSidebar: (context) => set({
+    searchSidebarOpen: true,
+    searchContext: context,
+    memberListVisible: false,
+  }),
+  closeSearchSidebar: () => set((state) => ({
+    searchSidebarOpen: false,
+    searchContext: null,
+    memberListVisible: preferenceManager.getDevice('member-list-visible', true),
+  })),
   setMediaViewMode: (mode) => set({ mediaViewMode: mode }),
   setSnappedSidebarWidth: (width) => {
     preferenceManager.setDevice('snapped-width', width);
