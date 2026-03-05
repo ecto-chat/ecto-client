@@ -18,7 +18,7 @@ export function toServerUrl(address: string): string {
 }
 
 /** Reserved ecto.chat subdomains that are NOT server addresses */
-const RESERVED_SUBDOMAINS = new Set(['app', 'api', 'media', 'accounts', 'www']);
+const RESERVED_SUBDOMAINS = new Set(['app', 'api', 'media', 'accounts', 'www', 'docs']);
 
 /**
  * Regex to match ecto server addresses in message text.
