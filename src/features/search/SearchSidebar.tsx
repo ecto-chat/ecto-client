@@ -181,7 +181,7 @@ export function SearchSidebar() {
       </div>
 
       {/* Search form */}
-      <form onSubmit={handleSubmit} className="flex gap-2 px-3 py-2">
+      <form onSubmit={handleSubmit} className="px-3 py-2">
         <Input
           ref={inputRef}
           value={query}
@@ -189,11 +189,7 @@ export function SearchSidebar() {
           placeholder="Search messages..."
           icon={<Search size={14} />}
           inputSize="sm"
-          className="flex-1"
         />
-        <Button type="submit" variant="primary" size="sm" loading={loading && results.length === 0} disabled={!query.trim()}>
-          Go
-        </Button>
       </form>
 
       {/* Filters */}
