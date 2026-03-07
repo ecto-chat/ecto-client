@@ -31,6 +31,7 @@ export { Separator } from './Separator';
 export { Spinner } from './Spinner';
 export { Switch } from './Switch';
 export { Tabs, TabsList, TabsTrigger, TabsContent } from './Tabs';
+export { TagInput } from './TagInput';
 export { TextArea } from './TextArea';
 export { ToastContainer, useToast } from './Toast';
 export { Tooltip } from './Tooltip';

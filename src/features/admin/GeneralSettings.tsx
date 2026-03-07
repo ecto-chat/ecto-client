@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, type FormEvent } from 'react';
 
-import { Button, Input, TextArea, Spinner, Switch, Select, Separator, ImageCropModal } from '@/ui';
+import { Button, Input, TextArea, Spinner, Switch, Select, Separator, ImageCropModal, TagInput } from '@/ui';
 
 import { cn } from '@/lib/cn';
 import { cssUrl } from '@/lib/css-utils';
@@ -30,6 +30,7 @@ type ServerConfig = {
   allow_member_dms: boolean;
   show_system_messages: boolean;
   discoverable: boolean;
+  tags: string[];
 };
 
 type GeneralSettingsProps = {
@@ -73,6 +74,7 @@ export function GeneralSettings({ serverId }: GeneralSettingsProps) {
         allow_member_dms: cfg.allow_member_dms,
         show_system_messages: cfg.show_system_messages,
         discoverable: cfg.discoverable ?? false,
+        tags: cfg.tags ?? [],
       });
     }).catch((err: unknown) => {
       console.warn('[admin] Failed to load server config:', err);
@@ -178,6 +180,7 @@ export function GeneralSettings({ serverId }: GeneralSettingsProps) {
         allow_member_dms: config.allow_member_dms,
         show_system_messages: config.show_system_messages,
         discoverable: config.discoverable,
+        tags: config.tags,
       });
       setConfigSuccess('Server configuration saved.');
     } catch (err: unknown) {
@@ -356,6 +359,15 @@ export function GeneralSettings({ serverId }: GeneralSettingsProps) {
               checked={config.discoverable}
               onCheckedChange={(checked) => setConfig({ ...config, discoverable: checked })}
             />
+
+            {config.discoverable && (
+              <TagInput
+                label="Server Tags"
+                tags={config.tags}
+                onChange={(tags) => setConfig({ ...config, tags })}
+                placeholder="gaming, community, art..."
+              />
+            )}
 
             <Select
               label="Max File Size"

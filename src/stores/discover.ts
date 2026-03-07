@@ -13,6 +13,10 @@ interface DiscoverStore {
   loading: boolean;
   hasMore: boolean;
   serverStats: Map<string, ServerStats>;
+  searchQuery: string;
+  searchResults: DiscoveryServer[];
+  searchLoading: boolean;
+  searchOnlineStatus: Map<string, boolean>;
 
   setPosts: (posts: DiscoveryPost[]) => void;
   appendPosts: (posts: DiscoveryPost[]) => void;
@@ -20,6 +24,11 @@ interface DiscoverStore {
   setLoading: (loading: boolean) => void;
   setHasMore: (hasMore: boolean) => void;
   fetchLiveStats: (extraServers?: { server_id: string; address: string }[]) => void;
+  setSearchQuery: (query: string) => void;
+  setSearchResults: (results: DiscoveryServer[]) => void;
+  setSearchLoading: (loading: boolean) => void;
+  setSearchOnlineStatus: (serverId: string, online: boolean) => void;
+  clearSearch: () => void;
   clear: () => void;
 }
 
@@ -29,6 +38,10 @@ export const useDiscoverStore = create<DiscoverStore>()((set, get) => ({
   loading: false,
   hasMore: true,
   serverStats: new Map(),
+  searchQuery: '',
+  searchResults: [],
+  searchLoading: false,
+  searchOnlineStatus: new Map(),
 
   setPosts: (posts) => set({ posts }),
   appendPosts: (posts) => set((s) => ({ posts: [...s.posts, ...posts] })),
@@ -76,5 +89,19 @@ export const useDiscoverStore = create<DiscoverStore>()((set, get) => ({
     }
   },
 
-  clear: () => set({ posts: [], servers: [], loading: false, hasMore: true, serverStats: new Map() }),
+  setSearchQuery: (query) => set({ searchQuery: query }),
+  setSearchResults: (results) => set({ searchResults: results }),
+  setSearchLoading: (loading) => set({ searchLoading: loading }),
+  setSearchOnlineStatus: (serverId, online) =>
+    set((s) => {
+      const next = new Map(s.searchOnlineStatus);
+      next.set(serverId, online);
+      return { searchOnlineStatus: next };
+    }),
+  clearSearch: () => set({ searchQuery: '', searchResults: [], searchLoading: false, searchOnlineStatus: new Map() }),
+
+  clear: () => set({
+    posts: [], servers: [], loading: false, hasMore: true, serverStats: new Map(),
+    searchQuery: '', searchResults: [], searchLoading: false, searchOnlineStatus: new Map(),
+  }),
 }));

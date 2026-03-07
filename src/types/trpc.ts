@@ -545,6 +545,7 @@ export interface ServerRouter {
         show_system_messages: boolean;
         discoverable: boolean;
         discovery_approved: boolean;
+        tags: string[];
         version: string;
       }>;
     };
@@ -557,6 +558,7 @@ export interface ServerRouter {
         allow_member_dms?: boolean;
         show_system_messages?: boolean;
         discoverable?: boolean;
+        tags?: string[];
       }) => Promise<{ success: boolean }>;
     };
     completeSetup: {
@@ -868,7 +870,7 @@ export interface CentralRouter {
       }) => Promise<{ posts: DiscoveryPost[]; has_more: boolean }>;
     };
     getServers: {
-      query: (input: { limit?: number }) => Promise<{ servers: DiscoveryServer[] }>;
+      query: (input: { limit?: number; query?: string }) => Promise<{ servers: DiscoveryServer[] }>;
     };
   };
 }

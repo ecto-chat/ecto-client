@@ -1,12 +1,15 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Compass, Server } from 'lucide-react';
+import { Compass, Server, Search } from 'lucide-react';
 import type { DiscoveryServer } from 'ecto-shared';
 import { connectionManager } from '@/services/connection-manager';
 import { useDiscoverStore } from '@/stores/discover';
 import { Spinner } from '@/ui/Spinner';
 import { ScrollArea } from '@/ui/ScrollArea';
+import { Input } from '@/ui/Input';
+import { toServerUrl } from '@/lib/server-address';
 import { FeaturedPost } from './FeaturedPost';
 import { FeaturedServerCard } from './FeaturedServerCard';
+import { SearchServerCard } from './SearchServerCard';
 import { PostCard } from './PostCard';
 
 const CAROUSEL_INTERVAL = 8000; // 8 seconds per slide
@@ -21,6 +24,47 @@ export function DiscoverPage() {
   const [progressKey, setProgressKey] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval>>(undefined);
   const [featuredServers, setFeaturedServers] = useState<DiscoveryServer[]>([]);
+  const searchQuery = useDiscoverStore((s) => s.searchQuery);
+  const searchResults = useDiscoverStore((s) => s.searchResults);
+  const searchLoading = useDiscoverStore((s) => s.searchLoading);
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  const handleSearchChange = (value: string) => {
+    const store = useDiscoverStore.getState();
+    store.setSearchQuery(value);
+
+    clearTimeout(debounceRef.current);
+    if (!value.trim()) {
+      store.clearSearch();
+      return;
+    }
+    debounceRef.current = setTimeout(async () => {
+      const centralTrpc = connectionManager.getCentralTrpc();
+      if (!centralTrpc) return;
+      store.setSearchLoading(true);
+      try {
+        const res = await centralTrpc.discovery.getServers.query({ query: value.trim(), limit: 20 });
+        store.setSearchResults(res.servers);
+        // Check online status for self-hosted servers
+        for (const srv of res.servers) {
+          if (!srv.address.endsWith('.ecto.chat')) {
+            fetch(`${toServerUrl(srv.address)}/trpc/server.info`, {
+              method: 'GET',
+              signal: AbortSignal.timeout(5000),
+            })
+              .then((r) => store.setSearchOnlineStatus(srv.server_id, r.ok))
+              .catch(() => store.setSearchOnlineStatus(srv.server_id, false));
+          }
+        }
+      } catch {
+        store.setSearchResults([]);
+      } finally {
+        store.setSearchLoading(false);
+      }
+    }, 300);
+  };
+
+  const isSearchActive = searchQuery.trim().length > 0;
 
   const load = useCallback(async () => {
     const centralTrpc = connectionManager.getCentralTrpc();
@@ -142,8 +186,36 @@ export function DiscoverPage() {
     <div className="flex flex-1 overflow-hidden bg-primary">
       <ScrollArea className="flex-1">
         <div className="max-w-[960px] mx-auto p-6 mt-4">
+          <div className="mb-6">
+            <Input
+              placeholder="Search servers by name or tag..."
+              icon={<Search size={16} />}
+              value={searchQuery}
+              onChange={(e) => handleSearchChange(e.target.value)}
+            />
+          </div>
 
-          {loading && posts.length === 0 ? (
+          {isSearchActive ? (
+            <div>
+              {searchLoading ? (
+                <div className="flex items-center justify-center py-20">
+                  <Spinner />
+                </div>
+              ) : searchResults.length === 0 ? (
+                <div className="text-center py-20">
+                  <Search size={48} className="mx-auto mb-4 text-muted" />
+                  <h2 className="text-lg font-semibold text-primary mb-2">No servers found</h2>
+                  <p className="text-sm text-secondary">Try a different search term.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-3 gap-3">
+                  {searchResults.map((server) => (
+                    <SearchServerCard key={server.server_id} server={server} />
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : loading && posts.length === 0 ? (
             <div className="flex items-center justify-center py-20">
               <Spinner />
             </div>
