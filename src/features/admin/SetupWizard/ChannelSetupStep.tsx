@@ -1,15 +1,12 @@
 import { Plus, X, FolderPlus } from 'lucide-react';
 
-import { Button, Input, Select, IconButton } from '@/ui';
+import { Button, Input, IconButton } from '@/ui';
+
+import { ChannelTypeSelector, type ChannelType } from '../ChannelTypeSelector';
 
 import type { StepProps } from './wizard-types';
 
 type ChannelSetupStepProps = Pick<StepProps, 'state' | 'updateState'>;
-
-const channelTypeOptions = [
-  { value: 'text', label: 'Text' },
-  { value: 'voice', label: 'Voice' },
-];
 
 const DEFAULT_ROLE_COLORS = ['#3498db', '#2ecc71', '#e74c3c', '#9b59b6', '#e67e22', '#f1c40f', '#1abc9c'];
 
@@ -71,7 +68,7 @@ function CategoryEditor({ state, updateState }: Pick<StepProps, 'state' | 'updat
     });
   };
 
-  const updateCategoryChannel = (catIndex: number, chIndex: number, name: string, type: 'text' | 'voice') => {
+  const updateCategoryChannel = (catIndex: number, chIndex: number, name: string, type: ChannelType) => {
     updateState({
       categories: categories.map((cat, i) =>
         i === catIndex
@@ -105,6 +102,7 @@ function CategoryEditor({ state, updateState }: Pick<StepProps, 'state' | 'updat
       {categories.map((cat, catIndex) => (
         <div key={catIndex} className="rounded-lg border-2 border-primary p-3">
           <div className="flex items-center gap-2 mb-2">
+            <FolderPlus size={14} className="text-secondary shrink-0" />
             <Input
               value={cat.name}
               placeholder="Category name"
@@ -120,29 +118,30 @@ function CategoryEditor({ state, updateState }: Pick<StepProps, 'state' | 'updat
               <X size={14} />
             </IconButton>
           </div>
-          <div className="flex flex-col gap-2 pl-2">
+          <div className="flex flex-col gap-3 pl-2">
             {cat.channels.map((ch, chIndex) => (
-              <div key={chIndex} className="flex items-center gap-2">
-                <div className="w-24 shrink-0">
-                  <Select
-                    options={channelTypeOptions}
-                    value={ch.type}
-                    onValueChange={(val) => updateCategoryChannel(catIndex, chIndex, ch.name, val as 'text' | 'voice')}
-                  />
-                </div>
-                <Input
-                  value={ch.name}
-                  placeholder="channel-name"
-                  onChange={(e) => updateCategoryChannel(catIndex, chIndex, e.target.value, ch.type)}
+              <div key={chIndex} className="space-y-2 rounded-lg bg-tertiary p-3">
+                <ChannelTypeSelector
+                  value={ch.type}
+                  onChange={(type) => updateCategoryChannel(catIndex, chIndex, ch.name, type)}
                 />
-                <IconButton
-                  variant="ghost"
-                  size="sm"
-                  tooltip="Remove channel"
-                  onClick={() => removeCategoryChannel(catIndex, chIndex)}
-                >
-                  <X size={14} />
-                </IconButton>
+                <div className="flex items-center gap-2">
+                  <Input
+                    label="Channel Name"
+                    value={ch.name}
+                    placeholder="channel-name"
+                    onChange={(e) => updateCategoryChannel(catIndex, chIndex, e.target.value, ch.type)}
+                  />
+                  <IconButton
+                    variant="ghost"
+                    size="sm"
+                    tooltip="Remove channel"
+                    className="mt-5"
+                    onClick={() => removeCategoryChannel(catIndex, chIndex)}
+                  >
+                    <X size={14} />
+                  </IconButton>
+                </div>
               </div>
             ))}
             <Button
@@ -169,45 +168,46 @@ function FlatChannelEditor({ state, updateState }: Pick<StepProps, 'state' | 'up
   const hasCategories = state.categories.length > 0;
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-3">
       {hasCategories && state.channels.length > 0 && (
         <div className="text-xs uppercase tracking-wider font-semibold text-muted">
           Uncategorized Channels
         </div>
       )}
       {state.channels.map((ch, i) => (
-        <div key={i} className="flex items-center gap-2">
-          <div className="w-24 shrink-0">
-            <Select
-              options={channelTypeOptions}
-              value={ch.type}
-              onValueChange={(val) => {
-                const channels = [...state.channels];
-                channels[i] = { ...ch, type: val as 'text' | 'voice' };
-                updateState({ channels });
-              }}
-            />
-          </div>
-          <Input
-            value={ch.name}
-            placeholder="channel-name"
-            onChange={(e) => {
+        <div key={i} className="space-y-2 rounded-lg bg-tertiary p-3">
+          <ChannelTypeSelector
+            value={ch.type}
+            onChange={(type) => {
               const channels = [...state.channels];
-              channels[i] = { ...ch, name: e.target.value };
+              channels[i] = { ...ch, type };
               updateState({ channels });
             }}
           />
-          <IconButton
-            variant="ghost"
-            size="sm"
-            tooltip="Remove channel"
-            onClick={() => {
-              const channels = state.channels.filter((_, idx) => idx !== i);
-              updateState({ channels });
-            }}
-          >
-            <X size={14} />
-          </IconButton>
+          <div className="flex items-center gap-2">
+            <Input
+              label="Channel Name"
+              value={ch.name}
+              placeholder="channel-name"
+              onChange={(e) => {
+                const channels = [...state.channels];
+                channels[i] = { ...ch, name: e.target.value };
+                updateState({ channels });
+              }}
+            />
+            <IconButton
+              variant="ghost"
+              size="sm"
+              tooltip="Remove channel"
+              className="mt-5"
+              onClick={() => {
+                const channels = state.channels.filter((_, idx) => idx !== i);
+                updateState({ channels });
+              }}
+            >
+              <X size={14} />
+            </IconButton>
+          </div>
         </div>
       ))}
       <Button

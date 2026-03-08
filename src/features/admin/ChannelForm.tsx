@@ -1,9 +1,7 @@
 import { useState, type FormEvent } from 'react';
-import { Hash, Volume2, FileText, Megaphone, FolderPlus } from 'lucide-react';
+import { FolderPlus } from 'lucide-react';
 
 import { Button, Input, Select } from '@/ui';
-
-import { cn } from '@/lib/cn';
 
 import { useChannelStore } from '@/stores/channel';
 
@@ -11,12 +9,7 @@ import { connectionManager } from '@/services/connection-manager';
 
 import { normalizeChannelName, type Category } from 'ecto-shared';
 
-const CHANNEL_TYPES = [
-  { value: 'text', label: 'Text', description: 'Messages & chat', icon: Hash },
-  { value: 'voice', label: 'Voice', description: 'Real-time voice chat', icon: Volume2 },
-  { value: 'page', label: 'Page', description: 'Persistent documents', icon: FileText },
-  { value: 'news', label: 'News', description: 'Broadcast updates', icon: Megaphone },
-] as const;
+import { ChannelTypeSelector, type ChannelType } from './ChannelTypeSelector';
 
 type CreateChannelFormProps = {
   serverId: string;
@@ -26,7 +19,7 @@ type CreateChannelFormProps = {
 
 export function CreateChannelForm({ serverId, categories, onDone }: CreateChannelFormProps) {
   const [name, setName] = useState('');
-  const [type, setType] = useState<'text' | 'voice' | 'page' | 'news'>('text');
+  const [type, setType] = useState<ChannelType>('text');
   const [categoryId, setCategoryId] = useState('none');
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState('');
@@ -64,29 +57,7 @@ export function CreateChannelForm({ serverId, categories, onDone }: CreateChanne
 
       {error && <p className="text-sm text-danger">{error}</p>}
 
-      <div className="grid grid-cols-4 gap-2">
-        {CHANNEL_TYPES.map((ct) => {
-          const Icon = ct.icon;
-          const selected = type === ct.value;
-          return (
-            <button
-              key={ct.value}
-              type="button"
-              className={cn(
-                'flex flex-col items-center gap-1.5 rounded-lg p-3 text-center transition-colors',
-                selected
-                  ? 'ring-2 ring-accent bg-accent/10'
-                  : 'bg-tertiary border-2 border-primary hover:border-accent/50',
-              )}
-              onClick={() => setType(ct.value)}
-            >
-              <Icon size={20} className={selected ? 'text-accent' : 'text-secondary'} />
-              <span className={cn('text-sm font-medium', selected ? 'text-accent' : 'text-primary')}>{ct.label}</span>
-              <span className="text-xs text-muted leading-tight">{ct.description}</span>
-            </button>
-          );
-        })}
-      </div>
+      <ChannelTypeSelector value={type} onChange={setType} />
 
       <div className="space-y-3">
         <Input

@@ -39,9 +39,9 @@ export type WizardState = {
   allowMemberDms: boolean;
   maxUploadSizeBytes: number;
   selectedTemplate: ServerTemplate | null;
-  categories: { name: string; channels: { name: string; type: 'text' | 'voice' }[] }[];
+  categories: { name: string; channels: { name: string; type: 'text' | 'voice' | 'page' | 'news' }[] }[];
   roles: { name: string; color: string }[];
-  channels: { name: string; type: 'text' | 'voice' }[];
+  channels: { name: string; type: 'text' | 'voice' | 'page' | 'news' }[];
   channelsCreated: boolean;
   invite: Invite | null;
   inviteUrl: string | null;
