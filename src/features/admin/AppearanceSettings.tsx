@@ -1,43 +1,19 @@
 import { useState, useEffect, useRef, type FormEvent } from 'react';
 
-import { Button, Input, TextArea, Spinner, Switch, Select, Separator, ImageCropModal, TagInput } from '@/ui';
+import { Button, Input, TextArea, Spinner, ImageCropModal } from '@/ui';
 
 import { cn } from '@/lib/cn';
 import { cssUrl } from '@/lib/css-utils';
 
 import { connectionManager } from '@/services/connection-manager';
-import { useServerStore } from '@/stores/server';
-
-import { UPLOAD_SIZE_OPTIONS, SHARED_STORAGE_OPTIONS } from './SetupWizard/wizard-types';
 
 import type { Server } from 'ecto-shared';
 
-const uploadSizeSelectOptions = UPLOAD_SIZE_OPTIONS.map((opt) => ({
-  value: String(opt.value),
-  label: opt.label,
-}));
-
-const sharedStorageSelectOptions = SHARED_STORAGE_OPTIONS.map((opt) => ({
-  value: String(opt.value),
-  label: opt.label,
-}));
-
-type ServerConfig = {
-  max_upload_size_bytes: number;
-  max_shared_storage_bytes: number;
-  allow_local_accounts: boolean;
-  require_invite: boolean;
-  allow_member_dms: boolean;
-  show_system_messages: boolean;
-  discoverable: boolean;
-  tags: string[];
-};
-
-type GeneralSettingsProps = {
+type AppearanceSettingsProps = {
   serverId: string;
 };
 
-export function GeneralSettings({ serverId }: GeneralSettingsProps) {
+export function AppearanceSettings({ serverId }: AppearanceSettingsProps) {
   const [server, setServer] = useState<Server | null>(null);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -46,14 +22,8 @@ export function GeneralSettings({ serverId }: GeneralSettingsProps) {
   const [success, setSuccess] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const bannerInputRef = useRef<HTMLInputElement>(null);
-
-  const [config, setConfig] = useState<ServerConfig | null>(null);
-  const [savingConfig, setSavingConfig] = useState(false);
   const [iconCropSrc, setIconCropSrc] = useState<string | null>(null);
   const [bannerCropSrc, setBannerCropSrc] = useState<string | null>(null);
-  const [configError, setConfigError] = useState('');
-  const [configSuccess, setConfigSuccess] = useState('');
-  const isManaged = useServerStore((s) => s.serverMeta.get(serverId)?.hosting_mode === 'managed');
 
   useEffect(() => {
     const trpc = connectionManager.getServerTrpc(serverId);
@@ -64,20 +34,6 @@ export function GeneralSettings({ serverId }: GeneralSettingsProps) {
       setDescription(result.server.description ?? '');
     }).catch((err: unknown) => {
       console.warn('[admin] Failed to load server info:', err);
-    });
-    trpc.serverConfig.get.query().then((cfg) => {
-      setConfig({
-        max_upload_size_bytes: cfg.max_upload_size_bytes,
-        max_shared_storage_bytes: cfg.max_shared_storage_bytes,
-        allow_local_accounts: cfg.allow_local_accounts,
-        require_invite: cfg.require_invite,
-        allow_member_dms: cfg.allow_member_dms,
-        show_system_messages: cfg.show_system_messages,
-        discoverable: cfg.discoverable ?? false,
-        tags: cfg.tags ?? [],
-      });
-    }).catch((err: unknown) => {
-      console.warn('[admin] Failed to load server config:', err);
     });
   }, [serverId]);
 
@@ -94,7 +50,7 @@ export function GeneralSettings({ serverId }: GeneralSettingsProps) {
         description: description || undefined,
       });
       setServer(updated);
-      setSuccess('Server settings saved.');
+      setSuccess('Appearance saved.');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to save');
     } finally {
@@ -164,32 +120,6 @@ export function GeneralSettings({ serverId }: GeneralSettingsProps) {
     }
   };
 
-  const handleSaveConfig = async () => {
-    if (!config) return;
-    setConfigError('');
-    setConfigSuccess('');
-    setSavingConfig(true);
-    try {
-      const trpc = connectionManager.getServerTrpc(serverId);
-      if (!trpc) throw new Error('Not connected');
-      await trpc.serverConfig.update.mutate({
-        max_upload_size_bytes: config.max_upload_size_bytes,
-        max_shared_storage_bytes: config.max_shared_storage_bytes,
-        allow_local_accounts: config.allow_local_accounts,
-        require_invite: config.require_invite,
-        allow_member_dms: config.allow_member_dms,
-        show_system_messages: config.show_system_messages,
-        discoverable: config.discoverable,
-        tags: config.tags,
-      });
-      setConfigSuccess('Server configuration saved.');
-    } catch (err: unknown) {
-      setConfigError(err instanceof Error ? err.message : 'Failed to save');
-    } finally {
-      setSavingConfig(false);
-    }
-  };
-
   if (!server) {
     return (
       <div className="flex items-center justify-center py-10">
@@ -201,7 +131,7 @@ export function GeneralSettings({ serverId }: GeneralSettingsProps) {
   return (
     <div className="space-y-8">
       <form onSubmit={handleSave} className="space-y-5">
-        <h3 className="text-base font-medium text-primary">Server Overview</h3>
+        <h3 className="text-base font-medium text-primary">Appearance</h3>
 
         {error && <p className="text-sm text-danger">{error}</p>}
         {success && <p className="text-sm text-success">{success}</p>}
@@ -313,88 +243,6 @@ export function GeneralSettings({ serverId }: GeneralSettingsProps) {
         </div>
       </form>
 
-      <Separator />
-
-      <div className="space-y-5">
-        <h3 className="text-base font-medium text-primary">Server Configuration</h3>
-
-        {configError && <p className="text-sm text-danger">{configError}</p>}
-        {configSuccess && <p className="text-sm text-success">{configSuccess}</p>}
-
-        {config ? (
-          <div className="flex flex-col gap-4">
-            <Switch
-              label="Require Invite to Join"
-              description="New members must have a valid invite code to join this server."
-              checked={config.require_invite}
-              onCheckedChange={(checked) => setConfig({ ...config, require_invite: checked })}
-            />
-
-            {!isManaged && (
-              <Switch
-                label="Allow Local Accounts"
-                description="Allow users to create accounts directly on this server without a central Ecto account."
-                checked={config.allow_local_accounts}
-                onCheckedChange={(checked) => setConfig({ ...config, allow_local_accounts: checked })}
-              />
-            )}
-
-            <Switch
-              label="Allow Member DMs"
-              description="Allow members to send direct messages to each other within this server."
-              checked={config.allow_member_dms}
-              onCheckedChange={(checked) => setConfig({ ...config, allow_member_dms: checked })}
-            />
-
-            <Switch
-              label="Show System Messages"
-              description="Display notifications in chat when members join or messages are pinned."
-              checked={config.show_system_messages}
-              onCheckedChange={(checked) => setConfig({ ...config, show_system_messages: checked })}
-            />
-
-            <Switch
-              label="Server Discovery"
-              description="Allow this server to appear in the Ecto Discover feed. Requires approval by Ecto admins."
-              checked={config.discoverable}
-              onCheckedChange={(checked) => setConfig({ ...config, discoverable: checked })}
-            />
-
-            {config.discoverable && (
-              <TagInput
-                label="Server Tags"
-                tags={config.tags}
-                onChange={(tags) => setConfig({ ...config, tags })}
-                placeholder="gaming, community, art..."
-              />
-            )}
-
-            <Select
-              label="Max File Size"
-              options={uploadSizeSelectOptions}
-              value={String(config.max_upload_size_bytes)}
-              onValueChange={(value) => setConfig({ ...config, max_upload_size_bytes: Number(value) })}
-            />
-
-            <Select
-              label="Shared Storage Capacity"
-              options={sharedStorageSelectOptions}
-              value={String(config.max_shared_storage_bytes)}
-              onValueChange={(value) => setConfig({ ...config, max_shared_storage_bytes: Number(value) })}
-            />
-
-            <div className="flex justify-end">
-              <Button onClick={handleSaveConfig} loading={savingConfig}>
-                Save Configuration
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <div className="flex items-center justify-center py-4">
-            <Spinner />
-          </div>
-        )}
-      </div>
       {iconCropSrc && (
         <ImageCropModal
           open

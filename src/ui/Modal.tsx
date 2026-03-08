@@ -13,6 +13,8 @@ type ModalProps = {
   children: ReactNode;
   width?: 'sm' | 'md' | 'lg' | 'xl' | 'full';
   className?: string;
+  /** Extra classes applied to the scrollable body wrapper. */
+  bodyClassName?: string;
 };
 
 const widthClasses = {
@@ -23,7 +25,7 @@ const widthClasses = {
   full: 'max-w-3xl',
 };
 
-export function Modal({ open, onOpenChange, title, description, children, width = 'md', className }: ModalProps) {
+export function Modal({ open, onOpenChange, title, description, children, width = 'md', className, bodyClassName }: ModalProps) {
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <AnimatePresence>
@@ -68,7 +70,7 @@ export function Modal({ open, onOpenChange, title, description, children, width 
                 ) : (
                   <VisuallyHidden><Dialog.Title>Dialog</Dialog.Title></VisuallyHidden>
                 )}
-                <div className="overflow-y-auto p-5 min-h-0">{children}</div>
+                <div className={cn('overflow-y-auto p-5 min-h-0', bodyClassName)}>{children}</div>
               </motion.div>
             </Dialog.Content>
           </Dialog.Portal>

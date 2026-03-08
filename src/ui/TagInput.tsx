@@ -11,9 +11,10 @@ type TagInputProps = {
   label?: string;
   placeholder?: string;
   className?: string;
+  disabled?: boolean;
 };
 
-export function TagInput({ tags, onChange, label, placeholder = 'Add a tag...', className }: TagInputProps) {
+export function TagInput({ tags, onChange, label, placeholder = 'Add a tag...', className, disabled }: TagInputProps) {
   const [value, setValue] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -59,6 +60,7 @@ export function TagInput({ tags, onChange, label, placeholder = 'Add a tag...', 
           'flex flex-wrap items-center gap-1.5 rounded-md bg-secondary border-2 border-primary px-2.5 py-1.5',
           'focus-within:ring-1 focus-within:ring-accent/40 focus-within:border-primary-active',
           'transition-colors duration-150 cursor-text',
+          disabled && 'opacity-50 pointer-events-none',
         )}
         onClick={() => inputRef.current?.focus()}
       >

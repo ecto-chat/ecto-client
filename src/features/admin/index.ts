@@ -1,6 +1,8 @@
 export { SetupWizard } from './SetupWizard';
 export { ServerSettings } from './ServerSettings';
-export { GeneralSettings } from './GeneralSettings';
+export { AppearanceSettings } from './AppearanceSettings';
+export { ConfigurationSettings } from './ConfigurationSettings';
+export { DiscoverySettings } from './DiscoverySettings';
 export { BansTab } from './SecuritySettings';
 export { DangerZone } from './DangerZone';
 export { TransferOwnership } from './TransferOwnership';
