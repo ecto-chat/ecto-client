@@ -7,8 +7,7 @@ import { Button, ConfirmDialog } from '@/ui';
 
 import { useHubFiles, fetchAllSharedFiles } from '@/hooks/useHubFiles';
 import { usePermissions } from '@/hooks/usePermissions';
-import { useUiStore } from '@/stores/ui';
-import { useHubFilesStore } from '@/stores/hub-files';
+import { useUiStore, useHubFilesStore } from 'ecto-core';
 
 import { BreadcrumbNav } from './BreadcrumbNav';
 import { FileBrowserTable, type TableRow } from './FileBrowserTable';

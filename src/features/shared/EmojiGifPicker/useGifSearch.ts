@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 
-import { searchGifs, getTrendingGifs, type KlipyGif } from '@/lib/klipy';
+import { searchGifs, getTrendingGifs, type KlipyGif } from 'ecto-core';
 
 export function useGifSearch() {
   const [query, setQuery] = useState('');

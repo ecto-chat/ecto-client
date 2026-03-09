@@ -2,9 +2,7 @@ import { useState, useCallback } from 'react';
 
 import { Button, ConfirmDialog } from '@/ui';
 
-import { useMemberStore } from '@/stores/member';
-
-import { connectionManager } from '@/services/connection-manager';
+import { useMemberStore, connectionManager } from 'ecto-core';
 
 import type { Member, Role } from 'ecto-shared';
 

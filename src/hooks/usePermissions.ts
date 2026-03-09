@@ -1,7 +1,5 @@
 import { Permissions } from 'ecto-shared';
-import { useServerStore } from '../stores/server.js';
-import { useMemberStore } from '../stores/member.js';
-import { useRoleStore } from '../stores/role.js';
+import { useServerStore, useMemberStore, useRoleStore } from 'ecto-core';
 
 type AllowedTabs = 'all' | string[];
 

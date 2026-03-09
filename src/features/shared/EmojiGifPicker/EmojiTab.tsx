@@ -8,7 +8,7 @@ import {
   getFrequentEmojis,
   type EmojiItem,
   type EmojiCategory,
-} from '@/lib/emoji-data';
+} from 'ecto-core';
 
 type EmojiTabProps = {
   onSelect: (emoji: string, item: EmojiItem) => void;

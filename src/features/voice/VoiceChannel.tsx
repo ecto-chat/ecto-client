@@ -5,9 +5,7 @@ import { Permissions } from 'ecto-shared';
 
 import { Avatar, Button } from '@/ui';
 
-import { useVoiceStore } from '@/stores/voice';
-import { useUiStore } from '@/stores/ui';
-import { useMemberStore } from '@/stores/member';
+import { useVoiceStore, useUiStore, useMemberStore } from 'ecto-core';
 import { usePermissions } from '@/hooks/usePermissions';
 
 import { cn } from '@/lib/cn';

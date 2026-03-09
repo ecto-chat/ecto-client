@@ -4,11 +4,7 @@ import { AlertTriangle } from 'lucide-react';
 
 import { Button, Input, ConfirmDialog } from '@/ui';
 
-import { useAuthStore } from '@/stores/auth';
-
-import { connectionManager } from '@/services/connection-manager';
-
-import { fullLogout } from '@/stores/reset';
+import { useAuthStore, connectionManager, fullLogout } from 'ecto-core';
 
 export function AccountDeletion() {
   const user = useAuthStore((s) => s.user);

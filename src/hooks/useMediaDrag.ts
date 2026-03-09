@@ -1,6 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
-import { useUiStore } from '@/stores/ui';
-import { SNAP_EDGE_THRESHOLD } from '@/lib/media-window-constants';
+import { useUiStore, SNAP_EDGE_THRESHOLD } from 'ecto-core';
 
 type SnapSide = 'left' | 'right' | null;
 

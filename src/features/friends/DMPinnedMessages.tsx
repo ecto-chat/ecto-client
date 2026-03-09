@@ -4,13 +4,11 @@ import { Pin } from 'lucide-react';
 
 import { Modal, Spinner, EmptyState, ScrollArea } from '@/ui';
 
-import { connectionManager } from '@/services/connection-manager';
+import { connectionManager, dmToMessage } from 'ecto-core';
 
 import type { Message } from 'ecto-shared';
 
 import { MessageItem } from '@/features/chat';
-
-import { dmToMessage } from '@/lib/message-adapters';
 
 type DMPinnedMessagesProps = {
   userId: string;

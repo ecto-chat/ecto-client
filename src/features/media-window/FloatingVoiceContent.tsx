@@ -2,8 +2,7 @@ import type { VoiceState } from 'ecto-shared';
 
 import { cn } from '@/lib/cn';
 import { Avatar } from '@/ui';
-import { useVoiceStore } from '@/stores/voice';
-import { useMemberStore } from '@/stores/member';
+import { useVoiceStore, useMemberStore } from 'ecto-core';
 import { VideoRenderer } from '@/features/shared/VideoRenderer';
 
 type FloatingVoiceContentProps = {

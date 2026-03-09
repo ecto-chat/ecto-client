@@ -37,15 +37,17 @@ const ActiveCallOverlay = lazy(() => import('@/features/call/ActiveCallOverlay')
 const ImageLightbox = lazy(() => import('@/features/chat/ImageLightbox').then(m => ({ default: m.ImageLightbox })));
 
 // stores, hooks, services, ui
-import { useUiStore } from '@/stores/ui';
-import { useVoiceStore } from '@/stores/voice';
-import { useConnectionStore } from '@/stores/connection';
-import { useCallStore } from '@/stores/call';
+import {
+  useUiStore,
+  useVoiceStore,
+  useConnectionStore,
+  useCallStore,
+  connectionManager,
+  getPlatform,
+} from 'ecto-core';
 import { useNotifications } from '@/hooks/useNotifications';
 import { useInitializeCentral } from '@/hooks/useInitializeCentral';
 import { useInitializeLocal } from '@/hooks/useInitializeLocal';
-import { connectionManager } from '@/services/connection-manager';
-import { setNotificationClickHandler } from '@/services/notification-service';
 import { startIdleDetection, stopIdleDetection } from '@/services/idle-detector';
 import { consumePendingJoin } from '@/hooks/useJoinParams';
 import { EmptyState } from '@/ui/EmptyState';
@@ -85,7 +87,7 @@ export function AppLayout() {
   }, []);
 
   useEffect(() => {
-    return setNotificationClickHandler((data) => {
+    return getPlatform().notification.onNotificationClick((data: Record<string, string>) => {
       if (data.serverId && data.conversationId) {
         useUiStore.getState().setActiveServer(data.serverId);
         useUiStore.getState().setHubSection('server-dms');

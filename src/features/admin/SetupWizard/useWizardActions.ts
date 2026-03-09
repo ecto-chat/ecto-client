@@ -1,11 +1,6 @@
 import { useCallback } from 'react';
 
-import { useServerStore } from '@/stores/server';
-import { useChannelStore } from '@/stores/channel';
-
-import { connectionManager } from '@/services/connection-manager';
-
-import type { ServerTemplate } from '@/lib/server-templates';
+import { useServerStore, useChannelStore, connectionManager, type ServerTemplate } from 'ecto-core';
 
 import { useWizardState } from './useWizardState';
 

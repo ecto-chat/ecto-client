@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { AlertTriangle, Settings } from 'lucide-react';
 import { Permissions } from 'ecto-shared';
-import { useUiStore } from '@/stores/ui';
-import { useServerStore } from '@/stores/server';
+import { useUiStore, useServerStore } from 'ecto-core';
 import { usePermissions } from '@/hooks/usePermissions';
 import { IconButton } from '@/ui/IconButton';
 import { Modal, Button } from '@/ui';

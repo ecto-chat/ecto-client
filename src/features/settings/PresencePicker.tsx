@@ -2,10 +2,7 @@ import { useState } from 'react';
 
 import { Button, Input } from '@/ui';
 
-import { useAuthStore } from '@/stores/auth';
-import { usePresenceStore } from '@/stores/presence';
-
-import { connectionManager } from '@/services/connection-manager';
+import { useAuthStore, usePresenceStore, connectionManager } from 'ecto-core';
 
 import { cn } from '@/lib/cn';
 

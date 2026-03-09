@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 
-import { useVoiceStore } from '@/stores/voice';
-import { useAuthStore } from '@/stores/auth';
+import { useVoiceStore, useAuthStore } from 'ecto-core';
 
 export type MediaStats = {
   resolution: string;

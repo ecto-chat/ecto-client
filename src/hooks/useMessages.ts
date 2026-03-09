@@ -1,12 +1,14 @@
 import { useCallback } from 'react';
 import { generateUUIDv7 } from 'ecto-shared';
 import type { Message } from 'ecto-shared';
-import { useMessageStore } from '../stores/message.js';
-import { useReadStateStore } from '../stores/read-state.js';
-import { useUiStore } from '../stores/ui.js';
-import { useAuthStore } from '../stores/auth.js';
-import { useMemberStore } from '../stores/member.js';
-import { connectionManager } from '../services/connection-manager.js';
+import {
+  useMessageStore,
+  useReadStateStore,
+  useUiStore,
+  useAuthStore,
+  useMemberStore,
+  connectionManager,
+} from 'ecto-core';
 
 export function useMessages(channelId: string) {
   const messages = useMessageStore((s) => s.messages.get(channelId));

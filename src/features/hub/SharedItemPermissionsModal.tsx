@@ -4,8 +4,7 @@ import { X, Check, Minus } from 'lucide-react';
 
 import { Modal, Select, Button, ScrollArea } from '@/ui';
 
-import { useRoleStore } from '@/stores/role';
-import { useUiStore } from '@/stores/ui';
+import { useRoleStore, useUiStore } from 'ecto-core';
 import { useHubFiles } from '@/hooks/useHubFiles';
 
 type PermDef = { key: keyof typeof Permissions; label: string; description: string };

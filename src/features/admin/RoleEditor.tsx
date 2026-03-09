@@ -4,7 +4,7 @@ import { Plus } from 'lucide-react';
 
 import { Button, ConfirmDialog, IconButton, Input, ScrollArea, Spinner, Tooltip } from '@/ui';
 
-import { connectionManager } from '@/services/connection-manager';
+import { connectionManager } from 'ecto-core';
 
 import { cn } from '@/lib/cn';
 

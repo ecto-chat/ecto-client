@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback } from 'react';
 
-import { connectionManager } from '@/services/connection-manager';
+import { connectionManager } from 'ecto-core';
 
 type UseFileUploadOptions = {
   channelId: string;

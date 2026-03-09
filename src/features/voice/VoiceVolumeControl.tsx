@@ -4,12 +4,9 @@ import { Volume2, VolumeX, Volume1 } from 'lucide-react';
 
 import { IconButton, Tooltip } from '@/ui';
 
-import { useVoiceStore } from '@/stores/voice';
-import { useAuthStore } from '@/stores/auth';
+import { useVoiceStore, useAuthStore, preferenceManager } from 'ecto-core';
 
 import { useVoice } from '@/hooks/useVoice';
-
-import { preferenceManager } from '@/services/preference-manager';
 
 import { cn } from '@/lib/cn';
 

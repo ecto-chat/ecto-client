@@ -1,6 +1,4 @@
-import { useVoiceStore } from '@/stores/voice';
-import { useUiStore } from '@/stores/ui';
-import { useChannelStore } from '@/stores/channel';
+import { useVoiceStore, useUiStore, useChannelStore } from 'ecto-core';
 
 import { VoiceHeader } from './VoiceHeader';
 import { VoiceParticipantGrid } from './VoiceParticipantGrid';

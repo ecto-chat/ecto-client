@@ -1,7 +1,5 @@
 import { useCallback } from 'react';
-import { useHubFilesStore } from '../stores/hub-files.js';
-import { useUiStore } from '../stores/ui.js';
-import { connectionManager } from '../services/connection-manager.js';
+import { useHubFilesStore, useUiStore, connectionManager } from 'ecto-core';
 
 function getTrpc() {
   const serverId = useUiStore.getState().activeServerId;

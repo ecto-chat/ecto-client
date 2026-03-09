@@ -5,7 +5,7 @@ import { X, ExternalLink } from 'lucide-react';
 
 import { IconButton } from '@/ui';
 
-import { extractUrls, fetchLinkPreview, type LinkPreviewData } from '@/lib/link-preview';
+import { extractUrls, fetchLinkPreview, type LinkPreviewData } from 'ecto-core';
 
 type LinkPreviewProps = {
   content: string;

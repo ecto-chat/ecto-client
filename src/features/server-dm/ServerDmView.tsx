@@ -1,8 +1,6 @@
 import { useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { useServerDmStore } from '@/stores/server-dm';
-import { useUiStore } from '@/stores/ui';
-import { connectionManager } from '@/services/connection-manager';
+import { useServerDmStore, useUiStore, connectionManager } from 'ecto-core';
 import { ServerDmConversationList } from './ServerDmConversationList';
 import { ServerDmChat } from './ServerDmChat';
 

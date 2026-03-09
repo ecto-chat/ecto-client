@@ -5,11 +5,8 @@ import { useNavigate } from 'react-router-dom';
 import { Lock, ArrowRight } from 'lucide-react';
 
 import { Avatar, Button } from '@/ui';
-import { useUiStore } from '@/stores/ui';
-import { useServerStore } from '@/stores/server';
-import { connectionManager } from '@/services/connection-manager';
+import { useUiStore, useServerStore, connectionManager, extractServerAddresses } from 'ecto-core';
 
-import { extractServerAddresses } from '@/lib/server-address';
 import { fetchServerPreview } from '@/features/servers/server-join-utils';
 import type { ServerPreviewData } from '@/features/servers/types';
 

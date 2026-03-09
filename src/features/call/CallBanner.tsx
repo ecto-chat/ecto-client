@@ -4,7 +4,7 @@ import { Maximize2 } from 'lucide-react';
 import { Button, IconButton } from '@/ui';
 
 import { useCall } from '@/hooks/useCall';
-import { useUiStore } from '@/stores/ui';
+import { useUiStore } from 'ecto-core';
 import { useExpandMedia } from '@/features/media-window';
 
 export function CallBanner() {

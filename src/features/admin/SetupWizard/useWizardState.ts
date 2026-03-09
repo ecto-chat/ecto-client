@@ -1,8 +1,6 @@
 import { useState, useCallback } from 'react';
 
-import { useServerStore } from '@/stores/server';
-
-import { connectionManager } from '@/services/connection-manager';
+import { useServerStore, connectionManager } from 'ecto-core';
 
 import type { WizardStep, WizardState } from './wizard-types';
 

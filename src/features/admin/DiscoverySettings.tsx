@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 
 import { Button, Spinner, Switch, TagInput } from '@/ui';
 
-import { connectionManager } from '@/services/connection-manager';
+import { connectionManager } from 'ecto-core';
 
 type DiscoveryState = {
   discoverable: boolean;

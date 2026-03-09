@@ -1,27 +1,24 @@
 import { useCallback, useEffect } from 'react';
-import { useVoiceStore } from '../stores/voice.js';
-import { useCallStore } from '../stores/call.js';
-import { connectionManager } from '../services/connection-manager.js';
-import { preferenceManager } from '../services/preference-manager.js';
 import {
+  useVoiceStore,
+  useCallStore,
+  connectionManager,
+  preferenceManager,
   CAMERA_PRESETS,
   SCREEN_PRESETS,
   getVideoQuality,
   getScreenQuality,
   setVideoQuality,
   setScreenQuality,
-} from '../lib/media-presets.js';
-import { switchAudioOutputDevice } from '../lib/media-utils.js';
-import {
   getLocalUserId,
   cleanupVoiceSession,
   restoreWsHandler,
   setupVoiceEventHandling,
   replaceAudioTrack,
-} from '../services/voice-media.js';
-
-export { resetVoiceSessionState } from '../services/voice-media.js';
-export type { VideoQuality, ScreenQuality } from '../lib/media-presets.js';
+} from 'ecto-core';
+export { resetVoiceSessionState } from 'ecto-core';
+export type { VideoQuality, ScreenQuality } from 'ecto-core';
+import { switchAudioOutputDevice } from '../lib/media-utils.js';
 
 export function useVoice() {
   const currentChannelId = useVoiceStore((s) => s.currentChannelId);

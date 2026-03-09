@@ -1,7 +1,5 @@
 import { useCallback } from 'react';
-import { useChannelStore } from '../stores/channel.js';
-import { useUiStore } from '../stores/ui.js';
-import { connectionManager } from '../services/connection-manager.js';
+import { useChannelStore, useUiStore, connectionManager } from 'ecto-core';
 
 export function useChannels(serverId: string) {
   const channels = useChannelStore((s) => s.channels.get(serverId));

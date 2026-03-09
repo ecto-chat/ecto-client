@@ -1,7 +1,7 @@
 import { useState, useRef, useMemo, useEffect, type FormEvent } from 'react';
 import { AlertCircle, ArrowLeft, Lock, Upload, X } from 'lucide-react';
 import type { NewsPost } from 'ecto-shared';
-import { connectionManager } from '@/services/connection-manager';
+import { connectionManager } from 'ecto-core';
 import { cssUrl } from '@/lib/css-utils';
 import { Button, Input, IconButton, Modal } from '@/ui';
 import { ScrollArea } from '@/ui/ScrollArea';

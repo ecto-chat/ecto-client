@@ -5,15 +5,11 @@ import type { VoiceState } from 'ecto-shared';
 
 import { EmptyState } from '@/ui';
 
-import { useVoiceStore } from '@/stores/voice';
-import { useMemberStore } from '@/stores/member';
-
-import { connectionManager } from '@/services/connection-manager';
+import { useVoiceStore, useMemberStore, connectionManager, type GridSlot } from 'ecto-core';
 
 import { useModPermissions } from './useModPermissions';
 import { VoiceParticipant } from './VoiceParticipant';
 import { ParticipantGridLayout, type ParticipantSlot } from '../shared/ParticipantGridLayout';
-import type { GridSlot } from '@/lib/grid-layout';
 
 type VoiceParticipantGridProps = {
   participants: VoiceState[];

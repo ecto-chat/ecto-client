@@ -3,9 +3,7 @@ import { FolderOpen, Mail } from 'lucide-react';
 import { Permissions, hasPermission } from 'ecto-shared';
 
 import { usePermissions } from '@/hooks/usePermissions';
-import { useUiStore } from '@/stores/ui';
-import { useServerStore } from '@/stores/server';
-import { useServerDmStore } from '@/stores/server-dm';
+import { useUiStore, useServerStore, useServerDmStore } from 'ecto-core';
 import { Badge } from '@/ui/Badge';
 
 import { cn } from '@/lib/cn';

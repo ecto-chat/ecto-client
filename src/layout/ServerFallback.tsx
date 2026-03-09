@@ -2,8 +2,7 @@ import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Hash } from 'lucide-react';
 
-import { useServerStore } from '@/stores/server';
-import { useUiStore } from '@/stores/ui';
+import { useServerStore, useUiStore } from 'ecto-core';
 import { EmptyState } from '@/ui/EmptyState';
 
 export function ServerFallback() {

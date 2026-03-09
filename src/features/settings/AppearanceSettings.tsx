@@ -2,7 +2,7 @@ import { useState } from 'react';
 
 import { Button, TextArea } from '@/ui';
 
-import { useUiStore } from '@/stores/ui';
+import { useUiStore } from 'ecto-core';
 import { applyCustomCSS } from '@/lib/custom-css';
 
 export function AppearanceSettings() {

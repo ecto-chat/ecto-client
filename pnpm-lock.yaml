@@ -74,6 +74,9 @@ importers:
       dompurify:
         specifier: ^3.3.1
         version: 3.3.1
+      ecto-core:
+        specifier: link:../ecto-core
+        version: link:../ecto-core
       ecto-shared:
         specifier: link:../ecto-shared
         version: link:../ecto-shared

@@ -4,8 +4,7 @@ import { Bell } from 'lucide-react';
 
 import { Button } from '@/ui';
 
-import { requestNotificationPermission } from '@/services/notification-service';
-import { preferenceManager } from '@/services/preference-manager';
+import { requestNotificationPermission, preferenceManager } from 'ecto-core';
 
 export function NotificationPrompt() {
   const [visible, setVisible] = useState(false);

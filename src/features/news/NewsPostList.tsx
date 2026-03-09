@@ -1,6 +1,6 @@
 import { AlertCircle, Newspaper, Pencil, Trash2 } from 'lucide-react';
 import type { NewsPost } from 'ecto-shared';
-import { connectionManager } from '@/services/connection-manager';
+import { connectionManager } from 'ecto-core';
 import { cssUrl } from '@/lib/css-utils';
 import { ScrollArea } from '@/ui/ScrollArea';
 import { Spinner, EmptyState } from '@/ui';

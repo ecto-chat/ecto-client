@@ -1,10 +1,7 @@
 import { useState, type FormEvent } from 'react';
 
 import { Button, Input } from '@/ui';
-import { useAuthStore } from '@/stores/auth';
-import { useServerStore } from '@/stores/server';
-import { useUiStore } from '@/stores/ui';
-import { connectionManager } from '@/services/connection-manager';
+import { useAuthStore, useServerStore, useUiStore, connectionManager } from 'ecto-core';
 
 type CreateServerFormProps = {
   onCancel: () => void;

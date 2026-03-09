@@ -1,8 +1,6 @@
 import { motion, AnimatePresence } from 'motion/react';
 
-import { useUiStore } from '@/stores/ui';
-
-import { connectionManager } from '@/services/connection-manager';
+import { useUiStore, connectionManager } from 'ecto-core';
 
 import { springGentle } from '@/lib/animations';
 

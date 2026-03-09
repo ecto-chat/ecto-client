@@ -1,8 +1,7 @@
 import { Volume2, Users, Minimize2 } from 'lucide-react';
 
 import { IconButton } from '@/ui';
-import { useUiStore } from '@/stores/ui';
-import { useVoiceStore } from '@/stores/voice';
+import { useUiStore, useVoiceStore } from 'ecto-core';
 import { cn } from '@/lib/cn';
 
 type VoiceHeaderProps = {

@@ -5,7 +5,7 @@ import { Button, Input, TextArea, Spinner, ImageCropModal } from '@/ui';
 import { cn } from '@/lib/cn';
 import { cssUrl } from '@/lib/css-utils';
 
-import { connectionManager } from '@/services/connection-manager';
+import { connectionManager } from 'ecto-core';
 
 import type { Server } from 'ecto-shared';
 

@@ -4,8 +4,7 @@ import { User, Lock, Palette, Bell, Mic, Shield, AlertTriangle } from 'lucide-re
 
 import { Modal, Tabs, TabsList, TabsTrigger, TabsContent, Separator } from '@/ui';
 
-import { useUiStore } from '@/stores/ui';
-import { useAuthStore } from '@/stores/auth';
+import { useUiStore, useAuthStore } from 'ecto-core';
 
 import { ProfileEditor } from './ProfileEditor';
 import { PresencePicker } from './PresencePicker';

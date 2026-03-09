@@ -1,6 +1,6 @@
 import type { DiscoveryPost } from 'ecto-shared';
 import { Avatar } from '@/ui/Avatar';
-import { useDiscoverStore } from '@/stores/discover';
+import { useDiscoverStore } from 'ecto-core';
 import { cssUrl } from '@/lib/css-utils';
 import { usePostClick } from './usePostClick';
 

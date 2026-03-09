@@ -4,7 +4,7 @@ import { motion } from 'motion/react';
 
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/ui/Tabs';
 
-import { recordEmojiUsage, type EmojiItem } from '@/lib/emoji-data';
+import { recordEmojiUsage, type EmojiItem } from 'ecto-core';
 
 import { EmojiTab } from './EmojiTab';
 import { GifTab } from './GifTab';

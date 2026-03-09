@@ -11,8 +11,7 @@ import {
 
 import { cn } from '@/lib/cn';
 
-import type { ServerTemplate } from '@/lib/server-templates';
-import { SERVER_TEMPLATES } from '@/lib/server-templates';
+import { SERVER_TEMPLATES, type ServerTemplate } from 'ecto-core';
 
 type TemplateStepProps = {
   onSelectTemplate: (template: ServerTemplate | null) => void;

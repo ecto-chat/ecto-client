@@ -4,8 +4,7 @@ import { useParams } from 'react-router-dom';
 import { MessageCircle } from 'lucide-react';
 
 import { EmptyState } from '@/ui';
-import { useFriendStore } from '@/stores/friend';
-import { useUiStore } from '@/stores/ui';
+import { useFriendStore, useUiStore } from 'ecto-core';
 import { useCall } from '@/hooks/useCall';
 import { usePresence } from '@/hooks/usePresence';
 

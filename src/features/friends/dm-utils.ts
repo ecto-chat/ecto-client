@@ -1,9 +1,6 @@
 import { generateUUIDv7 } from 'ecto-shared';
 
-import { useDmStore } from '@/stores/dm';
-import { useAuthStore } from '@/stores/auth';
-
-import { connectionManager } from '@/services/connection-manager';
+import { useDmStore, useAuthStore, connectionManager } from 'ecto-core';
 
 import type { Attachment, DirectMessage } from 'ecto-shared';
 

@@ -1,9 +1,7 @@
 import { useState, useCallback } from 'react';
 
 import { ConfirmDialog } from '@/ui';
-import { useUiStore } from '@/stores/ui';
-import { useServerStore } from '@/stores/server';
-import { connectionManager } from '@/services/connection-manager';
+import { useUiStore, useServerStore, connectionManager } from 'ecto-core';
 
 export function LeaveServerModal() {
   const open = useUiStore((s) => s.activeModal === 'leave-server');

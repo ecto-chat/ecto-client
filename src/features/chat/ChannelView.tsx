@@ -5,9 +5,7 @@ import { Search, Users, Hash, Pin } from 'lucide-react';
 
 import { IconButton, EmptyState } from '@/ui';
 
-import { useMessageStore } from '@/stores/message';
-import { useUiStore } from '@/stores/ui';
-import { useChannelStore } from '@/stores/channel';
+import { useMessageStore, useUiStore, useChannelStore } from 'ecto-core';
 
 import { useMessages } from '@/hooks/useMessages';
 import { useChannels } from '@/hooks/useChannels';

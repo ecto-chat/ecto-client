@@ -3,8 +3,7 @@ import { AnimatePresence, motion } from 'motion/react';
 import { LogIn } from 'lucide-react';
 
 import { Modal, Button, Spinner } from '@/ui';
-import { useUiStore } from '@/stores/ui';
-import { useAuthStore } from '@/stores/auth';
+import { useUiStore, useAuthStore } from 'ecto-core';
 
 import { JoinMethodPicker } from './JoinMethodPicker';
 import { CreateServerForm } from './CreateServerForm';

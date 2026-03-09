@@ -4,9 +4,7 @@ import { Webhook, Copy, Check, RefreshCw, Trash2, Plus } from 'lucide-react';
 
 import { Button, ConfirmDialog, EmptyState, Input, ScrollArea, Select, Spinner } from '@/ui';
 
-import { useChannelStore } from '@/stores/channel';
-
-import { connectionManager } from '@/services/connection-manager';
+import { useChannelStore, connectionManager } from 'ecto-core';
 
 type WebhookData = { id: string; channel_id: string; name: string; avatar_url: string | null; token: string; created_by: string; created_at: string };
 type ChannelOption = { id: string; name: string };

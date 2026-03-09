@@ -7,7 +7,7 @@ import { X, Download } from 'lucide-react';
 
 import { IconButton } from '@/ui';
 
-import { useUiStore } from '@/stores/ui';
+import { useUiStore } from 'ecto-core';
 
 type LightboxData = {
   src: string;

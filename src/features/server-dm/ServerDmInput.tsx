@@ -4,8 +4,7 @@ import { Send, Paperclip, Smile, Maximize2, Minimize2 } from 'lucide-react';
 
 import { TextArea } from '@/ui';
 
-import { connectionManager } from '@/services/connection-manager';
-import { useUiStore } from '@/stores/ui';
+import { connectionManager, useUiStore } from 'ecto-core';
 import { useMarkdownShortcuts } from '@/hooks/useMarkdownShortcuts';
 
 import { EmojiGifPicker } from '../shared/EmojiGifPicker';

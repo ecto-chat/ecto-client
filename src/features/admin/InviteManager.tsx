@@ -4,9 +4,7 @@ import { Link2, Copy, Check } from 'lucide-react';
 
 import { Button, EmptyState, Input, ScrollArea, Select, Spinner } from '@/ui';
 
-import { useUiStore } from '@/stores/ui';
-
-import { connectionManager } from '@/services/connection-manager';
+import { useUiStore, connectionManager } from 'ecto-core';
 
 import type { Invite } from 'ecto-shared';
 

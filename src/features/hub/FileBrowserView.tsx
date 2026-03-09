@@ -3,7 +3,7 @@ import { FolderOpen } from 'lucide-react';
 
 import { Tabs, TabsList, TabsTrigger, TabsContent, ScrollArea } from '@/ui';
 
-import { useHubFilesStore } from '@/stores/hub-files';
+import { useHubFilesStore } from 'ecto-core';
 
 import { SharedTab } from './SharedTab';
 import { ServerTab } from './ServerTab';

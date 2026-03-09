@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useMessageStore } from '../stores/message.js';
+import { useMessageStore } from 'ecto-core';
 
 export function useNotifications() {
   // Clear expired typing indicators every 2 seconds

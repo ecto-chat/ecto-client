@@ -4,8 +4,7 @@ import { Spinner, ScrollArea } from '@/ui';
 
 import type { Message } from 'ecto-shared';
 
-import { useMessageStore } from '@/stores/message';
-import { useUiStore } from '@/stores/ui';
+import { useMessageStore, useUiStore } from 'ecto-core';
 import { MessageItem } from './MessageItem';
 
 type MessageListProps = {

@@ -1,9 +1,7 @@
 import { useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import { useUiStore } from '@/stores/ui';
-import { useVoiceStore } from '@/stores/voice';
-import { connectionManager } from '@/services/connection-manager';
+import { useUiStore, useVoiceStore, connectionManager } from 'ecto-core';
 
 /**
  * Returns a function that expands the media window to fullscreen.

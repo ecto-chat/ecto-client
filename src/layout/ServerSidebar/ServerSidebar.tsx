@@ -1,8 +1,6 @@
 import { useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useServerStore } from '@/stores/server';
-import { useUiStore } from '@/stores/ui';
-import { connectionManager } from '@/services/connection-manager';
+import { useServerStore, useUiStore, connectionManager } from 'ecto-core';
 import { ScrollArea } from '@/ui/ScrollArea';
 import { Separator } from '@/ui/Separator';
 import { HomeButton } from './HomeButton';

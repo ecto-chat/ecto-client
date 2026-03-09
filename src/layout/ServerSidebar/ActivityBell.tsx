@@ -1,7 +1,6 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Bell } from 'lucide-react';
-import { useActivityStore } from '@/stores/activity';
-import { useUiStore } from '@/stores/ui';
+import { useActivityStore, useUiStore } from 'ecto-core';
 import { IconButton, Badge, Tooltip } from '@/ui';
 import { cn } from '@/lib/cn';
 

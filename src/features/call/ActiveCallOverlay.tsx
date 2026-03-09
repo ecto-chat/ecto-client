@@ -6,11 +6,9 @@ import { MicOff, Minimize2, Pin } from 'lucide-react';
 import { Avatar, IconButton } from '@/ui';
 
 import { useCall } from '@/hooks/useCall';
-import { useUiStore } from '@/stores/ui';
-import { useAuthStore } from '@/stores/auth';
+import { useUiStore, useAuthStore, type GridSlot } from 'ecto-core';
 import { cn } from '@/lib/cn';
 import { playOutgoingRingback } from '@/lib/ringtone';
-import type { GridSlot } from '@/lib/grid-layout';
 import type { VoiceState } from 'ecto-shared';
 
 import { VideoRenderer } from '../shared/VideoRenderer';

@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import type { VoiceState } from 'ecto-shared';
 
 import { useActiveSpeaker } from '@/hooks/useActiveSpeaker';
-import { computeGridLayout, type GridSlot } from '@/lib/grid-layout';
+import { computeGridLayout, type GridSlot } from 'ecto-core';
 
 export type ParticipantSlot = {
   id: string;

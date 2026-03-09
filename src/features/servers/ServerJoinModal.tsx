@@ -2,8 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Users, Wifi } from 'lucide-react';
 
 import { Modal, Avatar, Button, Spinner } from '@/ui';
-import { useUiStore } from '@/stores/ui';
-import { useAuthStore } from '@/stores/auth';
+import { useUiStore, useAuthStore } from 'ecto-core';
 
 import type { PendingJoin } from '@/hooks/useJoinParams';
 import type { ServerPreviewData } from './types';

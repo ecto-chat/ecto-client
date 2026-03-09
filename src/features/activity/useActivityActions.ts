@@ -1,6 +1,5 @@
 import { useCallback } from 'react';
-import { useActivityStore } from '@/stores/activity';
-import { connectionManager } from '@/services/connection-manager';
+import { useActivityStore, connectionManager } from 'ecto-core';
 
 export function useActivityActions() {
   const markRead = useCallback((itemIds: string[]) => {

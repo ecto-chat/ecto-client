@@ -5,17 +5,18 @@ import { Settings } from 'lucide-react';
 
 import { Modal, Button } from '@/ui';
 
-import { useUiStore } from '@/stores/ui';
-import { useAuthStore } from '@/stores/auth';
-import { useMemberStore } from '@/stores/member';
-import { useFriendStore } from '@/stores/friend';
+import {
+  useUiStore,
+  useAuthStore,
+  useMemberStore,
+  useFriendStore,
+  connectionManager,
+  useServerStore,
+  useServerDmStore,
+} from 'ecto-core';
 
 import { usePresence } from '@/hooks/usePresence';
 import { useCall } from '@/hooks/useCall';
-
-import { connectionManager } from '@/services/connection-manager';
-import { useServerStore } from '@/stores/server';
-import { useServerDmStore } from '@/stores/server-dm';
 
 import type { Role, GlobalUser } from 'ecto-shared';
 

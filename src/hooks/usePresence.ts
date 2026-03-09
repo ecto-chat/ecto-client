@@ -1,4 +1,4 @@
-import { usePresenceStore } from '../stores/presence.js';
+import { usePresenceStore } from 'ecto-core';
 import type { PresenceStatus } from 'ecto-shared';
 
 export function usePresence(userId: string) {

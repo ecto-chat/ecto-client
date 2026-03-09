@@ -1,9 +1,7 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { useToastStore, type Toast } from '@/stores/toast';
-import { useUiStore } from '@/stores/ui';
-import { connectionManager } from '@/services/connection-manager';
+import { useToastStore, useUiStore, connectionManager, type Toast } from 'ecto-core';
 import { Avatar } from '@/ui/Avatar';
 
 const AUTO_DISMISS_MS = 5000;

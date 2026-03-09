@@ -1,6 +1,5 @@
 import { connectionManager } from './connection-manager.js';
-import { usePresenceStore } from '../stores/presence.js';
-import { useAuthStore } from '../stores/auth.js';
+import { usePresenceStore, useAuthStore } from 'ecto-core';
 
 const IDLE_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
 

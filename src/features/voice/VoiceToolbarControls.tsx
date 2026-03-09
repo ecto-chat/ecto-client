@@ -7,8 +7,7 @@ import { Permissions } from 'ecto-shared';
 
 import { IconButton, DropdownMenu, DropdownMenuTrigger } from '@/ui';
 
-import { useVoiceStore } from '@/stores/voice';
-import { useChannelStore } from '@/stores/channel';
+import { useVoiceStore, useChannelStore } from 'ecto-core';
 
 import { useVoice } from '@/hooks/useVoice';
 

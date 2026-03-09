@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { NewsPost, NewsComment } from 'ecto-shared';
-import { connectionManager } from '@/services/connection-manager';
+import { connectionManager } from 'ecto-core';
 
 // ── Event listener bus (dispatched from server-event-handler) ──
 

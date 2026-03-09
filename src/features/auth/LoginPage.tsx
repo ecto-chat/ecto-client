@@ -5,7 +5,7 @@ import { motion } from 'motion/react';
 
 import { Button, Input, Separator } from '@/ui';
 
-import { useAuthStore } from '@/stores/auth';
+import { useAuthStore } from 'ecto-core';
 
 const stagger = {
   hidden: { opacity: 0, y: 12 },

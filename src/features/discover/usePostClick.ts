@@ -1,9 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import type { DiscoveryPost } from 'ecto-shared';
-import { useServerStore } from '@/stores/server';
-import { useChannelStore } from '@/stores/channel';
-import { useUiStore } from '@/stores/ui';
-import { connectionManager } from '@/services/connection-manager';
+import { useServerStore, useChannelStore, useUiStore, connectionManager } from 'ecto-core';
 
 export function usePostClick() {
   const navigate = useNavigate();

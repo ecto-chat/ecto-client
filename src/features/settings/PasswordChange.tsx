@@ -2,10 +2,7 @@ import { useState, type FormEvent } from 'react';
 
 import { Button, Input } from '@/ui';
 
-import { connectionManager } from '@/services/connection-manager';
-import { useAuthStore } from '@/stores/auth';
-import { secureStorage } from '@/services/secure-storage';
-import { getActiveUserId } from '@/services/account-registry';
+import { connectionManager, useAuthStore, secureStorage, getActiveUserId } from 'ecto-core';
 
 export function PasswordChange() {
   const user = useAuthStore((s) => s.user);

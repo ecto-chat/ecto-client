@@ -1,9 +1,8 @@
 import { useCallback, useRef } from 'react';
 import { motion } from 'motion/react';
 
-import { useUiStore } from '@/stores/ui';
+import { useUiStore, FLOAT_WIDTH, FLOAT_HEIGHT } from 'ecto-core';
 import { floatIn, springDock } from '@/lib/animations';
-import { FLOAT_WIDTH, FLOAT_HEIGHT } from '@/lib/media-window-constants';
 import { useMediaDrag } from '@/hooks/useMediaDrag';
 
 import { useMediaWindowMode } from './useMediaWindowMode';

@@ -1,8 +1,5 @@
 import { useEffect } from 'react';
-import { useCallStore } from '@/stores/call';
-import { useVoiceStore } from '@/stores/voice';
-import { useUiStore } from '@/stores/ui';
-import { useChannelStore } from '@/stores/channel';
+import { useCallStore, useVoiceStore, useUiStore, useChannelStore } from 'ecto-core';
 import type { VoiceState } from 'ecto-shared';
 
 type MediaWindowInfo = {

@@ -5,9 +5,7 @@ import { Pin } from 'lucide-react';
 
 import { Modal, Spinner, EmptyState, ScrollArea } from '@/ui';
 
-import { useUiStore } from '@/stores/ui';
-
-import { connectionManager } from '@/services/connection-manager';
+import { useUiStore, connectionManager } from 'ecto-core';
 
 import type { Message } from 'ecto-shared';
 

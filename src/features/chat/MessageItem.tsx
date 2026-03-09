@@ -10,15 +10,17 @@ import {
   ContextMenuSeparator,
 } from '@/ui/ContextMenu';
 
-import { useAuthStore } from '@/stores/auth';
-import { useUiStore } from '@/stores/ui';
-import { useMemberStore } from '@/stores/member';
-import { useChannelStore } from '@/stores/channel';
-import { useRoleStore } from '@/stores/role';
+import {
+  useAuthStore,
+  useUiStore,
+  useMemberStore,
+  useChannelStore,
+  useRoleStore,
+  extractServerAddresses,
+} from 'ecto-core';
 import { usePermissions } from '@/hooks/usePermissions';
 
 import { renderMarkdown } from '@/lib/markdown';
-import { extractServerAddresses } from '@/lib/server-address';
 
 import { MessageType, Permissions } from 'ecto-shared';
 import type { Message } from 'ecto-shared';

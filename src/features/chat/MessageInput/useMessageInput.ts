@@ -1,9 +1,7 @@
 import { useState, useRef, useCallback, useEffect, type KeyboardEvent } from 'react';
 
 import { Permissions } from 'ecto-shared';
-import { connectionManager } from '@/services/connection-manager';
-import { useChannelStore } from '@/stores/channel';
-import { useUiStore } from '@/stores/ui';
+import { connectionManager, useChannelStore, useUiStore } from 'ecto-core';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useMarkdownShortcuts } from '@/hooks/useMarkdownShortcuts';
 

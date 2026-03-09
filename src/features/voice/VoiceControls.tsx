@@ -3,9 +3,7 @@ import { Permissions } from 'ecto-shared';
 
 import { IconButton } from '@/ui';
 
-import { useVoiceStore } from '@/stores/voice';
-import { useChannelStore } from '@/stores/channel';
-import { useServerStore } from '@/stores/server';
+import { useVoiceStore, useChannelStore, useServerStore } from 'ecto-core';
 
 import { useVoice } from '@/hooks/useVoice';
 

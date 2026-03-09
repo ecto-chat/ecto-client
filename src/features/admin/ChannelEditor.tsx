@@ -19,9 +19,7 @@ import { Plus, FolderPlus } from 'lucide-react';
 
 import { Button, ConfirmDialog } from '@/ui';
 
-import { useChannelStore } from '@/stores/channel';
-
-import { connectionManager } from '@/services/connection-manager';
+import { useChannelStore, connectionManager } from 'ecto-core';
 
 import { normalizeChannelName, type Channel } from 'ecto-shared';
 

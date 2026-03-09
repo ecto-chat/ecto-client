@@ -2,8 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 
 import { Button, Modal } from '@/ui';
 
-import { useUiStore } from '@/stores/ui';
-import { useServerStore } from '@/stores/server';
+import { useUiStore, useServerStore } from 'ecto-core';
 
 import { usePermissions } from '@/hooks/usePermissions';
 
@@ -80,7 +79,6 @@ function TabPanel({ activeTab, serverId }: { activeTab: Tab; serverId: string })
     default: return null;
   }
 }
-
 
 /** Legacy tab key mapping — the old 'overview' tab mapped to these new tabs */
 const LEGACY_TAB_MAP: Record<string, Tab> = {

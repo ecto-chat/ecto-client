@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Maximize2, PictureInPicture2 } from 'lucide-react';
 
 import { IconButton } from '@/ui';
-import { useUiStore } from '@/stores/ui';
+import { useUiStore } from 'ecto-core';
 
 import { useExpandMedia } from './useExpandMedia';
 

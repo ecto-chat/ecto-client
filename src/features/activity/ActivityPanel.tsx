@@ -2,10 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { CheckCheck } from 'lucide-react';
 
 import { ScrollArea, Separator, IconButton } from '@/ui';
-import { useActivityStore } from '@/stores/activity';
-import { useUiStore } from '@/stores/ui';
-import { useServerDmStore } from '@/stores/server-dm';
-import { connectionManager } from '@/services/connection-manager';
+import { useActivityStore, useUiStore, useServerDmStore, connectionManager } from 'ecto-core';
 import { useActivityActions } from './useActivityActions';
 import { ActivityRow } from './ActivityRow';
 import { UserBar } from '@/layout/UserBar';

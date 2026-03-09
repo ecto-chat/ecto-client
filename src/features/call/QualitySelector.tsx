@@ -15,7 +15,7 @@ import {
   setScreenQuality,
   type VideoQuality,
   type ScreenQuality,
-} from '@/lib/media-presets';
+} from 'ecto-core';
 
 type QualitySelectorProps = {
   kind: 'video' | 'screen';

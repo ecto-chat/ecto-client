@@ -1,6 +1,5 @@
 import { useCallback } from 'react';
-import { useMemberStore } from '../stores/member.js';
-import { connectionManager } from '../services/connection-manager.js';
+import { useMemberStore, connectionManager } from 'ecto-core';
 
 export function useMembers(serverId: string) {
   const membersMap = useMemberStore((s) => s.members.get(serverId));

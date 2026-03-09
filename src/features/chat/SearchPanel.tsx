@@ -5,9 +5,7 @@ import { Search, X } from 'lucide-react';
 
 import { Input, IconButton, Button, Spinner, EmptyState, ScrollArea } from '@/ui';
 
-import { useChannelStore } from '@/stores/channel';
-
-import { connectionManager } from '@/services/connection-manager';
+import { useChannelStore, connectionManager } from 'ecto-core';
 
 import type { Message } from 'ecto-shared';
 

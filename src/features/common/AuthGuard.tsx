@@ -2,8 +2,7 @@ import { useEffect, useRef, type ReactNode } from 'react';
 
 import { useNavigate } from 'react-router-dom';
 
-import { useAuthStore } from '@/stores/auth';
-import { migrateFromLegacy } from '@/services/preference-migration';
+import { useAuthStore, migrateFromLegacy } from 'ecto-core';
 
 import { SplashScreen } from './SplashScreen';
 

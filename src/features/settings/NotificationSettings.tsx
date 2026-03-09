@@ -4,8 +4,7 @@ import { Play } from 'lucide-react';
 
 import { Switch, Select, Button, IconButton } from '@/ui';
 
-import { requestNotificationPermission } from '@/services/notification-service';
-import { preferenceManager } from '@/services/preference-manager';
+import { requestNotificationPermission, preferenceManager } from 'ecto-core';
 
 import { playSoundVariant, SOUND_LIBRARY } from '@/lib/notification-sounds';
 import type { SoundType } from '@/lib/notification-sounds';

@@ -2,8 +2,7 @@ import { useState, useEffect } from 'react';
 
 import { Button, Spinner, Switch, Select } from '@/ui';
 
-import { connectionManager } from '@/services/connection-manager';
-import { useServerStore } from '@/stores/server';
+import { connectionManager, useServerStore } from 'ecto-core';
 
 import { UPLOAD_SIZE_OPTIONS, SHARED_STORAGE_OPTIONS } from './SetupWizard/wizard-types';
 

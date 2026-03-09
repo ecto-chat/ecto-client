@@ -1,8 +1,6 @@
 import { AnimatePresence, motion } from 'motion/react';
 
-import { useMemberStore } from '@/stores/member';
-import { useUiStore } from '@/stores/ui';
-import { useAuthStore } from '@/stores/auth';
+import { useMemberStore, useUiStore, useAuthStore } from 'ecto-core';
 
 type TypingIndicatorProps = {
   channelId: string;

@@ -4,7 +4,7 @@ import { FileText, Search } from 'lucide-react';
 
 import { Button, EmptyState, Input, ScrollArea, Spinner } from '@/ui';
 
-import { connectionManager } from '@/services/connection-manager';
+import { connectionManager } from 'ecto-core';
 
 import type { AuditLogEntry } from 'ecto-shared';
 

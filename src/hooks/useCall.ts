@@ -1,27 +1,24 @@
 import { useCallback } from 'react';
-import { useCallStore } from '../stores/call.js';
-import { useVoiceStore } from '../stores/voice.js';
-import { useFriendStore } from '../stores/friend.js';
-import { connectionManager } from '../services/connection-manager.js';
-import { preferenceManager } from '../services/preference-manager.js';
 import {
+  useCallStore,
+  useVoiceStore,
+  useFriendStore,
+  connectionManager,
+  preferenceManager,
+  getPlatform,
   CAMERA_PRESETS,
   SCREEN_PRESETS,
   getVideoQuality,
   getScreenQuality,
   setVideoQuality,
   setScreenQuality,
-} from '../lib/media-presets.js';
-import { startSpeakingDetection, switchAudioOutputDevice } from '../lib/media-utils.js';
-import {
   cleanupCall,
   sendMuteUpdate,
   resetConsumedProducerIds,
-  getCallAudioElement,
   resetCallEventQueue,
-} from '../services/call-media.js';
-
-export { handleCallWsEvent } from '../services/call-media.js';
+} from 'ecto-core';
+export { handleCallWsEvent } from 'ecto-core';
+import { startSpeakingDetection } from '../lib/media-utils.js';
 
 export function useCall() {
   const callState = useCallStore((s) => s.callState);
@@ -293,12 +290,7 @@ export function useCall() {
 
   const switchAudioOutput = useCallback(async (deviceId: string) => {
     preferenceManager.setDevice('audio-output', deviceId);
-    const elements: (HTMLAudioElement | HTMLVideoElement)[] = [];
-    const mainAudio = getCallAudioElement();
-    if (mainAudio) elements.push(mainAudio);
-    const extras = document.querySelectorAll<HTMLAudioElement>('audio[data-call-audio]');
-    for (const el of extras) elements.push(el);
-    await switchAudioOutputDevice(elements, deviceId);
+    await getPlatform().mediaAudio.switchOutputDevice(deviceId);
   }, []);
 
   const switchVideoDevice = useCallback(async (deviceId: string) => {

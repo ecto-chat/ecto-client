@@ -2,7 +2,7 @@ import { Lock } from 'lucide-react';
 
 import { Button, EmptyState } from '@/ui';
 
-import { useUiStore } from '@/stores/ui';
+import { useUiStore } from 'ecto-core';
 
 type CentralSignInPromptProps = {
   message?: string;

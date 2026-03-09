@@ -3,10 +3,7 @@ import { useNavigate } from 'react-router-dom';
 
 import { EctoErrorCode } from 'ecto-shared';
 
-import { useUiStore } from '@/stores/ui';
-import { useAuthStore } from '@/stores/auth';
-import { useServerStore } from '@/stores/server';
-import { connectionManager } from '@/services/connection-manager';
+import { useUiStore, useAuthStore, useServerStore, connectionManager } from 'ecto-core';
 
 import type { LocalJoinStage, ServerPreviewData } from './types';
 import {

@@ -1,8 +1,7 @@
 import { useCallback } from 'react';
 
 import { Avatar, Button, EmptyState } from '@/ui';
-import { useFriendStore } from '@/stores/friend';
-import { connectionManager } from '@/services/connection-manager';
+import { useFriendStore, connectionManager } from 'ecto-core';
 
 export function BlockedList() {
   const blocked = useFriendStore((s) => s.blocked);

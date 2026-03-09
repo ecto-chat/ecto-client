@@ -1,8 +1,6 @@
 import { CornerDownRight } from 'lucide-react';
 import { Avatar } from '@/ui';
-import { useMessageStore } from '@/stores/message';
-import { useDmStore } from '@/stores/dm';
-import { useServerDmStore } from '@/stores/server-dm';
+import { useMessageStore, useDmStore, useServerDmStore } from 'ecto-core';
 
 type ReplyReferenceProps = {
   replyTo: string;

@@ -1,8 +1,5 @@
 import { useCallback } from 'react';
-import { useServerDmStore } from '@/stores/server-dm';
-import { useUiStore } from '@/stores/ui';
-import { connectionManager } from '@/services/connection-manager';
-import { toggleReaction } from '@/lib/reactions';
+import { useServerDmStore, useUiStore, connectionManager, toggleReaction } from 'ecto-core';
 
 export function useServerDmActions(
   conversationId: string | null,

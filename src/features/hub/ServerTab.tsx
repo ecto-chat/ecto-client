@@ -8,9 +8,7 @@ import { ConfirmDialog } from '@/ui';
 
 import { useHubFiles, fetchAllChannelFiles } from '@/hooks/useHubFiles';
 import { usePermissions } from '@/hooks/usePermissions';
-import { useChannelStore } from '@/stores/channel';
-import { useRoleStore } from '@/stores/role';
-import { useUiStore } from '@/stores/ui';
+import { useChannelStore, useRoleStore, useUiStore } from 'ecto-core';
 
 import { FileBrowserTable, type TableRow } from './FileBrowserTable';
 

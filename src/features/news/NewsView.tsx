@@ -4,11 +4,8 @@ import { Newspaper } from 'lucide-react';
 import { Permissions } from 'ecto-shared';
 import type { NewsPost } from 'ecto-shared';
 
-import { useChannelStore } from '@/stores/channel';
-import { useAuthStore } from '@/stores/auth';
-import { useMemberStore } from '@/stores/member';
+import { useChannelStore, useAuthStore, useMemberStore, connectionManager } from 'ecto-core';
 import { usePermissions } from '@/hooks/usePermissions';
-import { connectionManager } from '@/services/connection-manager';
 
 import { NewsPostList } from './NewsPostList';
 import { NewsPostDetail } from './NewsPostDetail';

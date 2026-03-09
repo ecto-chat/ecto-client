@@ -4,10 +4,7 @@ import { motion } from 'motion/react';
 import { Users, Lock } from 'lucide-react';
 
 import { Avatar, ScrollArea, Separator, EmptyState, Button } from '@/ui';
-import { useDmStore } from '@/stores/dm';
-import { usePresenceStore } from '@/stores/presence';
-import { useAuthStore } from '@/stores/auth';
-import { useUiStore } from '@/stores/ui';
+import { useDmStore, usePresenceStore, useAuthStore, useUiStore } from 'ecto-core';
 import { UserBar } from '@/layout/UserBar';
 
 import { cn } from '@/lib/cn';

@@ -1,14 +1,16 @@
 import { memo, useCallback } from 'react';
 import { motion } from 'motion/react';
 import { WifiOff, BellOff, CheckCheck, DoorOpen, Trash2, Link } from 'lucide-react';
-import { useNotifyStore } from '@/stores/notify';
-import { useReadStateStore } from '@/stores/read-state';
-import { useConnectionStore } from '@/stores/connection';
-import { useChannelStore } from '@/stores/channel';
-import { useServerDmStore } from '@/stores/server-dm';
-import { connectionManager } from '@/services/connection-manager';
-import { useUiStore } from '@/stores/ui';
-import { useServerStore } from '@/stores/server';
+import {
+  useNotifyStore,
+  useReadStateStore,
+  useConnectionStore,
+  useChannelStore,
+  useServerDmStore,
+  connectionManager,
+  useUiStore,
+  useServerStore,
+} from 'ecto-core';
 import { Avatar } from '@/ui/Avatar';
 import { Badge } from '@/ui/Badge';
 import { IconButton } from '@/ui/IconButton';

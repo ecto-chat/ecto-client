@@ -1,8 +1,4 @@
-import { useAuthStore } from '@/stores/auth';
-import { useServerStore } from '@/stores/server';
-import { useUiStore } from '@/stores/ui';
-
-import { connectionManager } from '@/services/connection-manager';
+import { useAuthStore, useServerStore, useUiStore, connectionManager } from 'ecto-core';
 
 import type { ServerPreviewInfo, AuthAction } from './DirectConnectForm';
 

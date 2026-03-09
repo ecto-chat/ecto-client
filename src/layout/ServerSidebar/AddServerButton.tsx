@@ -1,5 +1,5 @@
 import { Plus } from 'lucide-react';
-import { useUiStore } from '@/stores/ui';
+import { useUiStore } from 'ecto-core';
 import { IconButton } from '@/ui/IconButton';
 import { Tooltip } from '@/ui/Tooltip';
 

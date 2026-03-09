@@ -2,9 +2,7 @@ import { useState, useEffect, type FormEvent } from 'react';
 
 import { Button, Input, SearchSelect } from '@/ui';
 
-import { useServerStore } from '@/stores/server';
-
-import { connectionManager } from '@/services/connection-manager';
+import { useServerStore, connectionManager } from 'ecto-core';
 
 type TransferOwnershipProps = {
   serverId: string;

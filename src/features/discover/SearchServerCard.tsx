@@ -3,10 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import type { DiscoveryServer } from 'ecto-shared';
 import { Avatar } from '@/ui/Avatar';
 import { useToast } from '@/ui/Toast';
-import { useUiStore } from '@/stores/ui';
-import { useServerStore } from '@/stores/server';
-import { useDiscoverStore } from '@/stores/discover';
-import { connectionManager } from '@/services/connection-manager';
+import { useUiStore, useServerStore, useDiscoverStore, connectionManager } from 'ecto-core';
 
 interface SearchServerCardProps {
   server: DiscoveryServer;

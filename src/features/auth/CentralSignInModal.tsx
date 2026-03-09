@@ -2,10 +2,7 @@ import { useState, type FormEvent } from 'react';
 
 import { Button, Input, Modal, Separator } from '@/ui';
 
-import { useUiStore } from '@/stores/ui';
-import { useAuthStore } from '@/stores/auth';
-
-import { connectionManager } from '@/services/connection-manager';
+import { useUiStore, useAuthStore, connectionManager } from 'ecto-core';
 
 type Mode = 'login' | 'register';
 

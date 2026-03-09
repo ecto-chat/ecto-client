@@ -1,8 +1,7 @@
 import type { DiscoveryPost } from 'ecto-shared';
 import { Users } from 'lucide-react';
 import { Avatar } from '@/ui/Avatar';
-import { useDiscoverStore } from '@/stores/discover';
-import { useUiStore } from '@/stores/ui';
+import { useDiscoverStore, useUiStore } from 'ecto-core';
 import { cssUrl } from '@/lib/css-utils';
 import { usePostClick } from './usePostClick';
 

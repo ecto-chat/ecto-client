@@ -6,11 +6,8 @@ import { useNavigate } from 'react-router-dom';
 
 import { Input, IconButton, Button, Spinner, EmptyState, ScrollArea, Switch } from '@/ui';
 
-import { useUiStore } from '@/stores/ui';
-import { useChannelStore } from '@/stores/channel';
+import { useUiStore, useChannelStore, connectionManager, dmToMessage } from 'ecto-core';
 
-import { connectionManager } from '@/services/connection-manager';
-import { dmToMessage } from '@/lib/message-adapters';
 import { easeContent } from '@/lib/animations';
 
 import { SearchFilters, SearchResult } from '@/features/chat';

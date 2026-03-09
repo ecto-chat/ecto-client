@@ -1,13 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 
-import { useDmStore } from '@/stores/dm';
-import { useAuthStore } from '@/stores/auth';
-
-import { connectionManager } from '@/services/connection-manager';
+import { useDmStore, useAuthStore, connectionManager, dmToMessage } from 'ecto-core';
 
 import type { DirectMessage, Message } from 'ecto-shared';
 
-import { dmToMessage } from '@/lib/message-adapters';
 import { useDmActions } from './useDmActions';
 
 export function useDmMessages(userId: string | undefined) {

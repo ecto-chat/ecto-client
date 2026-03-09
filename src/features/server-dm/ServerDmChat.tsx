@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { MessageList, ReplyBanner } from '@/features/chat';
-import { useServerDmStore } from '@/stores/server-dm';
+import { useServerDmStore } from 'ecto-core';
 import { ServerDmHeader } from './ServerDmHeader';
 import { ServerDmInput } from './ServerDmInput';
 import { ServerDmEmptyState } from './ServerDmEmptyState';

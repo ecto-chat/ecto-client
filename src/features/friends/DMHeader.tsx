@@ -2,7 +2,7 @@ import { Pin, Search, Phone, Video } from 'lucide-react';
 
 import { Avatar, IconButton } from '@/ui';
 
-import { useUiStore } from '@/stores/ui';
+import { useUiStore } from 'ecto-core';
 
 import type { PresenceStatus } from 'ecto-shared';
 

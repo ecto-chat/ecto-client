@@ -3,16 +3,17 @@ import { useNavigate } from 'react-router-dom';
 
 import { Button, Input, Modal } from '@/ui';
 
-import { useUiStore } from '@/stores/ui';
-import { useAuthStore } from '@/stores/auth';
-import { useVoiceStore } from '@/stores/voice';
-import { useCallStore } from '@/stores/call';
-import { useNotifyStore } from '@/stores/notify';
-
-import { connectionManager } from '@/services/connection-manager';
-import { resetAllStores } from '@/stores/reset';
-import { preferenceManager } from '@/services/preference-manager';
-import { getAccountCount } from '@/services/account-registry';
+import {
+  useUiStore,
+  useAuthStore,
+  useVoiceStore,
+  useCallStore,
+  useNotifyStore,
+  connectionManager,
+  resetAllStores,
+  preferenceManager,
+  getAccountCount,
+} from 'ecto-core';
 
 export function AddAccountModal() {
   const open = useUiStore((s) => s.activeModal === 'add-account');

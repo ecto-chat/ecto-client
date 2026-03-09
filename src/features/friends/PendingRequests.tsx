@@ -4,8 +4,7 @@ import { motion } from 'motion/react';
 import { Check, X } from 'lucide-react';
 
 import { Avatar, Button, EmptyState, IconButton } from '@/ui';
-import { useFriendStore } from '@/stores/friend';
-import { connectionManager } from '@/services/connection-manager';
+import { useFriendStore, connectionManager } from 'ecto-core';
 
 export function PendingRequests() {
   const pendingIncoming = useFriendStore((s) => s.pendingIncoming);

@@ -29,8 +29,7 @@ import {
   ContextMenuItem,
   ContextMenuSeparator,
 } from '@/ui';
-import { useUiStore } from '@/stores/ui';
-import { connectionManager } from '@/services/connection-manager';
+import { useUiStore, connectionManager } from 'ecto-core';
 
 // ── Types ──
 

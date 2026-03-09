@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 
 import { Switch, Button } from '@/ui';
 
-import { useVoiceStore } from '@/stores/voice';
+import { useVoiceStore } from 'ecto-core';
 
 export function PushToTalkSettings() {
   const pttEnabled = useVoiceStore((s) => s.pttEnabled);

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 
 import { Select } from '@/ui';
 
-import { preferenceManager } from '@/services/preference-manager';
+import { preferenceManager } from 'ecto-core';
 
 import { PushToTalkSettings } from './PushToTalkSettings';
 

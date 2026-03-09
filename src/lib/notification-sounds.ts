@@ -1,4 +1,4 @@
-import { preferenceManager } from '../services/preference-manager.js';
+import { preferenceManager } from 'ecto-core';
 
 export type SoundType = 'message' | 'mention' | 'dm';
 

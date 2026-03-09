@@ -6,13 +6,10 @@ import { Permissions } from 'ecto-shared';
 import { Button, IconButton, Spinner, EmptyState, ImageCropModal } from '@/ui';
 import { ScrollArea } from '@/ui/ScrollArea';
 
-import { useUiStore } from '@/stores/ui';
-import { useChannelStore } from '@/stores/channel';
-import { useMemberStore } from '@/stores/member';
+import { useUiStore, useChannelStore, useMemberStore, connectionManager } from 'ecto-core';
 import { usePermissions } from '@/hooks/usePermissions';
 import { usePage } from '@/hooks/usePage';
 import { renderMarkdown } from '@/lib/markdown';
-import { connectionManager } from '@/services/connection-manager';
 
 import { PageHistory } from './PageHistory';
 

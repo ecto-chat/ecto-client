@@ -22,10 +22,8 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { Permissions } from 'ecto-shared';
 import { ScrollArea } from '@/ui/ScrollArea';
-import { useChannelStore } from '@/stores/channel';
-import { useUiStore } from '@/stores/ui';
+import { useChannelStore, useUiStore, connectionManager } from 'ecto-core';
 import { usePermissions } from '@/hooks/usePermissions';
-import { connectionManager } from '@/services/connection-manager';
 import { CategoryGroup } from '../CategoryGroup';
 import { ChannelItem } from '../ChannelItem';
 import type { Channel, Category } from 'ecto-shared';

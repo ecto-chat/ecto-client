@@ -1,10 +1,7 @@
 import { useEffect, useMemo } from 'react';
 import { Permissions } from 'ecto-shared';
 import { useMembers } from '@/hooks/useMembers';
-import { usePresenceStore } from '@/stores/presence';
-import { useUiStore } from '@/stores/ui';
-import { useServerStore } from '@/stores/server';
-import { useRoleStore } from '@/stores/role';
+import { usePresenceStore, useUiStore, useServerStore, useRoleStore } from 'ecto-core';
 import { ScrollArea } from '@/ui/ScrollArea';
 import { MemberSection } from './MemberSection';
 import type { Member } from 'ecto-shared';

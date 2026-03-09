@@ -2,13 +2,14 @@ import { useState, useEffect, useCallback } from 'react';
 
 import { Switch } from '@/ui';
 
-import { useAuthStore } from '@/stores/auth';
-import { useUiStore } from '@/stores/ui';
-import { useServerStore } from '@/stores/server';
-import { useMemberStore } from '@/stores/member';
-
-import { connectionManager } from '@/services/connection-manager';
-import { preferenceManager } from '@/services/preference-manager';
+import {
+  useAuthStore,
+  useUiStore,
+  useServerStore,
+  useMemberStore,
+  connectionManager,
+  preferenceManager,
+} from 'ecto-core';
 
 type PrivacyPrefs = {
   allowDmsFromStrangers: boolean;

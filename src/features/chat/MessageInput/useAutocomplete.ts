@@ -1,7 +1,6 @@
 import { useState, useCallback, useMemo, useEffect, type RefObject } from 'react';
 
-import { useMemberStore } from '@/stores/member';
-import { useChannelStore } from '@/stores/channel';
+import { useMemberStore, useChannelStore } from 'ecto-core';
 
 import type { Member, Channel } from 'ecto-shared';
 

@@ -7,7 +7,7 @@ import {
   SortableContext, useSortable, verticalListSortingStrategy, arrayMove,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { useServerStore } from '@/stores/server';
+import { useServerStore } from 'ecto-core';
 import { ServerIcon } from './ServerIcon';
 import type { ServerListEntry } from 'ecto-shared';
 

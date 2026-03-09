@@ -1,10 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { useServerDmStore } from '@/stores/server-dm';
-import { useAuthStore } from '@/stores/auth';
-import { useUiStore } from '@/stores/ui';
-import { connectionManager } from '@/services/connection-manager';
+import { useServerDmStore, useAuthStore, useUiStore, connectionManager, serverDmToMessage } from 'ecto-core';
 import type { ServerDmMessage, Message } from 'ecto-shared';
-import { serverDmToMessage } from '@/lib/message-adapters';
 import { useServerDmActions } from './useServerDmActions';
 
 export function useServerDmMessages(conversationId: string | null) {

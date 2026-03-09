@@ -1,8 +1,6 @@
 import { Permissions } from 'ecto-shared';
 
-import { useServerStore } from '@/stores/server';
-import { useMemberStore } from '@/stores/member';
-import { useRoleStore } from '@/stores/role';
+import { useServerStore, useMemberStore, useRoleStore } from 'ecto-core';
 
 export function useModPermissions(serverId: string | null) {
   const meta = useServerStore((s) => (serverId ? s.serverMeta.get(serverId) : undefined));

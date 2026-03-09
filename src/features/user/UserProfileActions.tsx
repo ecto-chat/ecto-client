@@ -4,9 +4,7 @@ import { Phone, Video, MessageCircle, Mail, UserX, UserPlus, Ban, Check, X } fro
 
 import { Button } from '@/ui';
 
-import { useFriendStore } from '@/stores/friend';
-
-import { connectionManager } from '@/services/connection-manager';
+import { useFriendStore, connectionManager } from 'ecto-core';
 
 import type { FriendRequest } from 'ecto-shared';
 

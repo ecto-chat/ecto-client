@@ -3,9 +3,7 @@ import { History, FileText } from 'lucide-react';
 import type { PageRevision } from 'ecto-shared';
 
 import { Modal, Spinner, EmptyState, ScrollArea, Button } from '@/ui';
-import { useUiStore } from '@/stores/ui';
-import { useMemberStore } from '@/stores/member';
-import { connectionManager } from '@/services/connection-manager';
+import { useUiStore, useMemberStore, connectionManager } from 'ecto-core';
 import { renderMarkdown } from '@/lib/markdown';
 
 type PageHistoryProps = {

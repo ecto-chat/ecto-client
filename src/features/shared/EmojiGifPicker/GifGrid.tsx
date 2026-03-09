@@ -1,6 +1,6 @@
 import { useRef, useCallback } from 'react';
 
-import type { KlipyGif } from '@/lib/klipy';
+import { type KlipyGif } from 'ecto-core';
 
 type GifGridProps = {
   gifs: KlipyGif[];

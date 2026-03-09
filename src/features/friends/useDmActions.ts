@@ -1,13 +1,10 @@
 import { useCallback } from 'react';
 
-import { useDmStore } from '@/stores/dm';
-
-import { connectionManager } from '@/services/connection-manager';
+import { useDmStore, connectionManager, toggleReaction } from 'ecto-core';
 
 import type { Attachment } from 'ecto-shared';
 
 import { sendDmMessage } from './dm-utils';
-import { toggleReaction } from '@/lib/reactions';
 
 export function useDmActions(
   userId: string | undefined,

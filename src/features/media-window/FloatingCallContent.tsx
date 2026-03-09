@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import { cn } from '@/lib/cn';
 import { Avatar } from '@/ui';
-import { useCallStore } from '@/stores/call';
+import { useCallStore } from 'ecto-core';
 
 export function FloatingCallContent() {
   const peer = useCallStore((s) => s.peer);

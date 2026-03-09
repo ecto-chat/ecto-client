@@ -3,9 +3,7 @@ import { FolderPlus } from 'lucide-react';
 
 import { Button, Input, Select } from '@/ui';
 
-import { useChannelStore } from '@/stores/channel';
-
-import { connectionManager } from '@/services/connection-manager';
+import { useChannelStore, connectionManager } from 'ecto-core';
 
 import { normalizeChannelName, type Category } from 'ecto-shared';
 

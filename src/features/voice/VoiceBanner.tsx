@@ -4,11 +4,8 @@ import { Maximize2, PhoneOff } from 'lucide-react';
 
 import { IconButton } from '@/ui';
 
-import { useChannelStore } from '@/stores/channel';
-import { useServerStore } from '@/stores/server';
-import { useUiStore } from '@/stores/ui';
+import { useChannelStore, useServerStore, useUiStore, connectionManager } from 'ecto-core';
 import { useExpandMedia } from '@/features/media-window';
-import { connectionManager } from '@/services/connection-manager';
 
 import { useVoice } from '@/hooks/useVoice';
 

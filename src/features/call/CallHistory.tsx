@@ -4,11 +4,8 @@ import { PhoneOff } from 'lucide-react';
 
 import { Tabs, TabsList, TabsTrigger, TabsContent, ScrollArea, EmptyState, Button } from '@/ui';
 
-import { useCallStore } from '@/stores/call';
-import { useAuthStore } from '@/stores/auth';
+import { useCallStore, useAuthStore, connectionManager, useUiStore } from 'ecto-core';
 import { useCall } from '@/hooks/useCall';
-import { connectionManager } from '@/services/connection-manager';
-import { useUiStore } from '@/stores/ui';
 
 import { CallHistoryEntry } from './CallHistoryEntry';
 

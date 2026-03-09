@@ -2,8 +2,7 @@ import { useMemo } from 'react';
 
 import { Select, Switch } from '@/ui';
 
-import { useChannelStore } from '@/stores/channel';
-import { useMemberStore } from '@/stores/member';
+import { useChannelStore, useMemberStore } from 'ecto-core';
 
 type SearchFiltersProps = {
   serverId: string;

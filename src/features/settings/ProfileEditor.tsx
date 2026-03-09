@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef, type FormEvent } from 'react';
 
 import { Button, Input, TextArea } from '@/ui';
-import { useAuthStore } from '@/stores/auth';
-import { connectionManager } from '@/services/connection-manager';
+import { useAuthStore, connectionManager } from 'ecto-core';
 
 import { AvatarUpload } from './AvatarUpload';
 import { BannerUpload } from './BannerUpload';

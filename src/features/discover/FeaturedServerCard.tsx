@@ -2,10 +2,7 @@ import { Check, Plus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import type { DiscoveryServer } from 'ecto-shared';
 import { Avatar } from '@/ui/Avatar';
-import { useUiStore } from '@/stores/ui';
-import { useServerStore } from '@/stores/server';
-import { useDiscoverStore } from '@/stores/discover';
-import { connectionManager } from '@/services/connection-manager';
+import { useUiStore, useServerStore, useDiscoverStore, connectionManager } from 'ecto-core';
 
 interface FeaturedServerCardProps {
   server: DiscoveryServer;

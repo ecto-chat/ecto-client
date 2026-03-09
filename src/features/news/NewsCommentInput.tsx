@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import type { NewsComment } from 'ecto-shared';
-import { connectionManager } from '@/services/connection-manager';
+import { connectionManager } from 'ecto-core';
 import { Send } from 'lucide-react';
 
 interface NewsCommentInputProps {

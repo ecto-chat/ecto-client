@@ -1,5 +1,5 @@
 import { Modal } from '@/ui';
-import { useUiStore } from '@/stores/ui';
+import { useUiStore } from 'ecto-core';
 
 type Contributor = {
   user_id: string;

@@ -1,12 +1,8 @@
 import { memo, useCallback } from 'react';
 import { Hash, BellOff, Star, FileText, Newspaper, Settings, ShieldAlert } from 'lucide-react';
 import { Permissions } from 'ecto-shared';
-import { useReadStateStore } from '@/stores/read-state';
-import { useNotifyStore } from '@/stores/notify';
-import { useServerStore } from '@/stores/server';
-import { useUiStore } from '@/stores/ui';
+import { useReadStateStore, useNotifyStore, useServerStore, useUiStore, connectionManager } from 'ecto-core';
 import { usePermissions } from '@/hooks/usePermissions';
-import { connectionManager } from '@/services/connection-manager';
 import { Badge } from '@/ui/Badge';
 import {
   ContextMenu,

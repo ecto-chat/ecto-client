@@ -1,6 +1,6 @@
 import { motion } from 'motion/react';
 
-import { useUiStore } from '@/stores/ui';
+import { useUiStore } from 'ecto-core';
 import { springDock } from '@/lib/animations';
 
 import { useMediaWindowMode } from './useMediaWindowMode';

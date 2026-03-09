@@ -1,10 +1,12 @@
 import { useEffect } from 'react';
-import { useAuthStore } from '../stores/auth.js';
-import { useServerStore } from '../stores/server.js';
-import { useConnectionStore } from '../stores/connection.js';
-import { useUiStore } from '../stores/ui.js';
-import { connectionManager } from '../services/connection-manager.js';
-import { getStoredServerSessions } from '../services/storage-manager.js';
+import {
+  useAuthStore,
+  useServerStore,
+  useConnectionStore,
+  useUiStore,
+  connectionManager,
+  getStoredServerSessions,
+} from 'ecto-core';
 
 /**
  * Central-authenticated initialization.

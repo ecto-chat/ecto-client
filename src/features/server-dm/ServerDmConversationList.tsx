@@ -1,7 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { useServerDmStore } from '@/stores/server-dm';
-import { useUiStore } from '@/stores/ui';
-import { connectionManager } from '@/services/connection-manager';
+import { useServerDmStore, useUiStore, connectionManager } from 'ecto-core';
 import { Avatar } from '@/ui/Avatar';
 import { Badge } from '@/ui/Badge';
 import { usePresence } from '@/hooks/usePresence';

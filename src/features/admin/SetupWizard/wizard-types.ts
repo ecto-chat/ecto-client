@@ -1,5 +1,5 @@
 import type { Invite } from 'ecto-shared';
-import type { ServerTemplate } from '@/lib/server-templates';
+import { type ServerTemplate } from 'ecto-core';
 
 export type WizardStep = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 

@@ -1,6 +1,5 @@
 import { Switch, Select } from '@/ui';
-import { useServerStore } from '@/stores/server';
-import { useUiStore } from '@/stores/ui';
+import { useServerStore, useUiStore } from 'ecto-core';
 
 import { UPLOAD_SIZE_OPTIONS, type StepProps } from './wizard-types';
 

@@ -5,10 +5,7 @@ import { X, Check, Minus, AlertTriangle } from 'lucide-react';
 
 import { Modal, Tabs, TabsList, TabsTrigger, TabsContent, Input, Select, Switch, Button, ScrollArea } from '@/ui';
 
-import { useUiStore } from '@/stores/ui';
-import { useChannelStore } from '@/stores/channel';
-import { useRoleStore } from '@/stores/role';
-import { connectionManager } from '@/services/connection-manager';
+import { useUiStore, useChannelStore, useRoleStore, connectionManager } from 'ecto-core';
 
 const SLOWMODE_OPTIONS = [
   { value: '0', label: 'Off' },

@@ -1,9 +1,5 @@
 import { useEffect } from 'react';
-import { useAuthStore } from '../stores/auth.js';
-import { useServerStore } from '../stores/server.js';
-import { useConnectionStore } from '../stores/connection.js';
-import { useUiStore } from '../stores/ui.js';
-import { connectionManager } from '../services/connection-manager.js';
+import { useAuthStore, useServerStore, useConnectionStore, useUiStore, connectionManager } from 'ecto-core';
 
 /**
  * Local-only initialization: load stored server sessions from

@@ -5,12 +5,8 @@ import { motion } from 'motion/react';
 import { Lock } from 'lucide-react';
 
 import { Tabs, TabsList, TabsTrigger, TabsContent, Badge, ScrollArea, Button, EmptyState } from '@/ui';
-import { useFriendStore } from '@/stores/friend';
-import { usePresenceStore } from '@/stores/presence';
-import { useAuthStore } from '@/stores/auth';
-import { useUiStore } from '@/stores/ui';
+import { useFriendStore, usePresenceStore, useAuthStore, useUiStore, connectionManager } from 'ecto-core';
 import { useCall } from '@/hooks/useCall';
-import { connectionManager } from '@/services/connection-manager';
 
 import type { PresenceStatus } from 'ecto-shared';
 

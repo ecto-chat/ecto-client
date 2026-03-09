@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 
-import { useVoiceStore } from '@/stores/voice';
+import { useVoiceStore } from 'ecto-core';
 
 /**
  * Tracks the most active speaker with hysteresis to prevent rapid switching.

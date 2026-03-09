@@ -4,15 +4,13 @@ import { Send, Paperclip, Smile, Maximize2, Minimize2 } from 'lucide-react';
 
 import { TextArea } from '@/ui';
 
-import { connectionManager } from '@/services/connection-manager';
-import { useAuthStore } from '@/stores/auth';
+import { connectionManager, useAuthStore } from 'ecto-core';
 import { useMarkdownShortcuts } from '@/hooks/useMarkdownShortcuts';
 
 import { EmojiGifPicker } from '../shared/EmojiGifPicker';
 import { MarkdownToolbar } from '../shared/MarkdownToolbar';
 
 import type { Attachment } from 'ecto-shared';
-
 
 type DMMessageInputProps = {
   userId: string;

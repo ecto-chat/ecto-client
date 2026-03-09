@@ -1,8 +1,7 @@
 import { useCallback, useRef, useState } from 'react';
 
 import { cn } from '@/lib/cn';
-import { useUiStore } from '@/stores/ui';
-import { SNAP_MIN_WIDTH, SNAP_MAX_WIDTH, RESIZE_HANDLE_WIDTH } from '@/lib/media-window-constants';
+import { useUiStore, SNAP_MIN_WIDTH, SNAP_MAX_WIDTH, RESIZE_HANDLE_WIDTH } from 'ecto-core';
 
 type ResizeHandleProps = {
   side: 'left' | 'right';

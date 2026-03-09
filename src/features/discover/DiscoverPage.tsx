@@ -1,12 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Compass, Server, Search } from 'lucide-react';
 import type { DiscoveryServer } from 'ecto-shared';
-import { connectionManager } from '@/services/connection-manager';
-import { useDiscoverStore } from '@/stores/discover';
+import { connectionManager, useDiscoverStore, toServerUrl } from 'ecto-core';
 import { Spinner } from '@/ui/Spinner';
 import { ScrollArea } from '@/ui/ScrollArea';
 import { Input } from '@/ui/Input';
-import { toServerUrl } from '@/lib/server-address';
 import { FeaturedPost } from './FeaturedPost';
 import { FeaturedServerCard } from './FeaturedServerCard';
 import { SearchServerCard } from './SearchServerCard';

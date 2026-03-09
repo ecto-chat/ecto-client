@@ -1,6 +1,6 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Compass } from 'lucide-react';
-import { useUiStore } from '@/stores/ui';
+import { useUiStore } from 'ecto-core';
 import { IconButton } from '@/ui/IconButton';
 import { Tooltip } from '@/ui/Tooltip';
 import { cn } from '@/lib/cn';

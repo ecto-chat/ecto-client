@@ -1,15 +1,20 @@
 import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Settings, Check, LogOut, Plus } from 'lucide-react';
-import { useAuthStore } from '@/stores/auth';
-import { useUiStore } from '@/stores/ui';
-import { useNotifyStore } from '@/stores/notify';
-import { useVoiceStore } from '@/stores/voice';
-import { useCallStore } from '@/stores/call';
-import { connectionManager } from '@/services/connection-manager';
-import { resetAllStores, fullLogout } from '@/stores/reset';
-import { preferenceManager } from '@/services/preference-manager';
-import { getAccounts, getActiveUserId, getAccountCount } from '@/services/account-registry';
+import {
+  useAuthStore,
+  useUiStore,
+  useNotifyStore,
+  useVoiceStore,
+  useCallStore,
+  connectionManager,
+  resetAllStores,
+  fullLogout,
+  preferenceManager,
+  getAccounts,
+  getActiveUserId,
+  getAccountCount,
+} from 'ecto-core';
 import {
   Avatar,
   IconButton,

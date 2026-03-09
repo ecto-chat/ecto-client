@@ -1,7 +1,4 @@
-import { useUiStore } from '@/stores/ui';
-import { useServerStore } from '@/stores/server';
-import { useMemberStore } from '@/stores/member';
-import { connectionManager } from '@/services/connection-manager';
+import { useUiStore, useServerStore, useMemberStore, connectionManager } from 'ecto-core';
 
 import type { ServerPreviewData } from './types';
 

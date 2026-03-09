@@ -5,8 +5,7 @@ import type { VoiceState } from 'ecto-shared';
 
 import { Avatar, IconButton, Tooltip } from '@/ui';
 
-import { useUiStore } from '@/stores/ui';
-import { useVoiceStore } from '@/stores/voice';
+import { useUiStore, useVoiceStore } from 'ecto-core';
 
 import { cn } from '@/lib/cn';
 

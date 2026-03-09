@@ -8,7 +8,7 @@ import {
   DropdownMenuLabel,
 } from '@/ui';
 
-import { preferenceManager } from '@/services/preference-manager';
+import { preferenceManager } from 'ecto-core';
 
 type DeviceSelectorProps = {
   kind: 'audioinput' | 'videoinput' | 'audiooutput';

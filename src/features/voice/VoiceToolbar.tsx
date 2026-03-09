@@ -4,7 +4,7 @@ import { AnimatePresence, motion } from 'motion/react';
 
 import { Button, ConfirmDialog } from '@/ui';
 
-import { useVoiceStore } from '@/stores/voice';
+import { useVoiceStore } from 'ecto-core';
 
 import { useVoice } from '@/hooks/useVoice';
 

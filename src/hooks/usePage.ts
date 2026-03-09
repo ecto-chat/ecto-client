@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { PageContent } from 'ecto-shared';
-import { connectionManager } from '@/services/connection-manager';
+import { connectionManager } from 'ecto-core';
 
 export function usePage(channelId: string, serverId: string) {
   const [page, setPage] = useState<PageContent | null>(null);

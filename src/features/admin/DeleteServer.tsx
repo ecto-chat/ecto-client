@@ -2,10 +2,7 @@ import { useState, type FormEvent } from 'react';
 
 import { Button, Input } from '@/ui';
 
-import { useServerStore } from '@/stores/server';
-import { useUiStore } from '@/stores/ui';
-
-import { connectionManager } from '@/services/connection-manager';
+import { useServerStore, useUiStore, connectionManager } from 'ecto-core';
 
 type DeleteServerProps = {
   serverId: string;
