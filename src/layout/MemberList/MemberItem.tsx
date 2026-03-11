@@ -68,7 +68,7 @@ export const MemberItem = memo(function MemberItem({ member, rolesMap }: MemberI
     // Create a placeholder conversation so the UI shows the chat.
     // The real conversation is created server-side on first message.
     const tempId = `pending-${member.user_id}`;
-    useServerDmStore.getState().ensureConversation({
+    useServerDmStore.getState().ensureConversation(activeServerId, {
       id: tempId,
       peer: {
         user_id: member.user_id,

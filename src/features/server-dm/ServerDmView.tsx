@@ -29,7 +29,7 @@ export function ServerDmView() {
     if (!trpc) return;
 
     trpc.serverDms.list.query().then((convos) => {
-      useServerDmStore.getState().setConversations(convos);
+      useServerDmStore.getState().setConversations(serverId, convos);
       useServerDmStore.getState().hydrateUnreads(serverId, convos);
     }).catch(() => {});
 

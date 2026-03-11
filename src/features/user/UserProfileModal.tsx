@@ -125,8 +125,9 @@ function UserProfileContent({ data, onClose }: { data: ModalData; onClose: () =>
     }
 
     // Create placeholder conversation
+    if (!serverId) return;
     const tempId = `pending-${userId}`;
-    useServerDmStore.getState().ensureConversation({
+    useServerDmStore.getState().ensureConversation(serverId, {
       id: tempId,
       peer: {
         user_id: userId,

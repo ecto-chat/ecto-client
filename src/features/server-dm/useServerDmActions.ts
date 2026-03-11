@@ -6,11 +6,13 @@ export function useServerDmActions(
   currentUserId: string | undefined,
   setHasMore: (v: boolean) => void,
 ) {
+  const getServerId = useCallback(() => useUiStore.getState().activeServerId, []);
+
   const getServerTrpc = useCallback(() => {
-    const serverId = useUiStore.getState().activeServerId;
+    const serverId = getServerId();
     if (!serverId) return null;
     return connectionManager.getServerTrpc(serverId);
-  }, []);
+  }, [getServerId]);
 
   const handleSend = useCallback(async (text: string, replyTo?: string, attachmentIds?: string[]) => {
     if (!conversationId || !text.trim()) return;
@@ -61,19 +63,24 @@ export function useServerDmActions(
       before: oldestId,
       limit: 50,
     });
-    useServerDmStore.getState().prependMessages(conversationId, result.messages);
+    const serverId = getServerId();
+    if (!serverId) return;
+    useServerDmStore.getState().prependMessages(serverId, conversationId, result.messages);
     setHasMore(result.has_more);
-  }, [conversationId, getServerTrpc, setHasMore]);
+  }, [conversationId, getServerTrpc, getServerId, setHasMore]);
 
   const handleReact = useCallback(async (messageId: string, emoji: string) => {
     if (!conversationId || !currentUserId) return;
     const trpc = getServerTrpc();
     if (!trpc) return;
 
+    const serverId = getServerId();
+    if (!serverId) return;
+
     const msg = useServerDmStore.getState().messages.get(conversationId)?.get(messageId);
     if (msg) {
       const newReactions = toggleReaction(msg.reactions, emoji, currentUserId);
-      useServerDmStore.getState().updateReactions(conversationId, messageId, newReactions);
+      useServerDmStore.getState().updateReactions(serverId, conversationId, messageId, newReactions);
     }
 
     try {
@@ -82,10 +89,10 @@ export function useServerDmActions(
       await trpc.serverDms.react.mutate({ message_id: messageId, emoji, action });
     } catch {
       if (msg) {
-        useServerDmStore.getState().updateReactions(conversationId, messageId, msg.reactions);
+        useServerDmStore.getState().updateReactions(serverId, conversationId, messageId, msg.reactions);
       }
     }
-  }, [conversationId, currentUserId, getServerTrpc]);
+  }, [conversationId, currentUserId, getServerTrpc, getServerId]);
 
   const handleEdit = useCallback(async (messageId: string, content: string) => {
     const trpc = getServerTrpc();
@@ -96,13 +103,15 @@ export function useServerDmActions(
   const handleDelete = useCallback(async (messageId: string) => {
     const trpc = getServerTrpc();
     if (!trpc || !conversationId) return;
-    useServerDmStore.getState().deleteMessage(conversationId, messageId);
+    const serverId = getServerId();
+    if (!serverId) return;
+    useServerDmStore.getState().deleteMessage(serverId, conversationId, messageId);
     try {
       await trpc.serverDms.delete.mutate({ message_id: messageId });
     } catch {
       // Message already removed from UI
     }
-  }, [conversationId, getServerTrpc]);
+  }, [conversationId, getServerTrpc, getServerId]);
 
   const handleMarkRead = useCallback(async (messageId: string) => {
     if (!conversationId || conversationId.startsWith('pending-')) return;

@@ -54,7 +54,7 @@ export function useServerDmMessages(conversationId: string | null) {
             trpc.serverDms.history
               .query({ conversation_id: conversationId, limit: 50 })
               .then((result) => {
-                useServerDmStore.getState().prependMessages(conversationId, result.messages);
+                useServerDmStore.getState().prependMessages(serverId, conversationId, result.messages);
                 setHasMore(result.has_more);
               })
               .catch(() => {});

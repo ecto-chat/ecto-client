@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { AnimatePresence } from 'motion/react';
 import { Send, Paperclip, Smile, Maximize2, Minimize2 } from 'lucide-react';
 
@@ -16,9 +17,10 @@ type MessageInputProps = {
   replyTo?: { id: string; author: string; content: string } | null;
   onCancelReply?: () => void;
   onExpandedChange?: (expanded: boolean) => void;
+  popupContainerRef?: React.RefObject<HTMLDivElement | null>;
 };
 
-export function MessageInput({ channelId, serverId, onSend, replyTo, onCancelReply, onExpandedChange }: MessageInputProps) {
+export function MessageInput({ channelId, serverId, onSend, replyTo, onCancelReply, onExpandedChange, popupContainerRef }: MessageInputProps) {
   const {
     content,
     setContent,
@@ -120,20 +122,22 @@ export function MessageInput({ channelId, serverId, onSend, replyTo, onCancelRep
     </>
   );
 
-  const autocompletePopup = (
-    <div className="relative shrink-0">
-      <AnimatePresence>
-        {autocomplete && filteredItems.length > 0 && (
-          <AutocompletePopup
-            autocomplete={autocomplete}
-            items={filteredItems}
-            selectedIndex={selectedIndex}
-            onSelect={selectItem}
-          />
-        )}
-      </AnimatePresence>
-    </div>
+  const autocompleteContent = (
+    <AnimatePresence>
+      {autocomplete && filteredItems.length > 0 && (
+        <AutocompletePopup
+          autocomplete={autocomplete}
+          items={filteredItems}
+          selectedIndex={selectedIndex}
+          onSelect={selectItem}
+        />
+      )}
+    </AnimatePresence>
   );
+
+  const autocompletePopup = popupContainerRef?.current
+    ? createPortal(autocompleteContent, popupContainerRef.current)
+    : <div className="relative shrink-0">{autocompleteContent}</div>;
 
   const emojiPicker = pickerOpen && (
     <EmojiGifPicker

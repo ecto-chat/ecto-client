@@ -30,6 +30,7 @@ export function ChannelView() {
   const [pinsOpen, setPinsOpen] = useState(false);
   const [replyTo, setReplyTo] = useState<{ id: string; author: string; content: string } | null>(null);
   const [inputExpanded, setInputExpanded] = useState(false);
+  const autocompleteContainerRef = useRef<HTMLDivElement>(null);
   const searchActive = useUiStore((s) => s.searchSidebarOpen && s.searchContext?.type === 'server');
   const pendingJumpMessageId = useUiStore((s) => s.pendingJumpMessageId);
   const navigate = useNavigate();
@@ -173,6 +174,7 @@ export function ChannelView() {
         jumpToMessageId={pendingJumpMessageId}
       />
 
+      <div ref={autocompleteContainerRef} className="relative shrink-0" />
       <div
         className="border-t-2 border-primary flex flex-col overflow-hidden"
         style={{
@@ -190,6 +192,7 @@ export function ChannelView() {
           replyTo={replyTo}
           onCancelReply={() => setReplyTo(null)}
           onExpandedChange={setInputExpanded}
+          popupContainerRef={autocompleteContainerRef}
         />
       </div>
 

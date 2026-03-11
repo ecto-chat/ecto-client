@@ -6,6 +6,7 @@ import {
   useUiStore,
   connectionManager,
   getStoredServerSessions,
+  toServerUrl,
 } from 'ecto-core';
 
 /**
@@ -142,7 +143,7 @@ export function useInitializeCentral() {
 
       // ── Phase 5: Connect background servers (staggered, fire-and-forget) ──
       const backgroundServers = servers.filter(
-        (s) => s.server_address !== activeAddress,
+        (s) => !activeAddress || toServerUrl(s.server_address) !== activeAddress,
       );
 
       if (backgroundServers.length > 0) {

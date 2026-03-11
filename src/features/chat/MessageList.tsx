@@ -159,7 +159,7 @@ export function MessageList({
       onScroll={handleScroll}
       className="flex-1"
     >
-      <div ref={contentRef}>
+      <div ref={contentRef} className="pb-4">
       <div ref={topSentinelRef} className="flex justify-center py-2">
         {hasMore && <Spinner size="sm" />}
       </div>

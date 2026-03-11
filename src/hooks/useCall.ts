@@ -105,11 +105,12 @@ export function useCall() {
   }, []);
 
   const endCall = useCallback(() => {
-    const { callId } = useCallStore.getState();
-    if (!callId) return;
-    const centralWs = connectionManager.getCentralWs();
-    if (!centralWs) return;
-    centralWs.send('call.end', { call_id: callId });
+    const { callId, callState } = useCallStore.getState();
+    if (callState === 'idle') return;
+    if (callId) {
+      const centralWs = connectionManager.getCentralWs();
+      centralWs?.send('call.end', { call_id: callId });
+    }
     cleanupCall();
   }, []);
 
