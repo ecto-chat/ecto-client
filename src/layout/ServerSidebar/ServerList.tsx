@@ -7,7 +7,7 @@ import {
   SortableContext, useSortable, verticalListSortingStrategy, arrayMove,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { useServerStore, connectionManager } from 'ecto-core';
+import { useServerStore, connectionManager, updateStoredServerMeta } from 'ecto-core';
 import { ServerIcon } from './ServerIcon';
 import type { ServerListEntry } from 'ecto-shared';
 
@@ -43,9 +43,10 @@ export function ServerList({ serverOrder, servers, activeServerId, onServerClick
     const store = useServerStore.getState();
     store.reorderServers(newOrder);
 
-    // Update position values in the store and persist to central
+    // Update position values in the store + cache and persist to central
     for (let i = 0; i < newOrder.length; i++) {
       store.updateServer(newOrder[i]!, { position: i });
+      updateStoredServerMeta(newOrder[i]!, { position: i }).catch(() => {});
     }
     const central = connectionManager.getCentralTrpc();
     if (central) {

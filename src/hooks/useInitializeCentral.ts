@@ -6,6 +6,7 @@ import {
   useUiStore,
   connectionManager,
   getStoredServerSessions,
+  updateStoredServerMeta,
   toServerUrl,
 } from 'ecto-core';
 
@@ -29,14 +30,15 @@ export function useInitializeCentral() {
     (async () => {
       // ── Phase 1: Pre-populate sidebar from cache for instant render ──
       const cached = await getStoredServerSessions();
-      for (const session of cached) {
+      const sortedCached = [...cached].sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+      for (const session of sortedCached) {
         if (session.serverName) {
           useServerStore.getState().addServer({
             id: session.id,
             server_address: session.address,
             server_name: session.serverName,
             server_icon: session.serverIcon ?? null,
-            position: 0,
+            position: session.position ?? 0,
             joined_at: '',
           });
           // Set 'connecting' immediately so servers don't flash as offline
@@ -94,6 +96,11 @@ export function useInitializeCentral() {
         centralTrpc.servers.list.query(),
         earlyConnectPromise,
       ]);
+
+      // Sync positions from servers.list into cache so next reload has correct order
+      for (const s of servers) {
+        updateStoredServerMeta(s.id, { position: s.position }).catch(() => {});
+      }
 
       // ── Phase 4: If early connect failed, try from servers.list ──
       let activeAddress: string | null = earlyResult?.address ?? null;
