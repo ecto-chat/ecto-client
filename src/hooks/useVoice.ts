@@ -43,32 +43,49 @@ export function useVoice() {
       audioProducer.pause();
     }
 
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.repeat) return;
-      if (e.key === pttKey) {
-        const producer = useVoiceStore.getState().producers.get('audio');
-        if (producer && producer.paused) {
-          producer.resume();
-          useVoiceStore.getState().setPttActive(true);
-        }
+    const handlePttDown = () => {
+      const producer = useVoiceStore.getState().producers.get('audio');
+      if (producer && producer.paused) {
+        producer.resume();
+        useVoiceStore.getState().setPttActive(true);
       }
     };
 
-    const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.key === pttKey) {
-        const producer = useVoiceStore.getState().producers.get('audio');
-        if (producer && !producer.paused) {
-          producer.pause();
-          useVoiceStore.getState().setPttActive(false);
-        }
+    const handlePttUp = () => {
+      const producer = useVoiceStore.getState().producers.get('audio');
+      if (producer && !producer.paused) {
+        producer.pause();
+        useVoiceStore.getState().setPttActive(false);
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
+    const cleanupFns: (() => void)[] = [];
+
+    // Electron: use uiohook-napi via IPC for global keydown+keyup
+    if (window.electronAPI?.ptt) {
+      window.electronAPI.ptt.registerShortcut(pttKey);
+      cleanupFns.push(window.electronAPI.ptt.onKeyDown(handlePttDown));
+      cleanupFns.push(window.electronAPI.ptt.onKeyUp(handlePttUp));
+      cleanupFns.push(() => window.electronAPI!.ptt.unregisterShortcut());
+    } else {
+      // Web fallback: DOM key events
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.repeat) return;
+        if (e.key === pttKey) handlePttDown();
+      };
+      const handleKeyUp = (e: KeyboardEvent) => {
+        if (e.key === pttKey) handlePttUp();
+      };
+      window.addEventListener('keydown', handleKeyDown);
+      window.addEventListener('keyup', handleKeyUp);
+      cleanupFns.push(() => {
+        window.removeEventListener('keydown', handleKeyDown);
+        window.removeEventListener('keyup', handleKeyUp);
+      });
+    }
+
     return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
+      for (const fn of cleanupFns) fn();
       // Resume mic when PTT is disabled
       const producer = useVoiceStore.getState().producers.get('audio');
       if (producer && producer.paused && !useVoiceStore.getState().selfMuted) {
@@ -154,7 +171,7 @@ export function useVoice() {
 
     for (const [consumerId, consumer] of consumers) {
       const meta = consumerMeta.get(consumerId);
-      if (meta?.source === 'audio') {
+      if (meta?.source === 'mic' || meta?.source === 'screen-audio') {
         if (deaf) consumer.pause();
         else consumer.resume();
       }

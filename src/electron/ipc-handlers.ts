@@ -4,7 +4,6 @@ import {
   safeStorage,
   Notification,
   dialog,
-  globalShortcut,
   BrowserWindow,
 } from 'electron';
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
@@ -120,29 +119,54 @@ export function registerIpcHandlers() {
     BrowserWindow.fromWebContents(event.sender)?.close();
   });
 
-  // Push-to-talk
-  let registeredPttKey: string | null = null;
+  // Push-to-talk (uiohook-napi for keydown+keyup support)
+  let pttKeycode: number | null = null;
+  let uiohookStarted = false;
+
+  // Map common PTT key names to uiohook keycodes
+  const KEY_MAP: Record<string, number> = {
+    ' ': 57, Space: 57,
+    F13: 100, F14: 101, F15: 102, F16: 103,
+    F17: 104, F18: 105, F19: 106, F20: 107,
+    F21: 108, F22: 109, F23: 110, F24: 111,
+    CapsLock: 58, ScrollLock: 70, Pause: 69,
+    Insert: 3639, Delete: 3667, Home: 3655, End: 3663,
+    PageUp: 3657, PageDown: 3665,
+    NumpadMultiply: 55, NumpadAdd: 78, NumpadSubtract: 74,
+    NumpadDecimal: 83, NumpadDivide: 3637,
+  };
 
   ipcMain.handle('ptt:register', (_event, key: string) => {
-    if (registeredPttKey) {
-      globalShortcut.unregister(registeredPttKey);
-    }
-    registeredPttKey = key;
-    try {
-      globalShortcut.register(key, () => {
-        const win = BrowserWindow.getAllWindows()[0];
-        win?.webContents.send('ptt:keydown');
+    pttKeycode = KEY_MAP[key] ?? null;
+    if (!pttKeycode) return false;
+
+    if (!uiohookStarted) {
+      // Lazy import to avoid loading native module when PTT isn't used
+      import('uiohook-napi').then(({ uIOhook }) => {
+        uIOhook.on('keydown', (e) => {
+          if (e.keycode === pttKeycode) {
+            BrowserWindow.getAllWindows()[0]?.webContents.send('ptt:keydown');
+          }
+        });
+        uIOhook.on('keyup', (e) => {
+          if (e.keycode === pttKeycode) {
+            BrowserWindow.getAllWindows()[0]?.webContents.send('ptt:keyup');
+          }
+        });
+        uIOhook.start();
       });
-      return true;
-    } catch {
-      return false;
+      uiohookStarted = true;
     }
+    return true;
   });
 
   ipcMain.handle('ptt:unregister', () => {
-    if (registeredPttKey) {
-      globalShortcut.unregister(registeredPttKey);
-      registeredPttKey = null;
+    pttKeycode = null;
+  });
+
+  app.on('will-quit', () => {
+    if (uiohookStarted) {
+      import('uiohook-napi').then(({ uIOhook }) => uIOhook.stop());
     }
   });
 
