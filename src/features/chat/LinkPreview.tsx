@@ -5,7 +5,7 @@ import { X, ExternalLink } from 'lucide-react';
 
 import { IconButton } from '@/ui';
 
-import { extractUrls, fetchLinkPreview, type LinkPreviewData } from 'ecto-core';
+import { extractUrls, fetchLinkPreview, connectionManager, useUiStore, type LinkPreviewData } from 'ecto-core';
 
 type LinkPreviewProps = {
   content: string;
@@ -15,6 +15,7 @@ type LinkPreviewProps = {
 export function LinkPreviews({ content, excludeUrls }: LinkPreviewProps) {
   const [previews, setPreviews] = useState<LinkPreviewData[]>([]);
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
+  const activeServerId = useUiStore((s) => s.activeServerId);
 
   useEffect(() => {
     let urls = extractUrls(content);
@@ -26,17 +27,22 @@ export function LinkPreviews({ content, excludeUrls }: LinkPreviewProps) {
       return;
     }
 
+    // Get server connection for proxied unfurl
+    const conn = activeServerId ? connectionManager.getServerConnection(activeServerId) : null;
+    const proxyBase = conn?.address;
+    const token = conn?.token;
+
     // Fetch previews for first 3 URLs
     const toFetch = urls.slice(0, 3);
     let cancelled = false;
 
-    Promise.all(toFetch.map(fetchLinkPreview)).then((results) => {
+    Promise.all(toFetch.map((url) => fetchLinkPreview(url, proxyBase, token))).then((results) => {
       if (cancelled) return;
       setPreviews(results.filter((r): r is LinkPreviewData => r !== null));
     });
 
     return () => { cancelled = true; };
-  }, [content]);
+  }, [content, activeServerId]);
 
   const visible = previews.filter((p) => !dismissed.has(p.url));
   if (visible.length === 0) return null;
