@@ -48,6 +48,7 @@ import {
 import { useNotifications } from '@/hooks/useNotifications';
 import { useInitializeCentral } from '@/hooks/useInitializeCentral';
 import { useInitializeLocal } from '@/hooks/useInitializeLocal';
+import { useDeepLink } from '@/hooks/useDeepLink';
 import { startIdleDetection, stopIdleDetection } from '@/services/idle-detector';
 import { consumePendingJoin } from '@/hooks/useJoinParams';
 import { EmptyState } from '@/ui/EmptyState';
@@ -72,12 +73,31 @@ export function AppLayout() {
   useNotifications();
   useInitializeCentral();
   useInitializeLocal();
+  useDeepLink();
 
-  // Check for pending join from URL params (e.g. server browser redirect)
+  // Check for pending join from URL params (e.g. server browser redirect or invite link)
   useEffect(() => {
     const pending = consumePendingJoin();
-    if (pending) {
+    if (!pending) return;
+
+    if (pending.address) {
+      // Have address — open join modal directly
       useUiStore.getState().openModal('server-join', pending);
+    } else if (pending.invite) {
+      // Invite-only — resolve via Central to get server address
+      connectionManager.resolveInvite(pending.invite)
+        .then(({ server_address }) => {
+          useUiStore.getState().openModal('server-join', {
+            address: server_address,
+            invite: pending.invite,
+          });
+        })
+        .catch(() => {
+          useUiStore.getState().openModal('server-join', {
+            address: '',
+            invite: pending.invite,
+          });
+        });
     }
   }, []);
 

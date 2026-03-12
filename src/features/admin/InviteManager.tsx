@@ -86,7 +86,10 @@ export function InviteManager() {
   };
 
   const handleCopy = async (code: string) => {
-    const link = `${window.location.origin}/invite/${code}`;
+    const isLocalDev = window.location.hostname === 'localhost';
+    const link = isLocalDev
+      ? `${window.location.origin}?invite=${code}`
+      : `https://ecto.chat/invite/${code}`;
     try { await navigator.clipboard.writeText(link); } catch { /* fallback omitted for brevity */ }
     setCopiedCode(code);
     setTimeout(() => setCopiedCode(null), 2000);

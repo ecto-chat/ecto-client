@@ -40,6 +40,7 @@ interface ElectronAPI {
   ptt: ElectronPTT;
   theme: ElectronTheme;
   files: ElectronFiles;
+  onDeepLink: (callback: (data: { type: string; code: string }) => void) => () => void;
 }
 
 declare global {

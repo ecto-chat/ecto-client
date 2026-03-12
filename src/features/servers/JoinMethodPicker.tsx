@@ -39,7 +39,7 @@ export function JoinMethodPicker({ onSubmit, onCancel, error, needsInvite, onInv
         label="Server Address"
         value={address}
         onChange={(e) => setAddress(e.target.value)}
-        placeholder="example.com:3000"
+        placeholder="server address or invite link"
         required={!needsInvite}
         autoFocus={!needsInvite}
         disabled={needsInvite}

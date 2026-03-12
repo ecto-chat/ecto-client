@@ -20,6 +20,7 @@ import {
   ContextMenuItem, ContextMenuSeparator,
 } from '@/ui/ContextMenu';
 import { cn } from '@/lib/cn';
+import { isManagedAddress } from '@/lib/server-address';
 import { springSnappy } from '@/lib/animations';
 import type { ServerListEntry } from 'ecto-shared';
 
@@ -64,11 +65,18 @@ export const ServerIcon = memo(function ServerIcon({
     useNotifyStore.getState().toggleMuteServer(serverId);
   }, [serverId]);
 
+  const isManaged = isManagedAddress(server.server_address);
+
   const copyServerLink = useCallback(() => {
-    if (server.server_address) {
+    if (server.server_address && !isManaged) {
       navigator.clipboard.writeText(server.server_address).catch(() => {});
     }
-  }, [server.server_address]);
+  }, [server.server_address, isManaged]);
+
+  const openInvites = useCallback(() => {
+    useUiStore.getState().setActiveServer(serverId);
+    useUiStore.getState().openModal('server-settings', { initialTab: 'invites' });
+  }, [serverId]);
 
   const leaveServer = useCallback(() => {
     useUiStore.getState().openModal('leave-server', {
@@ -147,9 +155,14 @@ export const ServerIcon = memo(function ServerIcon({
         <ContextMenuItem onSelect={toggleMute}>
           <BellOff size={14} className="mr-2" />{isMuted ? 'Unmute Server' : 'Mute Server'}
         </ContextMenuItem>
-        {server.server_address && (
+        {server.server_address && !isManaged && (
           <ContextMenuItem onSelect={copyServerLink}>
             <Link size={14} className="mr-2" />Copy Server Link
+          </ContextMenuItem>
+        )}
+        {isManaged && (
+          <ContextMenuItem onSelect={openInvites}>
+            <Link size={14} className="mr-2" />Invite People
           </ContextMenuItem>
         )}
         <ContextMenuSeparator />

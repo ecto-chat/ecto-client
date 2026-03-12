@@ -5,6 +5,44 @@ import { registerIpcHandlers } from './ipc-handlers.js';
 let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
 
+// Register ecto:// protocol handler (must be called before app.whenReady)
+app.setAsDefaultProtocolClient('ecto');
+
+// Ensure single instance — second launches forward their argv to the running instance
+const gotLock = app.requestSingleInstanceLock();
+if (!gotLock) {
+  app.quit();
+}
+
+function handleProtocolUrl(url: string) {
+  try {
+    // Supports both ecto://invite/abc123 and ecto:invite/abc123
+    const pathPart = url.replace(/^ecto:\/?\/?/, '');
+    const parts = pathPart.split('/');
+    if (parts[0] === 'invite' && parts[1]) {
+      mainWindow?.webContents.send('deep-link', { type: 'invite', code: parts[1] });
+    }
+  } catch {
+    // Malformed URL — ignore
+  }
+}
+
+// macOS: handle protocol URL when app is already running
+app.on('open-url', (event, url) => {
+  event.preventDefault();
+  handleProtocolUrl(url);
+});
+
+// Windows/Linux: second instance passes URL via argv
+app.on('second-instance', (_event, argv) => {
+  const url = argv.find((a) => a.startsWith('ecto://'));
+  if (url) handleProtocolUrl(url);
+  if (mainWindow) {
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.focus();
+  }
+});
+
 function createWindow() {
   const iconPath = path.join(__dirname, '../../resources/icon.png');
 

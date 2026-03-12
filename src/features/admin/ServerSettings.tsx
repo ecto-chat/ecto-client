@@ -19,8 +19,9 @@ import { RoleEditor } from './RoleEditor';
 import { ChannelEditor } from './ChannelEditor';
 import { MemberManager } from './MemberManager';
 import { WebhookManager } from './WebhookManager';
+import { CustomDomainTab } from './CustomDomainTab';
 
-type Tab = 'appearance' | 'configuration' | 'discovery' | 'roles' | 'channels' | 'members' | 'bans' | 'invites' | 'webhooks' | 'audit-log' | 'danger';
+type Tab = 'appearance' | 'configuration' | 'discovery' | 'roles' | 'channels' | 'members' | 'bans' | 'invites' | 'webhooks' | 'custom-domain' | 'audit-log' | 'danger';
 
 type TabSection = {
   label: string;
@@ -56,6 +57,7 @@ const TAB_SECTIONS: TabSection[] = [
     label: 'Advanced',
     tabs: [
       { key: 'webhooks', label: 'Webhooks' },
+      { key: 'custom-domain', label: 'Custom Domain' },
       { key: 'danger', label: 'Danger Zone' },
     ],
   },
@@ -74,6 +76,7 @@ function TabPanel({ activeTab, serverId }: { activeTab: Tab; serverId: string })
     case 'bans': return <BansTab serverId={serverId} />;
     case 'invites': return <InvitesTab serverId={serverId} />;
     case 'webhooks': return <WebhookManager serverId={serverId} />;
+    case 'custom-domain': return <CustomDomainTab serverId={serverId} />;
     case 'audit-log': return <AuditLogTab serverId={serverId} />;
     case 'danger': return <DangerZone serverId={serverId} />;
     default: return null;
@@ -88,6 +91,7 @@ const LEGACY_TAB_MAP: Record<string, Tab> = {
 export function ServerSettings() {
   const open = useUiStore((s) => s.activeModal === 'server-settings');
   const serverId = useUiStore((s) => s.activeServerId);
+  const modalData = useUiStore((s) => s.modalData) as { initialTab?: string } | null;
   const { allowedTabs } = usePermissions(serverId);
   const meta = useServerStore((s) => (serverId ? s.serverMeta.get(serverId) : undefined));
   const isOwner = !!(meta && meta.user_id && meta.admin_user_id === meta.user_id);
@@ -113,11 +117,22 @@ export function ServerSettings() {
       tabs = ALL_TABS.filter((tab) => unique.includes(tab.key));
     }
     if (!isOwner || isManaged) tabs = tabs.filter((tab) => tab.key !== 'danger');
+    if (!isManaged) tabs = tabs.filter((tab) => tab.key !== 'custom-domain');
     return tabs;
   }, [allowedTabs, isOwner, isManaged]);
 
-  const defaultTab = visibleTabs[0]?.key ?? 'appearance';
+  const requestedTab = modalData?.initialTab as Tab | undefined;
+  const defaultTab = (requestedTab && visibleTabs.some((t) => t.key === requestedTab))
+    ? requestedTab
+    : visibleTabs[0]?.key ?? 'appearance';
   const [activeTab, setActiveTab] = useState<Tab>(defaultTab);
+
+  // Sync active tab when modal opens with an initialTab
+  useEffect(() => {
+    if (requestedTab && visibleTabs.some((t) => t.key === requestedTab)) {
+      setActiveTab(requestedTab);
+    }
+  }, [requestedTab]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (visibleTabs.length > 0 && !visibleTabs.some((t) => t.key === activeTab)) {
@@ -136,7 +151,7 @@ export function ServerSettings() {
 
   return (
     <Modal open={open} onOpenChange={handleOpenChange} title="Server Settings" width="full" bodyClassName="!overflow-hidden !p-0">
-      <div className="flex h-[50vh]">
+      <div className="flex h-[70vh]">
         <nav className="min-w-40 shrink-0 border-r-2 border-primary p-5 overflow-y-auto">
           {TAB_SECTIONS.map((section) => {
             const sectionTabs = section.tabs.filter((t) => visibleKeys.has(t.key));

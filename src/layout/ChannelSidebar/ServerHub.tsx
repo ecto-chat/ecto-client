@@ -13,7 +13,10 @@ export function ServerHub() {
   const hubSection = useUiStore((s) => s.hubSection);
   const navigate = useNavigate();
   const { effectivePermissions, isAdmin } = usePermissions(serverId);
-  const canBrowse = isAdmin || hasPermission(effectivePermissions, Permissions.BROWSE_FILES);
+  const fileBrowserEnabled = useServerStore((s) =>
+    serverId ? s.serverMeta.get(serverId)?.file_browser_enabled ?? false : false,
+  );
+  const canBrowse = fileBrowserEnabled && (isAdmin || hasPermission(effectivePermissions, Permissions.BROWSE_FILES));
   const allowMemberDms = useServerStore((s) =>
     serverId ? s.serverMeta.get(serverId)?.allow_member_dms ?? false : false,
   );

@@ -19,4 +19,5 @@ export { MemberManager } from './MemberManager';
 export { RoleAssignment, KickBanDialog } from './MemberActions';
 export { InviteManager } from './InviteManager';
 export { WebhookManager } from './WebhookManager';
+export { CustomDomainTab } from './CustomDomainTab';
 export { ChannelSettingsModal } from './ChannelSettingsModal';

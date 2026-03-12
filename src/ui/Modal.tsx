@@ -44,7 +44,7 @@ export function Modal({ open, onOpenChange, title, description, children, width 
               <motion.div
                 className={cn(
                   'modal-panel fixed left-1/2 top-1/2 z-[100] w-[calc(100%-2rem)]',
-                  'max-h-[50vh] flex flex-col',
+                  'max-h-[85vh] flex flex-col',
                   'bg-secondary border-2 border-primary rounded-xl shadow-2xl',
                   'focus:outline-none',
                   widthClasses[width],

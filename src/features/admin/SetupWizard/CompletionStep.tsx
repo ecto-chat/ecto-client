@@ -1,6 +1,7 @@
 import { Link, Copy, PartyPopper, Ticket } from 'lucide-react';
 
 import { Button, Input } from '@/ui';
+import { isManagedAddress } from '@/lib/server-address';
 
 import type { StepProps } from './wizard-types';
 
@@ -68,6 +69,7 @@ export function CompletionStep({
   }
 
   // State 1: Not invite-only — setup complete, show server URL
+  const isManaged = isManagedAddress(serverUrl);
   if (!requireInvite) {
     return (
       <div className="flex flex-col items-center gap-6 py-4 text-center">
@@ -77,11 +79,18 @@ export function CompletionStep({
         <div className="space-y-2">
           <h2 className="text-xl text-primary">Setup Complete!</h2>
           <p className="text-sm text-secondary leading-relaxed max-w-sm">
-            Your server is ready. Anyone can join using the server address below.
+            {isManaged
+              ? 'Your server is ready. Share an invite link to let others join.'
+              : 'Your server is ready. Anyone can join using the server address below.'}
           </p>
         </div>
 
-        {serverUrl && (
+        {isManaged ? (
+          <Button variant="secondary" onClick={onCreateInvite} loading={loading} className="w-full">
+            <Link size={14} />
+            Generate Invite Link
+          </Button>
+        ) : serverUrl ? (
           <div className="flex items-center gap-2 w-full">
             <Input
               value={serverUrl}
@@ -99,7 +108,7 @@ export function CompletionStep({
               Copy
             </Button>
           </div>
-        )}
+        ) : null}
 
         <Button onClick={onFinish} className="w-full">
           Close Setup Wizard
@@ -121,7 +130,7 @@ export function CompletionStep({
         </p>
       </div>
 
-      {serverUrl && (
+      {serverUrl && !isManaged && (
         <div className="flex items-center gap-2 w-full">
           <Input
             value={serverUrl}

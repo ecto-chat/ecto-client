@@ -1,7 +1,7 @@
 const STORAGE_KEY = 'pendingJoin';
 
 export type PendingJoin = {
-  address: string;
+  address?: string;
   invite?: string;
 };
 
@@ -9,6 +9,11 @@ export type PendingJoin = {
  * Extracts `?join=` and `?invite=` from the current URL on first load,
  * stores them in sessionStorage for persistence through auth flows,
  * and cleans the URL params from the address bar.
+ *
+ * Supports three cases:
+ *  - `?join=addr` — join by address
+ *  - `?join=addr&invite=code` — join by address with invite
+ *  - `?invite=code` — resolve invite code via Central to get address
  */
 export function useJoinParams(): void {
   // Run synchronously on import/first call — only once
@@ -16,10 +21,11 @@ export function useJoinParams(): void {
 
   const params = new URLSearchParams(window.location.search);
   const join = params.get('join');
-  if (!join) return;
-
-  const pending: PendingJoin = { address: join };
   const invite = params.get('invite');
+  if (!join && !invite) return;
+
+  const pending: PendingJoin = {};
+  if (join) pending.address = join;
   if (invite) pending.invite = invite;
 
   sessionStorage.setItem(STORAGE_KEY, JSON.stringify(pending));

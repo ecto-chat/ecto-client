@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 import { Button, Spinner, Switch, Select } from '@/ui';
 
@@ -15,6 +15,8 @@ const sharedStorageSelectOptions = SHARED_STORAGE_OPTIONS.map((opt) => ({
   value: String(opt.value),
   label: opt.label,
 }));
+
+const DEFAULT_SHARED_STORAGE = 104857600; // 100MB
 
 type ConfigState = {
   max_upload_size_bytes: number;
@@ -35,11 +37,16 @@ export function ConfigurationSettings({ serverId }: ConfigurationSettingsProps) 
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const isManaged = useServerStore((s) => s.serverMeta.get(serverId)?.hosting_mode === 'managed');
+  // Remember the last non-zero storage value so toggling off→on restores it
+  const lastStorageRef = useRef(DEFAULT_SHARED_STORAGE);
 
   useEffect(() => {
     const trpc = connectionManager.getServerTrpc(serverId);
     if (!trpc) return;
     trpc.serverConfig.get.query().then((cfg) => {
+      if (cfg.max_shared_storage_bytes > 0) {
+        lastStorageRef.current = cfg.max_shared_storage_bytes;
+      }
       setConfig({
         max_upload_size_bytes: cfg.max_upload_size_bytes,
         max_shared_storage_bytes: cfg.max_shared_storage_bytes,
@@ -85,6 +92,8 @@ export function ConfigurationSettings({ serverId }: ConfigurationSettingsProps) 
     );
   }
 
+  const fileBrowserEnabled = config.max_shared_storage_bytes > 0;
+
   return (
     <div className="space-y-5">
       <h3 className="text-base font-medium text-primary">Configuration</h3>
@@ -123,6 +132,20 @@ export function ConfigurationSettings({ serverId }: ConfigurationSettingsProps) 
           onCheckedChange={(checked) => setConfig({ ...config, show_system_messages: checked })}
         />
 
+        <Switch
+          label="File Browser"
+          description="Enable the shared file browser for members to upload and browse files."
+          checked={fileBrowserEnabled}
+          onCheckedChange={(checked) => {
+            if (checked) {
+              setConfig({ ...config, max_shared_storage_bytes: lastStorageRef.current });
+            } else {
+              lastStorageRef.current = config.max_shared_storage_bytes || DEFAULT_SHARED_STORAGE;
+              setConfig({ ...config, max_shared_storage_bytes: 0 });
+            }
+          }}
+        />
+
         <Select
           label="Max File Size"
           options={uploadSizeSelectOptions}
@@ -130,12 +153,14 @@ export function ConfigurationSettings({ serverId }: ConfigurationSettingsProps) 
           onValueChange={(value) => setConfig({ ...config, max_upload_size_bytes: Number(value) })}
         />
 
-        <Select
-          label="Shared Storage Capacity"
-          options={sharedStorageSelectOptions}
-          value={String(config.max_shared_storage_bytes)}
-          onValueChange={(value) => setConfig({ ...config, max_shared_storage_bytes: Number(value) })}
-        />
+        {fileBrowserEnabled && (
+          <Select
+            label="Shared Storage Capacity"
+            options={sharedStorageSelectOptions}
+            value={String(config.max_shared_storage_bytes)}
+            onValueChange={(value) => setConfig({ ...config, max_shared_storage_bytes: Number(value) })}
+          />
+        )}
 
         <div className="flex justify-end">
           <Button onClick={handleSave} loading={saving}>

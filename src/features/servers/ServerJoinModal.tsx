@@ -34,7 +34,15 @@ export function ServerJoinModal() {
 
   // Fetch server preview when modal opens
   useEffect(() => {
-    if (!open || !modalData?.address) return;
+    if (!open) return;
+    if (!modalData?.address) {
+      // Invite resolution failed — no address to connect to
+      setLoading(false);
+      setFetchError(modalData?.invite
+        ? 'Could not resolve invite code. The invite may be invalid or expired.'
+        : 'No server address provided.');
+      return;
+    }
     setLoading(true);
     setFetchError('');
     setPreview(null);

@@ -51,4 +51,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
     saveFile: (data: ArrayBuffer, filename: string) =>
       ipcRenderer.invoke('file:save', data, filename),
   },
+
+  onDeepLink: (callback: (data: { type: string; code: string }) => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, data: { type: string; code: string }) =>
+      callback(data);
+    ipcRenderer.on('deep-link', handler);
+    return () => ipcRenderer.removeListener('deep-link', handler);
+  },
 });

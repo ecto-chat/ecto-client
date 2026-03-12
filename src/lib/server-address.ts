@@ -32,6 +32,17 @@ const ECTO_ADDRESS_RE =
  * Extract ecto server addresses from message text.
  * Returns up to 3 unique addresses (hostname only, no protocol/path).
  */
+/**
+ * Returns true if the address looks like a managed ecto-hosted server
+ * (i.e. matches `s-*.ecto.chat`).
+ */
+export function isManagedAddress(address: string | null | undefined): boolean {
+  if (!address) return false;
+  // Strip protocol and trailing slashes/paths to get the hostname
+  const hostname = address.replace(/^https?:\/\//, '').split(/[/:]/)[0] ?? '';
+  return /^s-[a-z0-9-]+\.ecto\.chat$/i.test(hostname);
+}
+
 export function extractServerAddresses(text: string): string[] {
   const seen = new Set<string>();
   const results: string[] = [];
