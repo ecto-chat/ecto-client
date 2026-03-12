@@ -7,7 +7,7 @@ import {
   SortableContext, useSortable, verticalListSortingStrategy, arrayMove,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { useServerStore, connectionManager, updateStoredServerMeta } from 'ecto-core';
+import { useServerStore, connectionManager, updateStoredServerPositions } from 'ecto-core';
 import { ServerIcon } from './ServerIcon';
 import type { ServerListEntry } from 'ecto-shared';
 
@@ -41,13 +41,16 @@ export function ServerList({ serverOrder, servers, activeServerId, onServerClick
     if (oldIndex === -1 || newIndex === -1) return;
     const newOrder = arrayMove([...serverOrder], oldIndex, newIndex);
     const store = useServerStore.getState();
+
     store.reorderServers(newOrder);
 
     // Update position values in the store + cache and persist to central
+    const positionUpdates: Array<{ id: string; position: number }> = [];
     for (let i = 0; i < newOrder.length; i++) {
       store.updateServer(newOrder[i]!, { position: i });
-      updateStoredServerMeta(newOrder[i]!, { position: i }).catch(() => {});
+      positionUpdates.push({ id: newOrder[i]!, position: i });
     }
+    updateStoredServerPositions(positionUpdates).catch(() => {});
     const central = connectionManager.getCentralTrpc();
     if (central) {
       const payload = newOrder

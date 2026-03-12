@@ -6,7 +6,7 @@ import {
   useUiStore,
   connectionManager,
   getStoredServerSessions,
-  updateStoredServerMeta,
+  updateStoredServerPositions,
   toServerUrl,
 } from 'ecto-core';
 
@@ -69,7 +69,7 @@ export function useInitializeCentral() {
               server_address: activeSession.address,
               server_name: serverName ?? activeSession.serverName ?? activeSession.address,
               server_icon: serverIcon ?? activeSession.serverIcon ?? null,
-              position: 0,
+              position: activeSession.position ?? 0,
               joined_at: '',
             });
             if (serverName) {
@@ -98,9 +98,7 @@ export function useInitializeCentral() {
       ]);
 
       // Sync positions from servers.list into cache so next reload has correct order
-      for (const s of servers) {
-        updateStoredServerMeta(s.id, { position: s.position }).catch(() => {});
-      }
+      updateStoredServerPositions(servers.map(s => ({ id: s.id, position: s.position }))).catch(() => {});
 
       // ── Phase 4: If early connect failed, try from servers.list ──
       let activeAddress: string | null = earlyResult?.address ?? null;
