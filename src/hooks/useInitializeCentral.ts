@@ -184,8 +184,13 @@ export function useInitializeCentral() {
                 });
               }
             });
+            // Rebuild sidebar order from position values after all connections settle
+            useServerStore.getState().rebuildOrder();
           });
         }, 100);
+      } else {
+        // No background servers — still rebuild order for the active server
+        useServerStore.getState().rebuildOrder();
       }
 
       // If nothing connected, set first server as active
