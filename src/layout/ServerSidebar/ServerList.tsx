@@ -7,7 +7,7 @@ import {
   SortableContext, useSortable, verticalListSortingStrategy, arrayMove,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { useServerStore } from 'ecto-core';
+import { useServerStore, connectionManager } from 'ecto-core';
 import { ServerIcon } from './ServerIcon';
 import type { ServerListEntry } from 'ecto-shared';
 
@@ -40,7 +40,25 @@ export function ServerList({ serverOrder, servers, activeServerId, onServerClick
     const newIndex = serverOrder.indexOf(over.id as string);
     if (oldIndex === -1 || newIndex === -1) return;
     const newOrder = arrayMove([...serverOrder], oldIndex, newIndex);
-    useServerStore.getState().reorderServers(newOrder);
+    const store = useServerStore.getState();
+    store.reorderServers(newOrder);
+
+    // Update position values in the store and persist to central
+    for (let i = 0; i < newOrder.length; i++) {
+      store.updateServer(newOrder[i]!, { position: i });
+    }
+    const central = connectionManager.getCentralTrpc();
+    if (central) {
+      const payload = newOrder
+        .map((id, idx) => {
+          const s = store.servers.get(id);
+          return s ? { server_address: s.server_address, position: idx } : null;
+        })
+        .filter((x): x is { server_address: string; position: number } => x !== null);
+      central.servers.reorder.mutate({ servers: payload }).catch((err: unknown) => {
+        console.warn('[central] Failed to persist server order:', err);
+      });
+    }
   };
 
   return (
