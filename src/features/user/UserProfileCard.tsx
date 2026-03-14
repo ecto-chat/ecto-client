@@ -24,6 +24,8 @@ type UserProfileCardProps = {
   avatarUrl?: string | null;
   bannerUrl?: string | null;
   status: PresenceStatus;
+  bio?: string | null;
+  customStatus?: string | null;
   createdAt?: string | null;
   joinedAt?: string | null;
   roles: Role[];
@@ -36,6 +38,8 @@ export function UserProfileCard({
   avatarUrl,
   bannerUrl,
   status,
+  bio,
+  customStatus,
   createdAt,
   joinedAt,
   roles,
@@ -66,9 +70,22 @@ export function UserProfileCard({
         </div>
       </div>
 
+      {customStatus && (
+        <div className="px-5 pt-2">
+          <p className="text-sm text-secondary italic">{customStatus}</p>
+        </div>
+      )}
+
       <div className="px-5 py-3">
         <Separator />
       </div>
+
+      {bio && (
+        <div className="px-5 pb-3">
+          <p className="mb-1 text-xs text-muted uppercase tracking-wide">About Me</p>
+          <p className="text-sm text-secondary whitespace-pre-wrap">{bio}</p>
+        </div>
+      )}
 
       {/* Member since (server join) */}
       {joinedAt && (

@@ -87,13 +87,17 @@ export function useAddServer() {
     const token = useAuthStore.getState().getToken();
     if (isCentral && token) {
       try {
-        const { realServerId, serverName } = await connectionManager.connectToServer(addr, addr, token, { openMainWs: true });
+        const { realServerId, serverName, serverIcon } = await connectionManager.connectToServer(addr, addr, token, { openMainWs: true });
+        const name = serverName ?? await queryServerName(realServerId, addr);
         const ct = connectionManager.getCentralTrpc();
-        if (ct) await ct.servers.add.mutate({ server_address: addr }).catch((err: unknown) => {
+        if (ct) await ct.servers.add.mutate({
+          server_address: addr,
+          server_name: name,
+          server_icon: serverIcon ?? undefined,
+        }).catch((err: unknown) => {
           console.warn('[central] Failed to sync server addition:', err);
         });
-        const name = serverName ?? await queryServerName(realServerId, addr);
-        addToServerStore(realServerId, addr, name, null);
+        addToServerStore(realServerId, addr, name, serverIcon ?? null);
         navigateToServer(realServerId);
         resetAndClose();
       } catch (err: unknown) {
@@ -131,13 +135,17 @@ export function useAddServer() {
     const token = useAuthStore.getState().getToken();
     if (!token) return;
     try {
-      const { realServerId, serverName } = await connectionManager.connectToServer(address, address, token, { inviteCode, openMainWs: true });
+      const { realServerId, serverName, serverIcon } = await connectionManager.connectToServer(address, address, token, { inviteCode, openMainWs: true });
+      const name = serverName ?? await queryServerName(realServerId, address);
       const ct = connectionManager.getCentralTrpc();
-      if (ct) await ct.servers.add.mutate({ server_address: address }).catch((err: unknown) => {
+      if (ct) await ct.servers.add.mutate({
+        server_address: address,
+        server_name: name,
+        server_icon: serverIcon ?? undefined,
+      }).catch((err: unknown) => {
         console.warn('[central] Failed to sync server addition:', err);
       });
-      const name = serverName ?? await queryServerName(realServerId, address);
-      addToServerStore(realServerId, address, name, null);
+      addToServerStore(realServerId, address, name, serverIcon ?? null);
       navigateToServer(realServerId);
       resetAndClose();
     } catch (err: unknown) {

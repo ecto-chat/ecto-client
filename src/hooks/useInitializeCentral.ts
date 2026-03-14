@@ -64,10 +64,11 @@ export function useInitializeCentral() {
               useConnectionStore.getState().removeConnection(activeSession.id);
               useServerStore.getState().removeServer(activeSession.id);
             }
+            const resolvedName = serverName ?? activeSession.serverName ?? null;
             useServerStore.getState().addServer({
               id: realServerId,
               server_address: activeSession.address,
-              server_name: serverName ?? activeSession.serverName ?? activeSession.address,
+              server_name: resolvedName,
               server_icon: serverIcon ?? activeSession.serverIcon ?? null,
               position: activeSession.position ?? 0,
               joined_at: '',

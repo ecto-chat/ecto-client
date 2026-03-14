@@ -1,8 +1,15 @@
 import type { ReactNode } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { ChevronDown, Settings } from 'lucide-react';
+import { ChevronDown, Settings, Plus, FolderPlus } from 'lucide-react';
 import { easeContent } from '@/lib/animations';
 import { cn } from '@/lib/cn';
+import {
+  ContextMenu,
+  ContextMenuTrigger,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+} from '@/ui/ContextMenu';
 
 interface CategoryGroupProps {
   name: string;
@@ -11,6 +18,8 @@ interface CategoryGroupProps {
   children: ReactNode;
   dragHandleProps?: React.HTMLAttributes<HTMLElement>;
   onSettingsClick?: () => void;
+  onCreateChannel?: () => void;
+  onCreateCategory?: () => void;
 }
 
 export function CategoryGroup({
@@ -20,37 +29,65 @@ export function CategoryGroup({
   children,
   dragHandleProps,
   onSettingsClick,
+  onCreateChannel,
+  onCreateCategory,
 }: CategoryGroupProps) {
+  const hasContextMenu = onCreateChannel || onCreateCategory;
+
+  const header = (
+    <div
+      className="flex items-center px-2 pt-2 pb-1 cursor-pointer select-none group focus-visible:ring-1 focus-visible:ring-accent/40 outline-none rounded-md"
+      onClick={onToggle}
+      {...dragHandleProps}
+    >
+      <ChevronDown
+        size={12}
+        className={cn(
+          'text-muted transition-transform duration-200 mr-1',
+          collapsed && '-rotate-90',
+        )}
+      />
+      <span className="text-xs uppercase tracking-wider text-muted font-semibold">
+        {name}
+      </span>
+      {onSettingsClick && (
+        <span
+          className="ml-auto text-muted opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer hover:text-primary"
+          title="Category Settings"
+          onClick={(e) => {
+            e.stopPropagation();
+            onSettingsClick();
+          }}
+        >
+          <Settings size={12} />
+        </span>
+      )}
+    </div>
+  );
+
   return (
     <div>
-      <div
-        className="flex items-center px-2 pt-2 pb-1 cursor-pointer select-none group focus-visible:ring-1 focus-visible:ring-accent/40 outline-none rounded-md"
-        onClick={onToggle}
-        {...dragHandleProps}
-      >
-        <ChevronDown
-          size={12}
-          className={cn(
-            'text-muted transition-transform duration-200 mr-1',
-            collapsed && '-rotate-90',
-          )}
-        />
-        <span className="text-xs uppercase tracking-wider text-muted font-semibold">
-          {name}
-        </span>
-        {onSettingsClick && (
-          <span
-            className="ml-auto text-muted opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer hover:text-primary"
-            title="Category Settings"
-            onClick={(e) => {
-              e.stopPropagation();
-              onSettingsClick();
-            }}
-          >
-            <Settings size={12} />
-          </span>
-        )}
-      </div>
+      {hasContextMenu ? (
+        <ContextMenu>
+          <ContextMenuTrigger asChild>
+            {header}
+          </ContextMenuTrigger>
+          <ContextMenuContent>
+            {onCreateChannel && (
+              <ContextMenuItem onSelect={onCreateChannel}>
+                <Plus size={14} className="mr-2" />
+                Create Channel
+              </ContextMenuItem>
+            )}
+            {onCreateCategory && (
+              <ContextMenuItem onSelect={onCreateCategory}>
+                <FolderPlus size={14} className="mr-2" />
+                Create Category
+              </ContextMenuItem>
+            )}
+          </ContextMenuContent>
+        </ContextMenu>
+      ) : header}
       <AnimatePresence initial={false}>
         {!collapsed && (
           <motion.div

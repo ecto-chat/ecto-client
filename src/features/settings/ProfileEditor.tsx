@@ -93,6 +93,7 @@ export function ProfileEditor() {
       if (bannerFile) {
         const bannerUrl = await uploadFile('banner', bannerFile);
         setUser({ ...user, banner_url: bannerUrl });
+        serverSyncData.banner_url = bannerUrl;
         setBannerFile(null);
         setBannerPreview(null);
       }
@@ -109,6 +110,9 @@ export function ProfileEditor() {
         if (updated.discriminator !== undefined) serverSyncData.discriminator = updated.discriminator;
         if (updated.display_name !== undefined) serverSyncData.display_name = updated.display_name;
         if (updated.avatar_url !== undefined) serverSyncData.avatar_url = updated.avatar_url;
+        if (updated.bio !== undefined) serverSyncData.bio = updated.bio;
+        if (updated.custom_status !== undefined) serverSyncData.custom_status = updated.custom_status;
+        if (updated.banner_url !== undefined) serverSyncData.banner_url = updated.banner_url;
       }
       // Sync profile changes to all connected servers (fire-and-forget)
       if (Object.keys(serverSyncData).length > 0) {

@@ -1,15 +1,17 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Permissions } from 'ecto-shared';
+import { Modal } from '@/ui';
 import { useChannels } from '@/hooks/useChannels';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useUiStore, useServerStore } from 'ecto-core';
+import { CreateChannelForm, CreateCategoryForm } from '@/features/admin/ChannelForm';
 import { ServerHeader } from '../ServerHeader';
 import { SetupBanner } from '../SetupBanner';
 import { UserBar } from '../UserBar';
 import { ChannelList } from './ChannelList';
 import { ServerHub } from './ServerHub';
-import type { Channel } from 'ecto-shared';
+import type { Channel, Category } from 'ecto-shared';
 
 export function ChannelSidebar() {
   const activeServerId = useUiStore((s) => s.activeServerId);
@@ -20,6 +22,9 @@ export function ChannelSidebar() {
   const [collapsedCategories, setCollapsedCategories] = useState(
     new Set<string>(),
   );
+  // null = closed, string = pre-selected category, undefined = no category pre-selected
+  const [createChannelCat, setCreateChannelCat] = useState<string | null | undefined>(null);
+  const [showCreateCategory, setShowCreateCategory] = useState(false);
   const navigate = useNavigate();
 
   const { isAdmin, effectivePermissions } = usePermissions(activeServerId);
@@ -35,8 +40,23 @@ export function ChannelSidebar() {
     meta.admin_user_id &&
     meta.user_id === meta.admin_user_id;
 
+  const canManageChannels =
+    isAdmin || (effectivePermissions & Permissions.MANAGE_CHANNELS) !== 0;
   const canViewHub =
     isAdmin || (effectivePermissions & Permissions.VIEW_SERVER_HUB) !== 0;
+
+  const handleCreateChannel = useCallback((categoryId?: string) => {
+    setCreateChannelCat(categoryId);
+  }, []);
+
+  const handleCreateCategory = useCallback(() => {
+    setShowCreateCategory(true);
+  }, []);
+
+  const categoryList = useMemo<Category[]>(
+    () => [...categories.values()],
+    [categories],
+  );
 
   const handleChannelClick = useCallback(
     (channel: Channel) => {
@@ -102,8 +122,42 @@ export function ChannelSidebar() {
         onToggleCategory={handleToggleCategory}
         canReorder={canReorder}
         serverId={activeServerId ?? ''}
+        onCreateChannel={canManageChannels ? handleCreateChannel : undefined}
+        onCreateCategory={canManageChannels ? handleCreateCategory : undefined}
       />
       <UserBar />
+
+      {/* Create Channel Modal */}
+      <Modal
+        open={createChannelCat !== null}
+        onOpenChange={(open) => { if (!open) setCreateChannelCat(null); }}
+        title="Create Channel"
+        width="md"
+      >
+        {createChannelCat !== null && activeServerId && (
+          <CreateChannelForm
+            serverId={activeServerId}
+            categories={categoryList}
+            onDone={() => setCreateChannelCat(null)}
+            defaultCategoryId={createChannelCat}
+          />
+        )}
+      </Modal>
+
+      {/* Create Category Modal */}
+      <Modal
+        open={showCreateCategory}
+        onOpenChange={(open) => { if (!open) setShowCreateCategory(false); }}
+        title="Create Category"
+        width="md"
+      >
+        {showCreateCategory && activeServerId && (
+          <CreateCategoryForm
+            serverId={activeServerId}
+            onDone={() => setShowCreateCategory(false)}
+          />
+        )}
+      </Modal>
     </div>
   );
 }

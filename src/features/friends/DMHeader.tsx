@@ -33,8 +33,16 @@ export function DMHeader({
 
   return (
     <div className="flex h-[60px] shrink-0 items-center gap-2 border-b-2 border-primary px-4">
-      <Avatar src={avatarUrl} username={username} size={28} status={status} />
-      <span className="text-sm font-medium text-primary">{username}</span>
+      <button type="button" className="cursor-pointer" onClick={() => useUiStore.getState().openModal('user-profile', { userId })}>
+        <Avatar src={avatarUrl} username={username} size={28} status={status} />
+      </button>
+      <button
+        type="button"
+        className="text-sm font-medium text-primary hover:underline cursor-pointer"
+        onClick={() => useUiStore.getState().openModal('user-profile', { userId })}
+      >
+        {username}
+      </button>
 
       <div className="ml-auto flex items-center gap-1">
         <IconButton

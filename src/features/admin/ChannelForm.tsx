@@ -13,12 +13,13 @@ type CreateChannelFormProps = {
   serverId: string;
   categories: Category[];
   onDone: () => void;
+  defaultCategoryId?: string;
 };
 
-export function CreateChannelForm({ serverId, categories, onDone }: CreateChannelFormProps) {
+export function CreateChannelForm({ serverId, categories, onDone, defaultCategoryId }: CreateChannelFormProps) {
   const [name, setName] = useState('');
   const [type, setType] = useState<ChannelType>('text');
-  const [categoryId, setCategoryId] = useState('none');
+  const [categoryId, setCategoryId] = useState(defaultCategoryId ?? 'none');
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState('');
 

@@ -169,7 +169,27 @@ export const MessageItem = memo(function MessageItem({
     );
   }
 
-  const authorName = message.author?.display_name ?? message.author?.username ?? 'Unknown';
+  // Use live member data for name/avatar so profile updates reflect immediately
+  const liveMember = message.author?.id ? serverMembers?.get(message.author.id) : undefined;
+  const authorName = liveMember?.nickname ?? liveMember?.display_name ?? liveMember?.username
+    ?? message.author?.display_name ?? message.author?.username ?? 'Unknown';
+  const authorAvatar = liveMember?.avatar_url ?? message.author?.avatar_url;
+  const authorUsername = liveMember?.username ?? message.author?.username ?? 'Unknown';
+
+  const roleColor = useMemo(() => {
+    if (!liveMember || !serverRoles) return undefined;
+    const member = liveMember;
+    let bestPosition = -1;
+    let color: string | undefined;
+    for (const roleId of member.roles) {
+      const role = serverRoles.get(roleId);
+      if (role?.color && role.position > bestPosition) {
+        bestPosition = role.position;
+        color = role.color;
+      }
+    }
+    return color;
+  }, [liveMember, serverRoles]);
 
   if (readOnly) {
     return (
@@ -178,12 +198,12 @@ export const MessageItem = memo(function MessageItem({
           <div className="w-[40px] shrink-0" />
         ) : (
           <div onClick={handleAuthorClick} className="shrink-0 cursor-pointer">
-            <Avatar src={message.author?.avatar_url} username={message.author?.username ?? 'Unknown'} size={40} />
+            <Avatar src={authorAvatar} username={authorUsername} size={40} />
           </div>
         )}
         <div className="min-w-0 flex-1">
           {!grouped && (
-            <MessageHeader authorName={authorName} isBot={!!message.webhook_id} timestamp={timestamp} isEdited={!!message.edited_at} isPinned={message.pinned} onAuthorClick={handleAuthorClick} />
+            <MessageHeader authorName={authorName} roleColor={roleColor} isBot={!!message.webhook_id} timestamp={timestamp} isEdited={!!message.edited_at} isPinned={message.pinned} onAuthorClick={handleAuthorClick} />
           )}
           {message.reply_to && <ReplyReference replyTo={message.reply_to} onJump={onJumpToMessage} />}
           {editing ? (
@@ -212,7 +232,7 @@ export const MessageItem = memo(function MessageItem({
             <div className="w-[40px] shrink-0" />
           ) : (
             <div onClick={handleAuthorClick} className="shrink-0 cursor-pointer">
-              <Avatar src={message.author?.avatar_url} username={message.author?.username ?? 'Unknown'} size={40} />
+              <Avatar src={authorAvatar} username={authorUsername} size={40} />
             </div>
           )}
 
@@ -220,6 +240,7 @@ export const MessageItem = memo(function MessageItem({
             {!grouped && (
               <MessageHeader
                 authorName={authorName}
+                roleColor={roleColor}
                 isBot={!!message.webhook_id}
                 timestamp={timestamp}
                 isEdited={!!message.edited_at}

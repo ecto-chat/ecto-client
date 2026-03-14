@@ -78,8 +78,7 @@ function UserProfileContent({ data, onClose }: { data: ModalData; onClose: () =>
     if (!centralTrpc) return;
     centralTrpc.profile.get.query({ user_id: userId }).then((profile) => {
       setBannerUrl(profile.banner_url);
-      // When no server context, use central profile for display info
-      if (!serverId) setCentralProfile(profile);
+      setCentralProfile(profile);
     }).catch(() => {});
   }, [userId, currentUserId, currentUser, member?.identity_type, serverId]);
 
@@ -151,6 +150,8 @@ function UserProfileContent({ data, onClose }: { data: ModalData; onClose: () =>
         avatarUrl={avatarUrl}
         bannerUrl={bannerUrl}
         status={status}
+        bio={centralProfile?.bio ?? (isSelf ? currentUser?.bio : null) ?? null}
+        customStatus={centralProfile?.custom_status ?? (isSelf ? currentUser?.custom_status : null) ?? null}
         createdAt={profileSource && 'created_at' in profileSource ? profileSource.created_at : undefined}
         joinedAt={member?.joined_at}
         roles={memberRoles}

@@ -20,8 +20,15 @@ import {
   defaultAnimateLayoutChanges, type AnimateLayoutChanges,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { Plus, FolderPlus } from 'lucide-react';
 import { Permissions } from 'ecto-shared';
 import { ScrollArea } from '@/ui/ScrollArea';
+import {
+  ContextMenu,
+  ContextMenuTrigger,
+  ContextMenuContent,
+  ContextMenuItem,
+} from '@/ui/ContextMenu';
 import { useChannelStore, useUiStore, connectionManager } from 'ecto-core';
 import { usePermissions } from '@/hooks/usePermissions';
 import { CategoryGroup } from '../CategoryGroup';
@@ -67,6 +74,8 @@ function SortableCategoryGroup({
   collapsed: boolean;
   onToggle: () => void;
   onSettingsClick?: () => void;
+  onCreateChannel?: () => void;
+  onCreateCategory?: () => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({
     id,
@@ -126,6 +135,8 @@ interface ChannelListProps {
   onToggleCategory: (categoryId: string) => void;
   canReorder: boolean;
   serverId: string;
+  onCreateChannel?: (categoryId?: string) => void;
+  onCreateCategory?: () => void;
 }
 
 export function ChannelList({
@@ -138,6 +149,8 @@ export function ChannelList({
   onToggleCategory,
   canReorder,
   serverId,
+  onCreateChannel,
+  onCreateCategory,
 }: ChannelListProps) {
   const { isAdmin, effectivePermissions } = usePermissions(serverId);
   const canManageChannels = isAdmin || (effectivePermissions & Permissions.MANAGE_CHANNELS) !== 0;
@@ -352,25 +365,47 @@ export function ChannelList({
     : null;
 
   if (!canReorder) {
+    const uncatContent = (
+      <AnimatePresence mode="popLayout">
+        {uncategorized.map((ch) => {
+          const delay = itemIndex++ * 0.04 + 0.02;
+          return (
+            <motion.div
+              key={ch.id}
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1], delay }}
+            >
+              {renderChannelItem(ch)}
+            </motion.div>
+          );
+        })}
+      </AnimatePresence>
+    );
+
     return (
       <ScrollArea className="flex-1" fadeEdges fadeHeight={40}>
         <div className="py-2 space-y-2">
-          <AnimatePresence mode="popLayout">
-            {uncategorized.map((ch) => {
-              const delay = itemIndex++ * 0.04 + 0.02;
-              return (
-                <motion.div
-                  key={ch.id}
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1], delay }}
-                >
-                  {renderChannelItem(ch)}
-                </motion.div>
-              );
-            })}
-          </AnimatePresence>
+          {canManageChannels && onCreateChannel ? (
+            <ContextMenu>
+              <ContextMenuTrigger asChild>
+                <div>{uncatContent}</div>
+              </ContextMenuTrigger>
+              <ContextMenuContent>
+                <ContextMenuItem onSelect={() => onCreateChannel()}>
+                  <Plus size={14} className="mr-2" />
+                  Create Channel
+                </ContextMenuItem>
+                {onCreateCategory && (
+                  <ContextMenuItem onSelect={onCreateCategory}>
+                    <FolderPlus size={14} className="mr-2" />
+                    Create Category
+                  </ContextMenuItem>
+                )}
+              </ContextMenuContent>
+            </ContextMenu>
+          ) : uncatContent}
 
           <AnimatePresence mode="popLayout">
             {sortedCategories.map(([catId, category]) => {
@@ -389,6 +424,8 @@ export function ChannelList({
                     collapsed={collapsedCategories.has(catId)}
                     onToggle={() => onToggleCategory(catId)}
                     onSettingsClick={canManageChannels ? () => handleCategorySettings(catId) : undefined}
+                    onCreateChannel={canManageChannels && onCreateChannel ? () => onCreateChannel(catId) : undefined}
+                    onCreateCategory={canManageChannels ? onCreateCategory : undefined}
                   >
                     {catChannels.map((ch) => (
                       <div key={ch.id}>{renderChannelItem(ch)}</div>
@@ -442,6 +479,8 @@ export function ChannelList({
                   collapsed={collapsedCategories.has(catId)}
                   onToggle={() => onToggleCategory(catId)}
                   onSettingsClick={canManageChannels ? () => handleCategorySettings(catId) : undefined}
+                  onCreateChannel={canManageChannels && onCreateChannel ? () => onCreateChannel(catId) : undefined}
+                  onCreateCategory={canManageChannels ? onCreateCategory : undefined}
                   containerChannelIds={catItems}
                   activeId={activeId}
                 >

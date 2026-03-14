@@ -2,7 +2,7 @@ import { useRef, useEffect, useCallback } from 'react';
 
 import { Spinner, ScrollArea } from '@/ui';
 
-import type { Message } from 'ecto-shared';
+import { type Message, MessageType } from 'ecto-shared';
 
 import { useMessageStore, useUiStore } from 'ecto-core';
 import { MessageItem } from './MessageItem';
@@ -170,9 +170,10 @@ export function MessageList({
         if (showDateSeparator) lastAuthorId = '';
         lastDate = msgDate;
 
+        const isSystemMessage = msg.type !== MessageType.DEFAULT;
         const currentAuthorId = msg.author?.id ?? '';
-        const isGrouped = !showDateSeparator && currentAuthorId === lastAuthorId && currentAuthorId !== '';
-        lastAuthorId = currentAuthorId;
+        const isGrouped = !showDateSeparator && !isSystemMessage && currentAuthorId === lastAuthorId && currentAuthorId !== '';
+        lastAuthorId = isSystemMessage ? '' : currentAuthorId;
 
         return (
           <div key={stableKeys.get(msg.id) ?? msg.id} data-message-id={msg.id} className={isGrouped ? 'mt-0.5' : idx === 0 ? '' : 'mt-4'}>

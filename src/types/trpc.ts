@@ -151,6 +151,7 @@ export interface ServerRouter {
         after?: string;
         role_id?: string;
         search?: string;
+        channel_id?: string;
       }) => Promise<{ members: Member[]; total: number; has_more: boolean }>;
     };
     kick: {
@@ -189,6 +190,9 @@ export interface ServerRouter {
       mutate: (input: {
         display_name?: string | null;
         avatar_url?: string | null;
+        banner_url?: string | null;
+        bio?: string | null;
+        custom_status?: string | null;
         username?: string;
         discriminator?: string;
       }) => Promise<{ success: boolean }>;

@@ -14,7 +14,8 @@ const MODERATION_BITS =
 
 export function MemberList() {
   const activeServerId = useUiStore((s) => s.activeServerId);
-  const { members, loadMembers } = useMembers(activeServerId ?? '');
+  const activeChannelId = useUiStore((s) => s.activeChannelId);
+  const { members, loadMembers } = useMembers(activeServerId ?? '', activeChannelId ?? undefined);
   const meta = useServerStore((s) =>
     activeServerId ? s.serverMeta.get(activeServerId) : undefined,
   );
