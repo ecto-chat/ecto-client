@@ -749,7 +749,7 @@ export interface CentralRouter {
 
   dms: {
     list: {
-      query: () => Promise<DMConversation[]>;
+      query: (input?: { limit?: number; before?: string }) => Promise<{ conversations: DMConversation[]; has_more: boolean }>;
     };
     send: {
       mutate: (input: {

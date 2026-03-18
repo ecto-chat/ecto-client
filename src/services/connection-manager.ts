@@ -224,8 +224,8 @@ class ConnectionManager {
     usePresenceStore.getState().bulkSetPresence(
       ready.presences as { user_id: string; status: PresenceStatus; custom_text?: string }[],
     );
-    this.centralTrpc!.dms.list.query().then((convos) => {
-      useDmStore.getState().setConversations(convos as import('ecto-shared').DMConversation[]);
+    this.centralTrpc!.dms.list.query().then((res) => {
+      useDmStore.getState().setConversations(res.conversations);
     }).catch(() => {});
 
     if (ready.active_call && useCallStore.getState().callState === 'idle') {

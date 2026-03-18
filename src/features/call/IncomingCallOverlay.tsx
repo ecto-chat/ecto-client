@@ -13,7 +13,7 @@ export function IncomingCallOverlay() {
   const timerRef = useRef<ReturnType<typeof setTimeout>>(null);
 
   useEffect(() => {
-    if (callState !== 'incoming_ringing') return;
+    if (callState !== 'incoming_ringing' || answeredElsewhere) return;
     const ringtone = playIncomingRingtone();
     timerRef.current = setTimeout(() => {
       // Server will send call.ended with timeout
@@ -22,7 +22,7 @@ export function IncomingCallOverlay() {
       ringtone.stop();
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [callState]);
+  }, [callState, answeredElsewhere]);
 
   if (callState !== 'incoming_ringing' || !peer || answeredElsewhere) return null;
 
